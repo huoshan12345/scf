@@ -510,16 +510,6 @@ ScfEcomponent* scf_ecomponent__alloc(uint64_t type)
 		c->uf  = ed->uf;
 		c->uh  = ed->uh;
 		c->ops = ed->ops;
-
-		if (ed->cpk) {
-			c->n_cpk = strlen(ed->cpk) + 1;
-
-			c->cpk = strdup(ed->cpk);
-			if (!c->cpk) {
-				ScfEcomponent_free(c);
-				return NULL;
-			}
-		}
 	}
 
 	int i;
@@ -531,7 +521,10 @@ ScfEcomponent* scf_ecomponent__alloc(uint64_t type)
 			return NULL;
 		}
 
-		pin->id = i;
+		pin->id     = i;
+		pin->ic_lid = -1;
+
+		scf_loge("pin %p, id: %ld, ic_lid: %ld\n", pin, pin->id, pin->ic_lid);
 
 		if (scf_ecomponent__add_pin(c, pin) < 0) {
 			ScfEcomponent_free(c);
@@ -743,4 +736,202 @@ int scf_eboard__del_function(ScfEboard* b, ScfEfunction* f)
 	}
 
 	return -EINVAL;
+}
+
+static int epin_cmp(const void* v0, const void* v1)
+{
+	const uint64_t* t0 = v0;
+	const uint64_t* t1 = v1;
+
+	if (t0[0] < t1[0])
+		return -1;
+
+	if (t0[0] > t1[0])
+		return 1;
+
+	if (t0[1] < t1[1])
+		return -1;
+
+	if (t0[1] > t1[1])
+		return 1;
+	return 0;
+}
+
+int scf_pins_same_line(ScfEfunction* f)
+{
+	ScfEcomponent* c;
+	ScfEline*      el;
+	ScfEline*      el2;
+	ScfEpin*       p;
+	ScfEpin*       p2;
+
+	long i;
+	long j;
+	long k;
+	long m;
+	long n;
+
+	for (i = 0; i < f->n_components; i++) {
+		c  =        f->components[i];
+
+		for (j = 0; j < c->n_pins; j++) {
+			p  =        c->pins[j];
+
+			qsort(p->tos, p->n_tos / 2, sizeof(uint64_t) * 2, epin_cmp);
+
+			for (k = 0; k < f->n_elines; k++) {
+				el        = f->elines[k];
+
+				for (m = 0; m + 1 < el->n_pins; m += 2) {
+
+					if (el->pins[m] == p->cid && el->pins[m + 1] == p->id)
+						goto next;
+				}
+
+				m = 0;
+				n = 0;
+				while (m + 1 < el->n_pins && n + 1 < p->n_tos) {
+
+					if (el->pins[m] < p->tos[n])
+						m += 2;
+					else if (el->pins[m] > p->tos[n])
+						n += 2;
+
+					else if (el->pins[m + 1] < p->tos[n + 1])
+						m += 2;
+					else if (el->pins[m + 1] > p->tos[n + 1])
+						n += 2;
+
+					else {
+						if (scf_eline__add_pin(el, p->cid, p->id) < 0)
+							return -ENOMEM;
+
+						p ->lid    = el->id;
+						p ->c_lid  = el->id;
+						el->flags |= p->flags;
+						goto next;
+					}
+				}
+			}
+
+			el = scf_eline__alloc();
+			if (!el)
+				return -ENOMEM;
+			el->id = f->n_elines;
+
+			if (scf_efunction__add_eline(f, el) < 0) {
+				ScfEline_free(el);
+				return -ENOMEM;
+			}
+
+			if (scf_eline__add_pin(el, p->cid, p->id) < 0)
+				return -ENOMEM;
+
+			p ->lid    = el->id;
+			p ->c_lid  = el->id;
+			el->flags |= p->flags;
+next:
+			for (n = 0; n + 1 < p->n_tos; n += 2) {
+
+				p2 = f->components[p->tos[n]]->pins[p->tos[n + 1]];
+
+				if (p2->cid >  p->cid
+				|| (p2->cid == p->cid && p2->id > p->id))
+					break;
+
+				el2 = f->elines[p2->lid];
+
+				if (el2 == el)
+					continue;
+
+				if (el2->id < el->id)
+					SCF_XCHG(el2, el);
+
+				for (m = 0; m + 1 < el2->n_pins; m += 2) {
+					p2 = f->components[el2->pins[m]]->pins[el2->pins[m + 1]];
+
+					if (scf_eline__add_pin(el, p2->cid, p2->id) < 0)
+						return -ENOMEM;
+
+					p2->lid    = el->id;
+					p2->c_lid  = el->id;
+					el->flags |= p2->flags;
+				}
+
+				qsort(el->pins, el->n_pins / 2, sizeof(uint64_t) * 2, epin_cmp);
+
+				el2->n_pins = 0;
+			}
+			p = NULL;
+		}
+	}
+
+	for (i = 0; i < f->n_elines; ) {
+		el        = f->elines[i];
+
+		if (0 == el->n_pins) {
+			scf_efunction__del_eline(f, el);
+			ScfEline_free(el);
+			continue;
+		}
+
+		el->c_pins = el->n_pins;
+		i++;
+	}
+
+	for (i = 0; i < f->n_elines; ) {
+		el        = f->elines[i];
+		el->id    = i;
+
+		int64_t eid = -1;
+
+		for (j = 0; j + 1 < el->n_pins; j += 2) {
+
+			c  = f->components[el->pins[j]];
+			p  = c->pins      [el->pins[j + 1]];
+
+			p->lid   = i;
+			p->c_lid = i;
+
+			if (p->ic_lid < 0)
+				continue;
+
+			if (eid < 0)
+				eid = p->ic_lid;
+
+			else if (eid != p->ic_lid) {
+				scf_loge("IC pin number set error, prev: %ld, current: %ld\n", eid, p->ic_lid);
+				return -EINVAL;
+			}
+
+			scf_logd("pin j: %ld, c%ldp%ld\n", j, el->pins[j], el->pins[j + 1]);
+		}
+
+		if (eid >= f->n_elines) {
+			scf_loge("IC pin number set error, max: %ld, current: %ld\n", f->n_elines - 1, eid);
+			return -EINVAL;
+		}
+
+		scf_logd("i: %ld, eid: %ld\n", i, eid);
+
+		if (eid >= 0 && eid != i) {
+			el->id = eid;
+
+			for (j = 0; j + 1 < el->n_pins; j += 2) {
+
+				c  = f->components[el->pins[j]];
+				p  = c->pins      [el->pins[j + 1]];
+
+				p->lid   = eid;
+				p->c_lid = eid;
+			}
+
+			SCF_XCHG(f->elines[eid], f->elines[i]);
+			continue;
+		}
+
+		i++;
+	}
+
+	return 0;
 }

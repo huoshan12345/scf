@@ -1,6 +1,7 @@
 #include"scf_lex.h"
 
-static scf_lex_key_word_t	key_words[] = {
+static scf_key_word_t  key_words[] =
+{
 	{"if",        SCF_LEX_WORD_KEY_IF},
 	{"else",      SCF_LEX_WORD_KEY_ELSE},
 
@@ -70,7 +71,8 @@ static scf_lex_key_word_t	key_words[] = {
 	{"struct",    SCF_LEX_WORD_KEY_STRUCT},
 };
 
-static scf_lex_escape_char_t	escape_chars[] = {
+static scf_escape_char_t  escape_chars[] =
+{
 	{'n', '\n'},
 	{'r', '\r'},
 	{'t', '\t'},
@@ -81,10 +83,11 @@ static int _find_key_word(const char* text)
 {
 	int i;
 	for (i = 0; i < sizeof(key_words) / sizeof(key_words[0]); i++) {
-		if (!strcmp(key_words[i].text, text)) {
+
+		if (!strcmp(key_words[i].text, text))
 			return key_words[i].type;
-		}
 	}
+
 	return -1;
 }
 
@@ -92,57 +95,27 @@ static int _find_escape_char(const int c)
 {
 	int i;
 	for (i = 0; i < sizeof(escape_chars) / sizeof(escape_chars[0]); i++) {
-		if (escape_chars[i].origin == c) {
+
+		if (escape_chars[i].origin == c)
 			return escape_chars[i].escape; // return the escape char
-		}
 	}
 
 	// if it isn't in the escape array, return the original char
 	return c;
 }
 
-scf_lex_error_t* scf_lex_error_alloc(scf_string_t* file, int line, int pos)
-{
-	assert(file);
-
-	scf_lex_error_t* e = calloc(1, sizeof(scf_lex_error_t));
-	assert(e);
-
-	e->file = scf_string_clone(file);
-	assert(e->file);
-
-	e->line = line;
-	e->pos = pos;
-	return e;
-}
-
-void scf_lex_error_free(scf_lex_error_t* e)
-{
-	assert(e);
-
-	if (e->message)
-		scf_string_free(e->message);
-	if (e->file)
-		scf_string_free(e->file);
-
-	free(e);
-	e = NULL;
-}
-
 int	scf_lex_open(scf_lex_t** plex, const char* path)
 {
-	printf("%s(),%d, keywords: %ld\n", __func__, __LINE__,
-			sizeof(key_words) / sizeof(key_words[0]));
-
-	assert(plex);
-	assert(path);
+	if (!plex || !path)
+		return -EINVAL;
 
 	scf_lex_t* lex = calloc(1, sizeof(scf_lex_t));
-	assert(lex);
+	if (!lex)
+		return -ENOMEM;
 
 	scf_list_init(&lex->word_list_head);
-	scf_list_init(&lex->error_list_head);
-	scf_list_init(&lex->char_list_head);
+
+	lex->char_list_head = NULL;
 
 	lex->fp = fopen(path, "r");
 	if (!lex->fp) {
@@ -151,12 +124,15 @@ int	scf_lex_open(scf_lex_t** plex, const char* path)
 		scf_loge("path: %s, errno: %d, pwd: %s\n", path, errno, cwd);
 
 		free(lex);
-		lex = NULL;
 		return -1;
 	}
 
 	lex->file = scf_string_cstr(path);
-	assert(lex->file);
+	if (!lex->file) {
+		fclose(lex->fp);
+		free(lex);
+		return -ENOMEM;
+	}
 
 	lex->nb_lines = 1;
 
@@ -166,80 +142,43 @@ int	scf_lex_open(scf_lex_t** plex, const char* path)
 
 int scf_lex_close(scf_lex_t* lex)
 {
-	assert(lex);
+	if (lex) {
+		scf_list_clear(&lex->word_list_head, scf_lex_word_t, list, scf_lex_word_free);
 
-	scf_list_clear(&lex->word_list_head, scf_lex_word_t, list, scf_lex_word_free);
-	scf_list_clear(&lex->error_list_head, scf_lex_error_t, list, scf_lex_error_free);
-
-	free(lex);
-	lex = NULL;
+		free(lex);
+	}
 	return 0;
 }
 
 int scf_lex_push_word(scf_lex_t* lex, scf_lex_word_t* word)
 {
-	assert(lex);
-	assert(word);
-
-	scf_list_add_front(&lex->word_list_head, &word->list);
+	if (lex && word)
+		scf_list_add_front(&lex->word_list_head, &word->list);
 	return 0;
 }
 
-static void _lex_space(scf_lex_t* lex)
+static int _lex_plus(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 {
-	scf_lex_char_t* c = _lex_pop_char(lex);
+	scf_char_t* c1 = _lex_pop_char(lex);
 
-	if ('\n' == c->c || '\r' == c->c || '\t' == c->c || ' ' == c->c) {
-
-		if ('\n' == c->c) {
-			lex->nb_lines++;
-			lex->pos = 0;
-		} else {
-			lex->pos++;
-		}
-
-		free(c);
-		c = NULL;
-
-		_lex_space(lex); // recursive call until others, to delete the unexpected space
-	} else {
-		_lex_push_char(lex, c); // save to the front of temp char list, used it later
-	}
-}
-
-static int _lex_plus(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c0)
-{
-	scf_lex_char_t* c1 = _lex_pop_char(lex);
 	if ('+' == c1->c) {
-		scf_lex_char_t* c2 = _lex_pop_char(lex);
-		if ('+' == c2->c) {
-			scf_lex_error_t* e = scf_lex_error_alloc(lex->file, lex->nb_lines, lex->pos);
-			e->message = scf_string_cstr("error: +++ is not supported");
-			scf_list_add_tail(&lex->error_list_head, &e->list);
+		scf_char_t* c2 = _lex_pop_char(lex);
 
-			free(c2);
-			free(c1);
-			free(c0);
-			c2 = NULL;
-			c1 = NULL;
-			c0 = NULL;
+		if ('+' == c2->c)
+			scf_logw("+++ may cause a BUG in file: %s, line: %d\n", lex->file->data, lex->nb_lines);
 
-			// can add error correction to continue the lexer
-			scf_loge("\n");
-			return -1;
-		} else {
-			_lex_push_char(lex, c2);
-			c2 = NULL;
+		_lex_push_char(lex, c2);
+		c2 = NULL;
 
-			scf_lex_word_t* w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_INC);
-			w->text = scf_string_cstr("++");
-			lex->pos += 2;
+		scf_lex_word_t* w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_INC);
+		w->text = scf_string_cstr("++");
+		lex->pos += 2;
 
-			*pword = w;
+		*pword = w;
 
-			free(c1);
-			c1 = NULL;
-		}
+		free(c1);
+		c1 = NULL;
+
 	} else if ('=' == c1->c) {
 		scf_lex_word_t* w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_ADD_ASSIGN);
 		w->text = scf_string_cstr("+=");
@@ -264,38 +203,27 @@ static int _lex_plus(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c0)
 	return 0;
 }
 
-static int _lex_minus(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c0)
+static int _lex_minus(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 {
-	scf_lex_char_t* c1 = _lex_pop_char(lex);
+	scf_char_t* c1 = _lex_pop_char(lex);
+
 	if ('-' == c1->c) {
-		scf_lex_char_t* c2 = _lex_pop_char(lex);
-		if ('-' == c2->c) {
-			scf_lex_error_t* e = scf_lex_error_alloc(lex->file, lex->nb_lines, lex->pos);
-			e->message = scf_string_cstr("error: --- is not supported");
-			scf_list_add_tail(&lex->error_list_head, &e->list);
+		scf_char_t* c2 = _lex_pop_char(lex);
 
-			free(c2);
-			free(c1);
-			free(c0);
-			c2 = NULL;
-			c1 = NULL;
-			c0 = NULL;
+		if ('-' == c2->c)
+			scf_logw("--- may cause a BUG in file: %s, line: %d\n", lex->file->data, lex->nb_lines);
 
-			// can add error correction to continue the lexer
-			scf_loge("\n");
-			return -1;
-		} else {
-			_lex_push_char(lex, c2);
-			c2 = NULL;
+		_lex_push_char(lex, c2);
+		c2 = NULL;
 
-			scf_lex_word_t* w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_DEC);
-			w->text = scf_string_cstr("--");
-			lex->pos += 2;
+		scf_lex_word_t* w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_DEC);
+		w->text = scf_string_cstr("--");
+		lex->pos += 2;
 
-			*pword = w;
-			free(c1);
-			c1 = NULL;
-		}
+		*pword = w;
+		free(c1);
+		c1 = NULL;
+
 	} else if ('>' == c1->c) {
 		scf_lex_word_t* w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_ARROW);
 		w->text = scf_string_cstr("->");
@@ -329,45 +257,56 @@ static int _lex_minus(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c0
 	return 0;
 }
 
-static int _lex_number(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c0)
+static int _lex_number(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 {
 	lex->pos++;
 
 	if ('0' == c0->c) {
-		scf_lex_char_t* c1 = _lex_pop_char(lex);
+		scf_char_t* c1 = _lex_pop_char(lex);
+
 		if ('x' == c1->c || 'X' == c1->c) {
 			// base 16
-			scf_string_t* s = scf_string_cstr_len((char*)&c0->c, 1);
-			scf_string_cat_cstr_len(s, (char*)&c1->c, 1);
+			scf_string_t* s = scf_string_cstr_len(c0->utf8, 1);
+
+			scf_string_cat_cstr_len(s, c1->utf8, 1);
 			lex->pos += 2;
+
 			free(c1);
-			c1 = NULL;
 			free(c0);
+			c1 = NULL;
 			c0 = NULL;
 
 			return _lex_number_base_16(lex, pword, s);
 
 		} else if ('.' == c1->c) {
 			// double
-			scf_string_t* s = scf_string_cstr_len((char*)&c0->c, 1);
-			scf_string_cat_cstr_len(s, (char*)&c1->c, 1);
+			scf_string_t* s = scf_string_cstr_len(c0->utf8, 1);
+
+			scf_string_cat_cstr_len(s, c1->utf8, 1);
 			lex->pos += 2;
+
 			free(c1);
-			c1 = NULL;
 			free(c0);
+			c1 = NULL;
 			c0 = NULL;
 
 			while (1) {
-				scf_lex_char_t* c2 = _lex_pop_char(lex);
+				scf_char_t* c2 = _lex_pop_char(lex);
+
 				if (c2->c >= '0' && c2->c <= '9') {
-					scf_string_cat_cstr_len(s, (char*)&c2->c, 1);
+					scf_string_cat_cstr_len(s, c2->utf8, 1);
 					lex->pos++;
+
 					free(c2);
 					c2 = NULL;
+
 				} else if ('.' == c2->c) {
-					// error
-					printf("%s(),%d, error: \n", __func__, __LINE__);
+					scf_loge("too many '.' for number in file: %s, line: %d\n", lex->file->data, lex->nb_lines);
+
+					free(c2);
+					c2 = NULL;
 					return -1;
+
 				} else {
 					_lex_push_char(lex, c2);
 					c2 = NULL;
@@ -383,7 +322,7 @@ static int _lex_number(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c
 				}
 			}
 		} else {
-			scf_string_t* s = scf_string_cstr_len((char*)&c0->c, 1);
+			scf_string_t* s = scf_string_cstr_len(c0->utf8, 1);
 
 			if (c1->c < '0' || c1->c > '9') {
 				// is 0
@@ -411,37 +350,44 @@ static int _lex_number(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c
 		}
 	} else {
 		// base 10
-		scf_string_t* s  = scf_string_cstr_len((char*)&c0->c, 1);
+		scf_string_t* s  = scf_string_cstr_len(c0->utf8, 1);
 
 		uint64_t value   = c0->c - '0';
 		int      nb_dots = 0;
 
+		free(c0);
+		c0 = NULL;
+
 		while (1) {
-			scf_lex_char_t* c1 = _lex_pop_char(lex);
+			scf_char_t* c1 = _lex_pop_char(lex);
 
-			if ((c1->c >= '0' && c1->c <= '9') || '.' == c1->c) {
-				if ('.' == c1->c) {
-					nb_dots++;
-					if (nb_dots > 1) {
-						// error
-						scf_lex_error_t* e = scf_lex_error_alloc(lex->file, lex->nb_lines, lex->pos);
-						e->message = scf_string_cstr("error: 2 '.' found, number is wrong");
-						scf_list_add_tail(&lex->error_list_head, &e->list);
-						printf("%s(),%d, error: \n", __func__, __LINE__);
-						return -1;
-					}
-				} else
-					value = value * 10 + c1->c - '0';
+			if (c1->c >= '0' && c1->c <= '9') {
 
-				scf_string_cat_cstr_len(s, (char*)&c1->c, 1);
+				value = value * 10 + c1->c - '0';
+
+				scf_string_cat_cstr_len(s, c1->utf8, 1);
 				lex->pos++;
+
 				free(c1);
 				c1 = NULL;
+
+			} else if ('.' == c1->c) {
+				scf_string_cat_cstr_len(s, c1->utf8, 1);
+				lex->pos++;
+
+				free(c1);
+				c1 = NULL;
+
+				if (++nb_dots > 1) {
+					scf_loge("too many '.' for number in file: %s, line: %d\n", lex->file->data, lex->nb_lines);
+					return -1;
+				}
 			} else {
 				_lex_push_char(lex, c1);
 				c1 = NULL;
 
 				scf_lex_word_t* w = NULL;
+
 				if (nb_dots > 0) {
 					w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_DOUBLE);
 					w->data.d = atof(s->data);
@@ -457,31 +403,32 @@ static int _lex_number(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c
 				s = NULL;
 
 				*pword = w;
-
-				free(c0);
-				c0 = NULL;
 				return 0;
 			}
 		}
 	}
 }
 
-static int _lex_identity(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c0)
+static int _lex_identity(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 {
-	scf_string_t* s = scf_string_cstr_len((char*)&c0->c, 1);
-	lex->pos++;
+	scf_string_t* s = scf_string_cstr_len(c0->utf8, c0->len);
+
+	lex->pos += c0->len;
 	free(c0);
 	c0 = NULL;
 
 	while (1) {
-		scf_lex_char_t* c1 = _lex_pop_char(lex);
-		if (('a' <= c1->c && 'z' >= c1->c)
-				|| ('A' <= c1->c && 'Z' >= c1->c)
-				|| ('0' <= c1->c && '9' >= c1->c)
-				|| '_' == c1->c
-				) {
-			scf_string_cat_cstr_len(s, (char*)&c1->c, 1);
-			lex->pos++;
+		scf_char_t* c1 = _lex_pop_char(lex);
+
+		if ('_' == c1->c
+				|| ('a'    <= c1->c && 'z'    >= c1->c)
+				|| ('A'    <= c1->c && 'Z'    >= c1->c)
+				|| ('0'    <= c1->c && '9'    >= c1->c)
+				|| (0x4e00 <= c1->c && 0x9fa5 >= c1->c)) {
+
+			scf_string_cat_cstr_len(s, c1->utf8, c1->len);
+			lex->pos += c1->len;
+
 			free(c1);
 			c1 = NULL;
 		} else {
@@ -530,48 +477,50 @@ static int _lex_identity(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t*
 	return -1;
 }
 
-static int _lex_char(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c0)
+static int _lex_char(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 {
 	scf_lex_word_t* w = NULL;
-	scf_string_t* s = scf_string_cstr_len((char*)&c0->c, 1);
+	scf_string_t*   s = scf_string_cstr_len(c0->utf8, 1);
 
-	scf_lex_char_t* c1 = _lex_pop_char(lex);
+	scf_char_t* c1 = _lex_pop_char(lex);
 
 	if ('\\' == c1->c) {
-		scf_lex_char_t* c2 = _lex_pop_char(lex);
-		scf_lex_char_t* c3 = _lex_pop_char(lex);
+		scf_char_t* c2 = _lex_pop_char(lex);
+		scf_char_t* c3 = _lex_pop_char(lex);
 
 		if ('\'' == c3->c) {
-			scf_string_cat_cstr_len(s, (char*)&c1->c, 1);
-			scf_string_cat_cstr_len(s, (char*)&c2->c, 1);
-			scf_string_cat_cstr_len(s, (char*)&c3->c, 1);
+			scf_string_cat_cstr_len(s, c1->utf8, 1);
+			scf_string_cat_cstr_len(s, c2->utf8, c2->len);
+			scf_string_cat_cstr_len(s, c3->utf8, 1);
 
 			w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_CHAR);
 			w->data.i64 = _find_escape_char(c2->c);
-			lex->pos += 4;
+			lex->pos += 3 + c2->len;
 
 			free(c3);
-			c3 = NULL;
 			free(c2);
+			c3 = NULL;
 			c2 = NULL;
 		} else {
-			printf("%s(),%d, error: \n", __func__, __LINE__);
+			scf_loge("const char lost 2nd ' in file: %s, line: %d\n", lex->file->data, lex->nb_lines);
 			return -1;
 		}
+
 	} else {
-		scf_lex_char_t* c2 = _lex_pop_char(lex);
+		scf_char_t* c2 = _lex_pop_char(lex);
+
 		if ('\'' == c2->c) {
-			scf_string_cat_cstr_len(s, (char*)&c1->c, 1);
-			scf_string_cat_cstr_len(s, (char*)&c2->c, 1);
+			scf_string_cat_cstr_len(s, c1->utf8, c1->len);
+			scf_string_cat_cstr_len(s, c2->utf8, 1);
 
 			w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_CHAR);
 			w->data.i64 = c1->c;
-			lex->pos += 3;
+			lex->pos += 2 + c1->len;
 
 			free(c2);
 			c2 = NULL;
 		} else {
-			printf("%s(),%d, error: \n", __func__, __LINE__);
+			scf_loge("const char lost 2nd ' in file: %s, line: %d\n", lex->file->data, lex->nb_lines);
 			return -1;
 		}
 	}
@@ -581,41 +530,45 @@ static int _lex_char(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c0)
 	*pword = w;
 
 	free(c1);
-	c1 = NULL;
 	free(c0);
+	c1 = NULL;
 	c0 = NULL;
 	return 0;
 }
 
-static int _lex_string(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c0)
+static int _lex_string(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 {
 	scf_lex_word_t* w = NULL;
-	scf_string_t* s = scf_string_cstr_len((char*)&c0->c, 1);
-	scf_string_t* data = scf_string_alloc();
+	scf_string_t*   s = scf_string_cstr_len(c0->utf8, 1);
+	scf_string_t*   d = scf_string_alloc();
 
 	while (1) {
-		scf_lex_char_t* c1 = _lex_pop_char(lex);
+		scf_char_t* c1 = _lex_pop_char(lex);
+
 		if ('\"' == c1->c) {
-			scf_string_cat_cstr_len(s, (char*)&c1->c, 1);
+			scf_string_cat_cstr_len(s, c1->utf8, 1);
 
 			w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_STRING);
-			w->data.s = data;
-			data = NULL;
-			w->text = s;
+			w->data.s = d;
+			w->text   = s;
+			d = NULL;
 			s = NULL;
+
 			lex->pos++;
 			*pword = w;
 
 			free(c1);
 			c1 = NULL;
 			return 0;
+
 		} else if ('\\' == c1->c) {
-			scf_lex_char_t* c2 = _lex_pop_char(lex);
+			scf_char_t* c2 = _lex_pop_char(lex);
+
 			int ch2 = _find_escape_char(c2->c);
 
-			scf_string_cat_cstr_len(s, (char*)&c1->c, 1);
-			scf_string_cat_cstr_len(s, (char*)&c2->c, 1);
-			lex->pos += 2;
+			scf_string_cat_cstr_len(s, c1->utf8, 1);
+			scf_string_cat_cstr_len(s, c2->utf8, c2->len);
+			lex->pos += 1 + c2->len;
 
 			free(c2);
 			free(c1);
@@ -630,7 +583,7 @@ static int _lex_string(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c
 						ch2 <<= 3;
 						ch2  += c1->c - '0';
 
-						scf_string_cat_cstr_len(s, (char*)&c1->c, 1);
+						scf_string_cat_cstr_len(s, c1->utf8, 1);
 						lex->pos++;
 
 						free(c1);
@@ -641,17 +594,19 @@ static int _lex_string(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c
 					}
 				}
 
-				scf_string_cat_cstr_len(data, (char*)&ch2, 1);
+				scf_string_cat_cstr_len(d, (char*)&ch2, 1);
 			} else
-				scf_string_cat_cstr_len(data, (char*)&ch2, 1);
+				scf_string_cat_cstr_len(d, (char*)&ch2, 1);
 
 		} else if (EOF == c1->c) {
-			printf("%s(),%d, error: \n", __func__, __LINE__);
+			scf_loge("const string lost 2nd \" in file: %s, line: %d\n", lex->file->data, lex->nb_lines);
 			return -1;
+
 		} else {
-			scf_string_cat_cstr_len(s, (char*)&c1->c, 1);
-			scf_string_cat_cstr_len(data, (char*)&c1->c, 1);
-			lex->pos++;
+			scf_string_cat_cstr_len(s, c1->utf8, c1->len);
+			scf_string_cat_cstr_len(d, c1->utf8, c1->len);
+			lex->pos += c1->len;
+
 			free(c1);
 			c1 = NULL;
 		}
@@ -660,46 +615,43 @@ static int _lex_string(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_char_t* c
 
 int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 {
-	assert(lex);
-	assert(pword);
-	assert(lex->fp);
+	if (!lex || !lex->fp || !pword)
+		return -EINVAL;
+
+	scf_list_t*		l = NULL;
+	scf_char_t*     c = NULL;
+	scf_lex_word_t*	w = NULL;
 
 	if (!scf_list_empty(&lex->word_list_head)) {
-		scf_list_t*		l = scf_list_head(&lex->word_list_head);
-		scf_lex_word_t*	w = scf_list_data(l, scf_lex_word_t, list);
+		l = scf_list_head(&lex->word_list_head);
+		w = scf_list_data(l, scf_lex_word_t, list);
 
 		scf_list_del(&w->list);
 		*pword = w;
 		return 0;
 	}
 
-	scf_lex_char_t* c = _lex_pop_char(lex);
-	if (EOF == c->c) {
-		scf_lex_word_t* w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_EOF);
-		w->text = scf_string_cstr("eof");
-		*pword = w;
-		free(c);
-		c = NULL;
-		return 0;
-	}
+	c = _lex_pop_char(lex);
 
-	if ('\n' == c->c || '\r' == c->c || '\t' == c->c || ' ' == c->c) {
-#if 0
-		scf_lex_word_t* w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_SPACE);
-		w->text = scf_string_cstr(" ");
-		*pword = w;
-#endif
+	while  ('\n' == c->c || '\r' == c->c || '\t' == c->c || ' ' == c->c) {
 		if ('\n' == c->c) {
 			lex->nb_lines++;
 			lex->pos = 0;
-		} else {
+		} else
 			lex->pos++;
-		}
+
+		free(c);
+		c = _lex_pop_char(lex);
+	}
+
+	if (EOF == c->c) {
+		w       = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_EOF);
+		w->text = scf_string_cstr("eof");
+		*pword  = w;
 
 		free(c);
 		c = NULL;
-		_lex_space(lex);
-		return scf_lex_pop_word(lex, pword); // recursive call to drop the SPACE WORD
+		return 0;
 	}
 
 	if ('+' == c->c)
@@ -717,7 +669,7 @@ int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 
 	if ('/' == c->c) {
 
-		scf_lex_char_t* c2 = _lex_pop_char(lex);
+		scf_char_t* c2 = _lex_pop_char(lex);
 
 		if ('/' == c2->c) {
 			free(c);
@@ -909,7 +861,7 @@ int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 			}
 
 			if (scf_string_cat(w0->text, w1->text) < 0
-					|| scf_string_cat(w0->data.s, w1->data.s) < 0) {
+			 || scf_string_cat(w0->data.s, w1->data.s) < 0) {
 
 				scf_lex_word_free(w1);
 				scf_lex_word_free(w0);
@@ -928,11 +880,14 @@ int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 	if ('0' <= c->c && '9' >= c->c)
 		return _lex_number(lex, pword, c);
 
-	if ('_' == c->c || ('a' <= c->c && 'z' >= c->c) || ('A' <= c->c && 'Z' >= c->c)) {
+	if ('_' == c->c
+			|| ('a'    <= c->c && 'z'    >= c->c)
+			|| ('A'    <= c->c && 'Z'    >= c->c)
+			|| (0x4e00 <= c->c && 0x9fa5 >= c->c)) { // support China chars
+
 		return _lex_identity(lex, pword, c);
 	}
 
-	scf_loge("c: %c\n", c->c);
+	scf_loge("unknown char: %c, utf: %#x, in file: %s, line: %d\n", c->c, c->c, lex->file->data, lex->nb_lines);
 	return -1;
 }
-

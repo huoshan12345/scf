@@ -4,29 +4,49 @@
 scf_block_t* scf_block_alloc(scf_lex_word_t* w)
 {
 	scf_block_t* b = calloc(1, sizeof(scf_block_t));
-	assert(b);
-
-	b->node.type = SCF_OP_BLOCK;
-
-	if (w)
-		b->node.w = scf_lex_word_clone(w);
-	else
-		b->node.w = NULL;
+	if (!b)
+		return NULL;
 
 	b->scope = scf_scope_alloc(w, "block");
+	if (!b->scope) {
+		free(b);
+		return NULL;
+	}
 
+	if (w) {
+		b->node.w = scf_lex_word_clone(w);
+
+		if (!b->node.w) {
+			scf_scope_free(b->scope);
+			free(b);
+			return NULL;
+		}
+	}
+
+	b->node.type = SCF_OP_BLOCK;
 	return b;
 }
 
 scf_block_t* scf_block_alloc_cstr(const char* name)
 {
 	scf_block_t* b = calloc(1, sizeof(scf_block_t));
-	assert(b);
+	if (!b)
+		return NULL;
+
+	b->name = scf_string_cstr(name);
+	if (!b->name) {
+		free(b);
+		return NULL;
+	}
+
+	b->scope = scf_scope_alloc(NULL, name);
+	if (!b->scope) {
+		scf_string_free(b->name);
+		free(b);
+		return NULL;
+	}
 
 	b->node.type = SCF_OP_BLOCK;
-	b->name = scf_string_cstr(name);
-	b->scope = scf_scope_alloc(NULL, name);
-
 	return b;
 }
 
@@ -38,23 +58,22 @@ void scf_block_end(scf_block_t* b, scf_lex_word_t* w)
 
 void scf_block_free(scf_block_t* b)
 {
-	assert(b);
-	assert(b->scope);
+	if (b) {
+		scf_scope_free(b->scope);
+		b->scope = NULL;
 
-	scf_scope_free(b->scope);
-	b->scope = NULL;
+		if (b->name) {
+			scf_string_free(b->name);
+			b->name = NULL;
+		}
 
-	if (b->name) {
-		scf_string_free(b->name);
-		b->name = NULL;
+		if (b->w_end) {
+			scf_lex_word_free(b->w_end);
+			b->w_end = NULL;
+		}
+
+		scf_node_free((scf_node_t*)b);
 	}
-
-	if (b->w_end) {
-		scf_lex_word_free(b->w_end);
-		b->w_end = NULL;
-	}
-
-	scf_node_free((scf_node_t*)b);
 }
 
 scf_type_t*	scf_block_find_type(scf_block_t* b, const char* name)

@@ -10,8 +10,8 @@ typedef struct scf_3ac_operator_s	scf_3ac_operator_t;
 typedef struct scf_3ac_operand_s	scf_3ac_operand_t;
 
 struct scf_3ac_operator_s {
-	int							type;
-	const char*					name;
+	int                 type;
+	const char*         name;
 };
 
 struct scf_3ac_operand_s {
@@ -33,7 +33,6 @@ struct scf_3ac_code_s {
 	scf_vector_t*		srcs; // src operands, usually 2
 
 	scf_label_t*		label; // only for 'goto' to find the destination to go
-	scf_node_t*		    error; // only for 'error'
 
 	scf_3ac_code_t*     origin;
 

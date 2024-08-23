@@ -3,15 +3,32 @@
 scf_scope_t* scf_scope_alloc(scf_lex_word_t* w, const char* name)
 {
 	scf_scope_t* scope = calloc(1, sizeof(scf_scope_t));
-	assert(scope);
+	if (!scope)
+		return NULL;
 
 	scope->name = scf_string_cstr(name);
-
-	if (w) {
-		scope->w = scf_lex_word_clone(w);
+	if (!scope->name) {
+		free(scope);
+		return NULL;
 	}
 
 	scope->vars = scf_vector_alloc();
+	if (!scope->vars) {
+		scf_string_free(scope->name);
+		free(scope);
+		return NULL;
+	}
+
+	if (w) {
+		scope->w = scf_lex_word_clone(w);
+
+		if (!scope->w) {
+			scf_vector_free(scope->vars);
+			scf_string_free(scope->name);
+			free(scope);
+			return NULL;
+		}
+	}
 
 	scf_list_init(&scope->list);
 	scf_list_init(&scope->type_list_head);
@@ -58,24 +75,22 @@ void scf_scope_push_label(scf_scope_t* scope, scf_label_t* l)
 
 void scf_scope_free(scf_scope_t* scope)
 {
-	assert(scope);
+	if (scope) {
+		scf_string_free(scope->name);
+		scope->name = NULL;
 
-	assert(scope->name);
-	scf_string_free(scope->name);
-	scope->name = NULL;
+		if (scope->w)
+			scf_lex_word_free(scope->w);
 
-	if (scope->w)
-		scf_lex_word_free(scope->w);
+		scf_vector_clear(scope->vars, (void (*)(void*))scf_variable_free);
+		scf_vector_free(scope->vars);
+		scope->vars = NULL;
 
-	scf_vector_clear(scope->vars, (void (*)(void*))scf_variable_free);
-	scf_vector_free(scope->vars);
-	scope->vars = NULL;
+		scf_list_clear(&scope->type_list_head, scf_type_t, list, scf_type_free);
+		scf_list_clear(&scope->function_list_head, scf_function_t, list, scf_function_free);
 
-	scf_list_clear(&scope->type_list_head, scf_type_t, list, scf_type_free);
-	scf_list_clear(&scope->function_list_head, scf_function_t, list, scf_function_free);
-
-	free(scope);
-	scope = NULL;
+		free(scope);
+	}
 }
 
 scf_type_t*	scf_scope_find_type(scf_scope_t* scope, const char* name)
@@ -102,9 +117,8 @@ scf_type_t*	scf_scope_find_type_type(scf_scope_t* scope, const int type)
 			l != scf_list_sentinel(&scope->type_list_head); l = scf_list_next(l)) {
 
 		scf_type_t* t = scf_list_data(l, scf_type_t, list);
-		if (type == t->type) {
+		if (type == t->type)
 			return t;
-		}
 	}
 	return NULL;
 }
@@ -118,9 +132,8 @@ scf_variable_t*	scf_scope_find_variable(scf_scope_t* scope, const char* name)
 		scf_variable_t* v = scope->vars->data[i];
 
 		//printf("%s(),%d, scope: %p, name: %s, v: %s\n", __func__, __LINE__, scope, name, v->w->text->data);
-		if (v->w && !strcmp(name, v->w->text->data)) {
+		if (v->w && !strcmp(name, v->w->text->data))
 			return v;
-		}
 	}
 	return NULL;
 }
@@ -134,9 +147,8 @@ scf_label_t* scf_scope_find_label(scf_scope_t* scope, const char* name)
 
 		scf_label_t* label = scf_list_data(l, scf_label_t, list);
 
-		if (!strcmp(name, label->w->text->data)) {
+		if (!strcmp(name, label->w->text->data))
 			return label;
-		}
 	}
 	return NULL;
 }
@@ -261,25 +273,3 @@ int scf_scope_find_overloaded_functions(scf_vector_t** pfunctions, scf_scope_t* 
 	*pfunctions = vec;
 	return 0;
 }
-
-scf_type_t*	scf_scope_list_find_type(scf_list_t* h, const char* name)
-{
-	scf_list_t* l;
-	for (l = scf_list_head(h);
-			l != scf_list_sentinel(h); l = scf_list_next(l)) {
-
-		scf_scope_t* scope = scf_list_data(l, scf_scope_t, list);
-		scf_list_t* l1;
-
-		for (l1 = scf_list_head(&scope->type_list_head);
-				l1 != scf_list_sentinel(&scope->type_list_head); l1 = scf_list_next(l1)) {
-			scf_type_t* t = scf_list_data(l1, scf_type_t, list);
-
-			if (!strcmp(name, t->name->data)) {
-				return t;
-			}
-		}
-	}
-	return NULL;
-}
-

@@ -46,10 +46,7 @@ int             scf_scope_find_overloaded_functions(scf_vector_t** pfunctions, s
 
 int             scf_scope_find_like_functions(scf_vector_t** pfunctions, scf_scope_t* scope, const char* name, scf_vector_t* argv);
 
-scf_type_t*     scf_scope_list_find_type(scf_list_t* h, const char* name);
-
 void            scf_scope_push_label(scf_scope_t* scope, scf_label_t* l);
 scf_label_t*    scf_scope_find_label(scf_scope_t* scope, const char* name);
 
 #endif
-

@@ -992,20 +992,6 @@ scf_operator_handler_t* scf_find_const_operator_handler(const int type)
 	return NULL;
 }
 
-int scf_const_opt(scf_ast_t* ast)
-{
-	scf_handler_data_t d = {0};
-
-	int ret = _scf_expr_calculate_internal(ast, (scf_node_t*)ast->root_block, &d);
-
-	if (ret < 0) {
-		scf_loge("\n");
-		return -1;
-	}
-
-	return 0;
-}
-
 int scf_function_const_opt(scf_ast_t* ast, scf_function_t* f)
 {
 	scf_handler_data_t d = {0};

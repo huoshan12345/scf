@@ -322,4 +322,3 @@ scf_dfa_module_t dfa_module_type =
 	.init_module = _dfa_init_module_type,
 	.init_syntax = _dfa_init_syntax_type,
 };
-
