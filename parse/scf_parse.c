@@ -49,10 +49,12 @@ scf_base_type_t	base_types[] =
 
 int	scf_parse_open(scf_parse_t** pparse)
 {
-	assert(pparse);
+	if (!pparse)
+		return -EINVAL;
 
 	scf_parse_t* parse = calloc(1, sizeof(scf_parse_t));
-	assert(parse);
+	if (!parse)
+		return -EINVAL;
 
 	if (scf_ast_open(&parse->ast) < 0) {
 		scf_loge("\n");
@@ -89,6 +91,16 @@ debug_error:
 const_error:
 	scf_vector_free(parse->symtab);
 	return -1;
+}
+
+int scf_parse_close(scf_parse_t* parse)
+{
+	if (parse) {
+		free(parse);
+		parse = NULL;
+	}
+
+	return 0;
 }
 
 static int _find_sym(const void* v0, const void* v1)
@@ -140,15 +152,6 @@ static int _scf_parse_add_sym(scf_parse_t* parse, const char* name,
 		}
 	}
 
-	return 0;
-}
-
-int scf_parse_close(scf_parse_t* parse)
-{
-	assert(parse);
-
-	free(parse);
-	parse = NULL;
 	return 0;
 }
 

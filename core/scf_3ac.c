@@ -304,9 +304,7 @@ scf_3ac_code_t* scf_3ac_code_clone(scf_3ac_code_t* c)
 		}
 	}
 
-	c2->label = c->label;
-	c2->error = c->error;
-
+	c2->label  = c->label;
 	c2->origin = c;
 	return c2;
 }
@@ -425,7 +423,6 @@ scf_3ac_code_t* scf_3ac_jmp_code(int type, scf_label_t* l, scf_node_t* err)
 
 	c->op    = scf_3ac_find_operator(type);
 	c->label = l;
-	c->error = err;
 
 	c->dsts  = scf_vector_alloc();
 	if (!c->dsts) {

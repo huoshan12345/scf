@@ -162,6 +162,7 @@ struct scf_epin_s
 	SCF_PACK_DEF_VARS(uint64_t, tos);
 	SCF_PACK_DEF_VAR(uint64_t, c_lid);
 
+	SCF_PACK_DEF_VAR(int64_t, ic_lid);
 	SCF_PACK_DEF_OBJ(ScfEcomponent, IC);
 
 	SCF_PACK_DEF_VAR(double, v);
@@ -198,6 +199,8 @@ SCF_PACK_INFO_VAR(ScfEpin, lid),
 SCF_PACK_INFO_VAR(ScfEpin, flags),
 SCF_PACK_INFO_VARS(ScfEpin, tos, uint64_t),
 SCF_PACK_INFO_VAR(ScfEpin, c_lid),
+
+SCF_PACK_INFO_VAR(ScfEpin, ic_lid),
 
 SCF_PACK_INFO_VAR(ScfEpin, v),
 SCF_PACK_INFO_VAR(ScfEpin, a),
@@ -277,7 +280,7 @@ struct scf_ecomponent_s
 	SCF_PACK_DEF_VAR(uint64_t, model);
 	SCF_PACK_DEF_OBJS(ScfEpin, pins);
 
-	SCF_PACK_DEF_VARS(uint8_t, cpk);
+	SCF_PACK_DEF_OBJ(ScfEfunction, pf);
 	SCF_PACK_DEF_OBJ(ScfEfunction, f);
 	SCF_PACK_DEF_OBJ(ScfEops,      ops);
 
@@ -307,8 +310,6 @@ SCF_PACK_INFO_VAR(ScfEcomponent, id),
 SCF_PACK_INFO_VAR(ScfEcomponent, type),
 SCF_PACK_INFO_VAR(ScfEcomponent, model),
 SCF_PACK_INFO_OBJS(ScfEcomponent, pins, ScfEpin),
-
-SCF_PACK_INFO_VARS(ScfEcomponent, cpk, uint8_t),
 
 SCF_PACK_INFO_VAR(ScfEcomponent, v),
 SCF_PACK_INFO_VAR(ScfEcomponent, a),
@@ -393,6 +394,8 @@ int            scf_efunction__del_eline    (ScfEfunction* f, ScfEline* el);
 ScfEboard*     scf_eboard__alloc();
 int            scf_eboard__add_function(ScfEboard* b, ScfEfunction* f);
 int            scf_eboard__del_function(ScfEboard* b, ScfEfunction* f);
+
+int            scf_pins_same_line(ScfEfunction* f);
 
 #define EDA_INST_ADD_COMPONENT(_ef, _c, _type) \
 	do { \

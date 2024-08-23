@@ -52,4 +52,3 @@ scf_dfa_module_t dfa_module_identity =
 	.init_module = _dfa_init_module_identity,
 	.init_syntax = _dfa_init_syntax_identity,
 };
-

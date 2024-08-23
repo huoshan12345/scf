@@ -2,12 +2,19 @@
 
 int	scf_ast_open(scf_ast_t** past)
 {
-	assert(past);
+	if (!past)
+		return -EINVAL;
 
 	scf_ast_t* ast = calloc(1, sizeof(scf_ast_t));
-	assert(ast);
+	if (!ast)
+		return -ENOMEM;
 
 	ast->root_block = scf_block_alloc_cstr("global");
+	if (!ast->root_block) {
+		free(ast);
+		return -ENOMEM;
+	}
+
 	ast->root_block->node.root_flag = 1;
 
 	ast->global_consts = scf_vector_alloc();

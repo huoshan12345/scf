@@ -4,7 +4,8 @@
 #include"scf_string.h"
 #include"scf_list.h"
 
-enum scf_lex_words {
+enum scf_lex_words
+{
 	SCF_LEX_WORD_PLUS = 0,		// +
 	SCF_LEX_WORD_MINUS,			// -
 	SCF_LEX_WORD_STAR,			// *
@@ -213,7 +214,7 @@ enum scf_lex_words {
 	SCF_LEX_WORD_CONST_U64,
 
 	// identity
-	SCF_LEX_WORD_ID,			// identity, start of _, a-z, A-Z, may include 0-9
+	SCF_LEX_WORD_ID, // identity, start of _, a-z, A-Z, may include 0-9
 };
 
 typedef struct {
@@ -268,9 +269,8 @@ static inline int scf_lex_is_base_type(scf_lex_word_t* w)
 	return SCF_LEX_WORD_KEY_CHAR <= w->type && SCF_LEX_WORD_KEY_VOID >= w->type;
 }
 
-scf_lex_word_t*		scf_lex_word_alloc(scf_string_t* file, int line, int pos, int type);
-scf_lex_word_t*		scf_lex_word_clone(scf_lex_word_t* w);
-void				scf_lex_word_free(scf_lex_word_t* w);
+scf_lex_word_t*  scf_lex_word_alloc(scf_string_t* file, int line, int pos, int type);
+scf_lex_word_t*  scf_lex_word_clone(scf_lex_word_t* w);
+void             scf_lex_word_free (scf_lex_word_t* w);
 
 #endif
-

@@ -5,9 +5,8 @@
 scf_string_t*	scf_string_alloc()
 {
 	scf_string_t* s = malloc(sizeof(scf_string_t));
-	if (!s) {
+	if (!s)
 		return NULL;
-	}
 
 	s->data = malloc(SCF_STRING_NUMBER_INC + 1);
 	if (!s->data) {
@@ -21,24 +20,21 @@ scf_string_t*	scf_string_alloc()
 	return s;
 }
 
-scf_string_t*	scf_string_clone(scf_string_t* s)
+scf_string_t* scf_string_clone(scf_string_t* s)
 {
-	if (!s) {
+	if (!s)
 		return NULL;
-	}
 
 	scf_string_t* s1 = malloc(sizeof(scf_string_t));
-	if (!s1) {
+	if (!s1)
 		return NULL;
-	}
 
-	if (s->capacity > 0) {
+	if (s->capacity  > 0)
 		s1->capacity = s->capacity;
-	} else if (s->len > 0) {
+	else if (s->len  > 0)
 		s1->capacity = s->len;
-	} else {
+	else
 		s1->capacity = SCF_STRING_NUMBER_INC;
-	}
 
 	s1->data = malloc(s1->capacity + 1);
 	if (!s1->data) {
@@ -47,28 +43,25 @@ scf_string_t*	scf_string_clone(scf_string_t* s)
 	}
 
 	s1->len = s->len;
-	if (s->len > 0) {
+	if (s->len > 0)
 		memcpy(s1->data, s->data, s->len);
-	}
-	s1->data[s1->len] = '\0';
 
+	s1->data[s1->len] = '\0';
 	return s1;
 }
 
-scf_string_t*	scf_string_cstr(const char* str)
+scf_string_t* scf_string_cstr(const char* str)
 {
-	if (!str) {
+	if (!str)
 		return NULL;
-	}
 
 	return scf_string_cstr_len(str, strlen(str));
 }
 
-scf_string_t*	scf_string_cstr_len(const char* str, size_t len)
+scf_string_t* scf_string_cstr_len(const char* str, size_t len)
 {
-	if (!str) {
+	if (!str)
 		return NULL;
-	}
 
 	scf_string_t s;
 	s.capacity	= -1;
@@ -80,13 +73,11 @@ scf_string_t*	scf_string_cstr_len(const char* str, size_t len)
 
 void scf_string_free(scf_string_t* s)
 {
-	if (!s) {
+	if (!s)
 		return;
-	}
 
-	if (s->capacity > 0) {
+	if (s->capacity > 0)
 		free(s->data);
-	}
 
 	free(s);
 	s = NULL;
@@ -115,13 +106,12 @@ int	scf_string_cmp(const scf_string_t* s0, const scf_string_t* s1)
 	if (!s0 || !s1 || !s0->data || !s1->data)
 		return -EINVAL;
 
-	if (s0->len < s1->len) {
+	if (s0->len < s1->len)
 		return -1;
-	} else if (s0->len > s1->len) {
+
+	if (s0->len > s1->len)
 		return 1;
-	} else {
-		return strncmp(s0->data, s1->data, s0->len);
-	}
+	return strncmp(s0->data, s1->data, s0->len);
 }
 
 int	scf_string_cmp_cstr(const scf_string_t* s0, const char* str)
@@ -169,19 +159,15 @@ int	scf_string_copy(scf_string_t* s0, const scf_string_t* s1)
 
 int	scf_string_cat(scf_string_t* s0, const scf_string_t* s1)
 {
-	if (!s0 || !s1 || !s0->data || !s1->data) {
-		scf_loge("\n");
+	if (!s0 || !s1 || !s0->data || !s1->data)
 		return -EINVAL;
-	}
 
 	assert(s0->capacity > 0);
 
 	if (s0->len + s1->len > s0->capacity) {
 		char* p = realloc(s0->data, s0->len + s1->len + SCF_STRING_NUMBER_INC + 1);
-		if (!p) {
-		scf_loge("\n");
+		if (!p)
 			return -ENOMEM;
-		}
 
 		s0->data = p;
 		s0->capacity = s0->len + s1->len + SCF_STRING_NUMBER_INC;
@@ -203,10 +189,8 @@ int	scf_string_cat_cstr(scf_string_t* s0, const char* str)
 
 int	scf_string_cat_cstr_len(scf_string_t* s0, const char* str, size_t len)
 {
-	if (!s0 || !s0->data || !str) {
-		scf_loge("\n");
+	if (!s0 || !s0->data || !str)
 		return -EINVAL;
-	}
 
 	scf_string_t s1;
 	s1.capacity	= -1;
@@ -330,7 +314,6 @@ int scf_string_get_offset(scf_string_t* str, const char* data, size_t len)
 	int ret;
 
 	if (0 == str->len) {
-
 		if (scf_string_cat_cstr_len(str, data, len) < 0)
 			return -1;
 		return 0;
