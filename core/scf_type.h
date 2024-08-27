@@ -22,9 +22,6 @@ struct scf_type_s {
 
 	scf_string_t*       name;
 
-	scf_lex_word_t*     w_start;
-	scf_lex_word_t*		w_end;
-
 	// list for scope's type_list_head
 	scf_list_t			list;
 
