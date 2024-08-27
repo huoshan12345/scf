@@ -5,90 +5,140 @@
 
 scf_function_t* scf_function_alloc(scf_lex_word_t* w)
 {
+	assert(w);
+
 	scf_function_t* f = calloc(1, sizeof(scf_function_t));
-	assert(f);
+	if (!f)
+		return NULL;
 
 	f->node.type = SCF_FUNCTION;
-
-	assert(w);
-	f->node.w = scf_lex_word_clone(w);
-
-	f->scope = scf_scope_alloc(w, "function");
-
-	f->rets             = scf_vector_alloc();
-	f->argv             = scf_vector_alloc();
-	f->callee_functions = scf_vector_alloc();
-	f->caller_functions = scf_vector_alloc();
-	f->jmps             = scf_vector_alloc();
-	f->dfs_tree         = scf_vector_alloc();
-	f->bb_loops         = scf_vector_alloc();
-
-	f->text_relas       = scf_vector_alloc();
-	f->data_relas       = scf_vector_alloc();
-
-	f->op_type = -1;
+	f->op_type   = -1;
 
 	scf_list_init(&f->basic_block_list_head);
 	scf_list_init(&f->dag_list_head);
+
+	f->scope = scf_scope_alloc(w, "function");
+	if (!f->scope)
+		goto _scope_error;
+
+	f->node.w = scf_lex_word_clone(w);
+	if (!f->node.w)
+		goto _word_error;
+
+	f->rets = scf_vector_alloc();
+	if (!f->rets)
+		goto _ret_error;
+
+	f->argv = scf_vector_alloc();
+	if (!f->argv)
+		goto _argv_error;
+
+	f->callee_functions = scf_vector_alloc();
+	if (!f->callee_functions)
+		goto _callee_error;
+
+	f->caller_functions = scf_vector_alloc();
+	if (!f->caller_functions)
+		goto _caller_error;
+
+	f->jmps = scf_vector_alloc();
+	if (!f->jmps)
+		goto _jmps_error;
+
+	f->dfs_tree = scf_vector_alloc();
+	if (!f->dfs_tree)
+		goto _dfs_tree_error;
+
+	f->bb_loops = scf_vector_alloc();
+	if (!f->bb_loops)
+		goto _loop_error;
+
+	f->bb_groups = scf_vector_alloc();
+	if (!f->bb_groups)
+		goto _group_error;
+
+	f->text_relas = scf_vector_alloc();
+	if (!f->text_relas)
+		goto _text_rela_error;
+
+	f->data_relas = scf_vector_alloc();
+	if (!f->data_relas)
+		goto _data_rela_error;
+
 	return f;
+
+_data_rela_error:
+	scf_vector_free(f->text_relas);
+_text_rela_error:
+	scf_vector_free(f->bb_groups);
+_group_error:
+	scf_vector_free(f->bb_loops);
+_loop_error:
+	scf_vector_free(f->dfs_tree);
+_dfs_tree_error:
+	scf_vector_free(f->jmps);
+_jmps_error:
+	scf_vector_free(f->caller_functions);
+_caller_error:
+	scf_vector_free(f->callee_functions);
+_callee_error:
+	scf_vector_free(f->argv);
+_argv_error:
+	scf_vector_free(f->rets);
+_ret_error:
+	scf_lex_word_free(f->node.w);
+_word_error:
+	scf_scope_free(f->scope);
+_scope_error:
+	free(f);
+	return NULL;
 }
 
 void scf_function_free(scf_function_t* f)
 {
-	assert(f);
-	assert(f->scope);
+	if (f) {
+		scf_scope_free(f->scope);
+		f->scope = NULL;
 
-	scf_scope_free(f->scope);
-	f->scope = NULL;
+		if (f->signature) {
+			scf_string_free(f->signature);
+			f->signature = NULL;
+		}
 
-	if (f->signature) {
-		scf_string_free(f->signature);
-		f->signature = NULL;
+		if (f->rets) {
+			scf_vector_clear(f->rets, ( void (*)(void*) ) scf_variable_free);
+			scf_vector_free (f->rets);
+		}
+
+		if (f->argv) {
+			scf_vector_clear(f->argv, ( void (*)(void*) ) scf_variable_free);
+			scf_vector_free (f->argv);
+			f->argv = NULL;
+		}
+
+		if (f->callee_functions)
+			scf_vector_free(f->callee_functions);
+
+		if (f->caller_functions)
+			scf_vector_free(f->caller_functions);
+
+		if (f->jmps) {
+			scf_vector_free(f->jmps);
+			f->jmps = NULL;
+		}
+
+		if (f->text_relas) {
+			scf_vector_free(f->text_relas);
+			f->text_relas = NULL;
+		}
+
+		if (f->data_relas) {
+			scf_vector_free(f->data_relas);
+			f->data_relas = NULL;
+		}
+
+		scf_node_free((scf_node_t*)f);
 	}
-
-	if (f->w_start) {
-		scf_lex_word_free(f->w_start);
-		f->w_start = NULL;
-	}
-
-	if (f->w_end) {
-		scf_lex_word_free(f->w_end);
-		f->w_end = NULL;
-	}
-
-	if (f->rets) {
-		scf_vector_clear(f->rets, ( void (*)(void*) ) scf_variable_free);
-		scf_vector_free (f->rets);
-	}
-
-	if (f->argv) {
-		scf_vector_clear(f->argv, ( void (*)(void*) ) scf_variable_free);
-		scf_vector_free (f->argv);
-		f->argv = NULL;
-	}
-
-	if (f->callee_functions)
-		scf_vector_free(f->callee_functions);
-
-	if (f->caller_functions)
-		scf_vector_free(f->caller_functions);
-
-	if (f->jmps) {
-		scf_vector_free(f->jmps);
-		f->jmps = NULL;
-	}
-
-	if (f->text_relas) {
-		scf_vector_free(f->text_relas);
-		f->text_relas = NULL;
-	}
-
-	if (f->data_relas) {
-		scf_vector_free(f->data_relas);
-		f->data_relas = NULL;
-	}
-
-	scf_node_free((scf_node_t*)f);
 }
 
 int scf_function_same(scf_function_t* f0, scf_function_t* f1)

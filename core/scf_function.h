@@ -10,9 +10,6 @@ struct scf_function_s {
 
 	scf_string_t*     signature;
 
-	scf_lex_word_t*   w_start;
-	scf_lex_word_t*   w_end;
-
 	scf_list_t        list; // for scope
 
 	scf_vector_t*     rets; // return values

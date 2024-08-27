@@ -50,12 +50,6 @@ scf_block_t* scf_block_alloc_cstr(const char* name)
 	return b;
 }
 
-void scf_block_end(scf_block_t* b, scf_lex_word_t* w)
-{
-	if (w)
-		b->w_end = scf_lex_word_clone(w);
-}
-
 void scf_block_free(scf_block_t* b)
 {
 	if (b) {
@@ -65,11 +59,6 @@ void scf_block_free(scf_block_t* b)
 		if (b->name) {
 			scf_string_free(b->name);
 			b->name = NULL;
-		}
-
-		if (b->w_end) {
-			scf_lex_word_free(b->w_end);
-			b->w_end = NULL;
 		}
 
 		scf_node_free((scf_node_t*)b);

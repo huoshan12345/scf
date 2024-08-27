@@ -9,17 +9,12 @@ struct scf_block_s {
 	scf_scope_t*        scope;
 
 	scf_string_t*       name;
-
-	scf_lex_word_t*     w_start;
-	scf_lex_word_t*		w_end;
 };
 
 
 scf_block_t*	scf_block_alloc(scf_lex_word_t* w);
 
 scf_block_t*	scf_block_alloc_cstr(const char* name);
-
-void			scf_block_end(scf_block_t* b, scf_lex_word_t* w);
 
 void			scf_block_free(scf_block_t* b);
 
