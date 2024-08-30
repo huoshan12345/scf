@@ -456,10 +456,9 @@ static int _lex_identity(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 			} else {
 				int type = _find_key_word(s->data);
 
-				if (-1 == type) {
-					type = SCF_LEX_WORD_ID + lex->nb_identities++;
-					w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, type);
-				} else
+				if (-1 == type)
+					w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_ID);
+				else
 					w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, type);
 			}
 

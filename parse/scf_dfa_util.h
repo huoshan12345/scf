@@ -453,4 +453,3 @@ static inline int scf_dfa_is_end_var(scf_dfa_t* dfa, void* word)
 }
 
 #endif
-

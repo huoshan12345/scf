@@ -247,7 +247,7 @@ typedef struct {
 
 static inline int scf_lex_is_identity(scf_lex_word_t* w)
 {
-	return w->type >= SCF_LEX_WORD_ID;
+	return SCF_LEX_WORD_ID == w->type;
 }
 
 static inline int scf_lex_is_operator(scf_lex_word_t* w)

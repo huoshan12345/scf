@@ -262,4 +262,3 @@ scf_dfa_module_t dfa_module_create =
 
 	.fini_module = _dfa_fini_module_create,
 };
-

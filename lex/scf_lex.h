@@ -31,8 +31,6 @@ typedef struct {
 
 	FILE*           fp; // file pointer to the code
 
-	int             nb_identities;
-
 	scf_string_t*   file; // original code file name
 	int             nb_lines;
 	int             pos;
