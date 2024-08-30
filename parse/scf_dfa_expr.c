@@ -943,11 +943,11 @@ static int _dfa_init_syntax_expr(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(expr,       semicolon);
 
 	// container(ptr, type, member)
-	scf_dfa_node_add_child(expr,       container);
-	scf_dfa_node_add_child(create_rp,  rp);
-	scf_dfa_node_add_child(create_rp,  binary_op);
-	scf_dfa_node_add_child(create_rp,  comma);
-	scf_dfa_node_add_child(create_rp,  semicolon);
+	scf_dfa_node_add_child(expr,         container);
+	scf_dfa_node_add_child(container_rp, rp);
+	scf_dfa_node_add_child(container_rp, binary_op);
+	scf_dfa_node_add_child(container_rp, comma);
+	scf_dfa_node_add_child(container_rp, semicolon);
 
 	// create class object
 	scf_dfa_node_add_child(expr,       create);
@@ -1028,9 +1028,6 @@ static int _dfa_init_syntax_expr(scf_dfa_t* dfa)
 
 	// create class object
 	scf_dfa_node_add_child(binary_op,  create);
-	scf_dfa_node_add_child(create_id,  semicolon);
-	scf_dfa_node_add_child(create_rp,  semicolon);
-
 	scf_dfa_node_add_child(binary_op,  expr);
 
 	scf_dfa_node_add_child(unary_post, rp);
@@ -1063,4 +1060,3 @@ scf_dfa_module_t dfa_module_expr =
 
 	.fini_module = _dfa_fini_module_expr,
 };
-

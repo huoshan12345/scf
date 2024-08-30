@@ -112,15 +112,7 @@ void scf_dfa_node_free(scf_dfa_node_t* node)
 	assert(0 == node->refs);
 
 	if (node->childs) {
-		int i;
-
-		for (i = 0; i < node->childs->size; i++) {
-			scf_dfa_node_t* child = node->childs->data[i];
-
-			scf_dfa_node_free(child);
-			child = NULL;
-		}
-
+		scf_vector_clear(node->childs, (void (*)(void*) )scf_dfa_node_free);
 		scf_vector_free(node->childs);
 		node->childs = NULL;
 	}
@@ -137,25 +129,30 @@ int scf_dfa_node_add_child(scf_dfa_node_t* parent, scf_dfa_node_t* child)
 		return -1;
 	}
 
-	if (!parent->childs) {
-		parent->childs = scf_vector_alloc();
-		scf_vector_add(parent->childs, child);
-		child->refs++;
-		return 0;
-	}
-
+	scf_dfa_node_t* node;
 	int i;
 
-	for (i = 0; i < parent->childs->size; i++) {
-		scf_dfa_node_t* node = parent->childs->data[i];
+	if (parent->childs) {
 
-		if (!strcmp(child->name, node->name)) {
-			scf_logi("repeated: node->name: %s\n", node->name);
-			return SCF_DFA_REPEATED;
+		for (i = 0; i < parent->childs->size; i++) {
+			node      = parent->childs->data[i];
+
+			if (!strcmp(child->name, node->name)) {
+				scf_logi("repeated: child: %s, parent: %s\n", child->name, parent->name);
+				return SCF_DFA_REPEATED;
+			}
 		}
+
+	} else {
+		parent->childs = scf_vector_alloc();
+		if (!parent->childs)
+			return -ENOMEM;
 	}
 
-	scf_vector_add(parent->childs, child);
+	int ret = scf_vector_add(parent->childs, child);
+	if (ret < 0)
+		return ret;
+
 	child->refs++;
 	return 0;
 }
@@ -171,10 +168,11 @@ int scf_dfa_open(scf_dfa_t** pdfa, const char* name, void* priv)
 
 	int i;
 	for (i = 0; dfa_ops_array[i]; i++) {
-		if (!strcmp(name, dfa_ops_array[i]->name)) {
-			ops = dfa_ops_array[i];
+		ops =   dfa_ops_array[i];
+
+		if (!strcmp(name, ops->name))
 			break;
-		}
+		ops = NULL;
 	}
 
 	if (!ops) {
@@ -204,15 +202,7 @@ void scf_dfa_close(scf_dfa_t* dfa)
 		return;
 
 	if (dfa->nodes) {
-		int i;
-
-		for (i = 0; i < dfa->nodes->size; i++) {
-			scf_dfa_node_t* node = dfa->nodes->data[i];
-
-			scf_dfa_node_free(node);
-			node = NULL;
-		}
-
+		scf_vector_clear(dfa->nodes, (void (*)(void*) )scf_dfa_node_free);
 		scf_vector_free(dfa->nodes);
 		dfa->nodes = NULL;
 	}
@@ -229,13 +219,15 @@ void scf_dfa_close(scf_dfa_t* dfa)
 int scf_dfa_add_node(scf_dfa_t* dfa, scf_dfa_node_t* node)
 {
 	if (!dfa || !node)
-		return -1;
+		return -EINVAL;
 
-	if (!dfa->nodes)
+	if (!dfa->nodes) {
 		dfa->nodes = scf_vector_alloc();
+		if (!dfa->nodes)
+			return -ENOMEM;
+	}
 
-	scf_vector_add(dfa->nodes, node);
-	return 0;
+	return scf_vector_add(dfa->nodes, node);
 }
 
 scf_dfa_node_t* scf_dfa_find_node(scf_dfa_t* dfa, const char* name)
@@ -246,10 +238,11 @@ scf_dfa_node_t* scf_dfa_find_node(scf_dfa_t* dfa, const char* name)
 	if (!dfa->nodes)
 		return NULL;
 
+	scf_dfa_node_t* node;
 	int i;
 
 	for (i = 0; i < dfa->nodes->size; i++) {
-		scf_dfa_node_t* node = dfa->nodes->data[i];
+		node      = dfa->nodes->data[i];
 
 		if (!strcmp(name, node->name))
 			return node;
@@ -262,20 +255,19 @@ static int _scf_dfa_childs_parse_word(scf_dfa_t* dfa, scf_dfa_node_t** childs, i
 {
 	assert(words->size > 0);
 
-	int i = 0;
-	while (i < nb_childs) {
+	int i;
+	for (i = 0; i < nb_childs; i++) {
+
 		scf_dfa_node_t* child = childs[i];
 		scf_lex_word_t* w     = words->data[words->size - 1];
 
-		scf_logd("nb_childs: %d, child: %s, w: %s\n", nb_childs, child->name, w->text->data);
+		scf_logd("i: %d, nb_childs: %d, child: %s, w: %s\n", i, nb_childs, child->name, w->text->data);
 
 		scf_dfa_hook_t* hook = scf_dfa_find_hook(dfa, &(dfa->hooks[SCF_DFA_HOOK_PRE]), w);
 		if (hook) {
 			// if pre hook is set, deliver the word to the proper hook node.
-			if (hook->node != child) {
-				i++;
+			if (hook->node != child)
 				continue;
-			}
 
 			scf_logi("\033[32mpre hook: %s\033[0m\n", hook->node->name);
 
@@ -285,21 +277,17 @@ static int _scf_dfa_childs_parse_word(scf_dfa_t* dfa, scf_dfa_node_t** childs, i
 
 		} else {
 			assert(child->is);
-			if (!child->is(dfa, w)) {
-				i++;
+			if (!child->is(dfa, w))
 				continue;
-			}
 		}
 
 		int ret = _scf_dfa_node_parse_word(dfa, child, words, data);
 
-		if (SCF_DFA_OK == ret) {
+		if (SCF_DFA_OK == ret)
 			return SCF_DFA_OK;
 
-		} else if (SCF_DFA_ERROR == ret)
+		else if (SCF_DFA_ERROR == ret)
 			return SCF_DFA_ERROR;
-
-		i++;
 	}
 
 	scf_logd("SCF_DFA_NEXT_SYNTAX\n\n");
@@ -433,58 +421,37 @@ _continue:
 
 int scf_dfa_parse_word(scf_dfa_t* dfa, void* word, void* data)
 {
-	if (!dfa || !word) {
-		scf_loge("\n");
-		return -1;
-	}
+	if (!dfa || !word)
+		return -EINVAL;
 
-	if (!dfa->syntaxes || dfa->syntaxes->size <= 0) {
-		scf_loge("\n");
-		return -1;
-	}
+	if (!dfa->syntaxes || dfa->syntaxes->size <= 0)
+		return -EINVAL;
 
-	if (!dfa->ops || !dfa->ops->pop_word) {
-		scf_loge("\n");
-		return -1;
-	}
+	if (!dfa->ops || !dfa->ops->pop_word)
+		return -EINVAL;
 
-	scf_vector_t*   words = scf_vector_alloc();
-	scf_lex_word_t* w     = word;
+	scf_vector_t* words = scf_vector_alloc();
+	if (!words)
+		return -ENOMEM;
 
-	int ret;
-	int i;
-
-//	assert(!dfa->words);
-//	dfa->words = scf_vector_alloc();
-
-	scf_vector_add(words, word);
-//	scf_vector_add(dfa->words, word);
+	int ret = scf_vector_add(words, word);
+	if (ret < 0)
+		return ret;
 
 	ret = _scf_dfa_childs_parse_word(dfa, (scf_dfa_node_t**)dfa->syntaxes->data, dfa->syntaxes->size, words, data);
-
 
 	if (SCF_DFA_OK != ret) {
 		assert(words->size >= 1);
 
-		w = words->data[words->size - 1];
+		scf_lex_word_t* w = words->data[words->size - 1];
 		scf_loge("ret: %d, w->type: %d, '%s', line: %d\n\n", ret, w->type, w->text->data, w->line);
 
-		scf_vector_free(words);
-		words = NULL;
-		return SCF_DFA_ERROR;
+		ret = SCF_DFA_ERROR;
 	}
 
-	for (i = 0; i < words->size; i++) {
-		scf_lex_word_t* w = words->data[i];
-		scf_logd("##free w: %p, w->type: %d, '%s'\n", w, w->type, w->text->data);
-
-		dfa->ops->free_word(words->data[i]);
-		words->data[i] = NULL;
-	}
-
+	scf_vector_clear(words, (void (*)(void*) )dfa->ops->free_word);
 	scf_vector_free(words);
 	words = NULL;
 
-	return SCF_DFA_OK;
+	return ret;
 }
-
