@@ -254,13 +254,13 @@ static void _x64_elf_process_syms(elf_native_t* x64, uint32_t cs_index)
 	}
 }
 
-static int _x64_elf_write_exec(scf_elf_context_t* elf)
+static int _x64_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 {
 	elf_native_t* x64      = elf->priv;
 	int 		  nb_phdrs = 3;
 
 	if (x64->dynsyms && x64->dynsyms->size) {
-		__x64_elf_add_dyn(x64);
+		__x64_elf_add_dyn(x64, sysroot);
 		nb_phdrs = 6;
 	}
 

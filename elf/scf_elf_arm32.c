@@ -207,13 +207,13 @@ static int _arm32_elf_link_sections(elf_native_t* arm32, uint32_t cs_index, uint
 	return 0;
 }
 
-static int _arm32_elf_write_exec(scf_elf_context_t* elf)
+static int _arm32_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 {
 	elf_native_t* arm32    = elf->priv;
 	int 		  nb_phdrs = 3;
 
 	if (arm32->dynsyms && arm32->dynsyms->size) {
-		__arm32_elf_add_dyn(arm32);
+		__arm32_elf_add_dyn(arm32, sysroot);
 		nb_phdrs = 6;
 	}
 
@@ -460,4 +460,3 @@ scf_elf_ops_t	elf_ops_arm32 =
 	.write_rel	      = _arm32_elf_write_rel,
 	.write_exec       = _arm32_elf_write_exec,
 };
-

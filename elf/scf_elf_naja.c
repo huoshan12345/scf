@@ -220,13 +220,13 @@ static int _naja_elf_link_sections(elf_native_t* naja, uint32_t cs_index, uint32
 	return 0;
 }
 
-static int _naja_elf_write_exec(scf_elf_context_t* elf)
+static int _naja_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 {
 	elf_native_t* naja    = elf->priv;
 	int 		  nb_phdrs = 3;
 
 	if (naja->dynsyms && naja->dynsyms->size) {
-		__naja_elf_add_dyn(naja);
+		__naja_elf_add_dyn(naja, sysroot);
 		nb_phdrs = 6;
 	}
 
@@ -473,4 +473,3 @@ scf_elf_ops_t	elf_ops_naja =
 	.write_rel	      = _naja_elf_write_rel,
 	.write_exec       = _naja_elf_write_exec,
 };
-

@@ -420,7 +420,7 @@ static int _section_cmp(const void* v0, const void* v1)
 	return 0;
 }
 
-int __arm32_elf_add_dyn (elf_native_t* arm32)
+int __arm32_elf_add_dyn (elf_native_t* arm32, const char* sysroot)
 {
 	elf_section_t* s;
 	elf_sym_t*     sym;
@@ -537,7 +537,12 @@ int __arm32_elf_add_dyn (elf_native_t* arm32)
 
 	Elf32_Dyn* dyns = (Elf32_Dyn*)arm32->dynamic->data;
 
-	size_t prefix   = strlen("../lib/arm32/");
+	size_t prefix   = strlen(sysroot);
+
+	if ('/' != sysroot[prefix - 1])
+		prefix++;
+
+	prefix += strlen("arm32/");
 
 	for (i = 0; i < arm32->dyn_needs->size; i++) {
 		scf_string_t* needed = arm32->dyn_needs->data[i];

@@ -220,13 +220,13 @@ static int _arm64_elf_link_sections(elf_native_t* arm64, uint32_t cs_index, uint
 	return 0;
 }
 
-static int _arm64_elf_write_exec(scf_elf_context_t* elf)
+static int _arm64_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 {
 	elf_native_t* arm64    = elf->priv;
 	int 		  nb_phdrs = 3;
 
 	if (arm64->dynsyms && arm64->dynsyms->size) {
-		__arm64_elf_add_dyn(arm64);
+		__arm64_elf_add_dyn(arm64, sysroot);
 		nb_phdrs = 6;
 	}
 
@@ -472,4 +472,3 @@ scf_elf_ops_t	elf_ops_arm64 =
 	.write_rel	      = _arm64_elf_write_rel,
 	.write_exec       = _arm64_elf_write_exec,
 };
-

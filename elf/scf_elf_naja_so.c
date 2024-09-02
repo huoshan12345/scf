@@ -423,11 +423,11 @@ static int _section_cmp(const void* v0, const void* v1)
 	return 0;
 }
 
-int __naja_elf_add_dyn (elf_native_t* naja)
+int __naja_elf_add_dyn(elf_native_t* naja, const char* sysroot)
 {
 	elf_section_t* s;
 	elf_sym_t*     sym;
-	Elf64_Rela*            rela;
+	Elf64_Rela*    rela;
 
 	int i;
 	for (i  = naja->symbols->size - 1; i >= 0; i--) {
@@ -540,7 +540,12 @@ int __naja_elf_add_dyn (elf_native_t* naja)
 
 	Elf64_Dyn* dyns = (Elf64_Dyn*)naja->dynamic->data;
 
-	size_t prefix   = strlen("../lib/arm64/");
+	size_t prefix   = strlen(sysroot);
+
+	if ('/' != sysroot[prefix - 1])
+		prefix++;
+
+	prefix += strlen("arm64/");
 
 	for (i = 0; i < naja->dyn_needs->size; i++) {
 		scf_string_t* needed = naja->dyn_needs->data[i];
