@@ -67,6 +67,7 @@ static scf_key_word_t  key_words[] =
 
 	{"include",   SCF_LEX_WORD_KEY_INCLUDE},
 
+	{"enum",      SCF_LEX_WORD_KEY_ENUM},
 	{"union",     SCF_LEX_WORD_KEY_UNION},
 	{"struct",    SCF_LEX_WORD_KEY_STRUCT},
 };
