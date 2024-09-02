@@ -13,6 +13,7 @@ extern scf_dfa_module_t  dfa_module_container;
 extern scf_dfa_module_t  dfa_module_init_data;
 extern scf_dfa_module_t  dfa_module_va_arg;
 
+extern scf_dfa_module_t  dfa_module_enum;
 extern scf_dfa_module_t  dfa_module_union;
 extern scf_dfa_module_t  dfa_module_class;
 
@@ -53,6 +54,7 @@ scf_dfa_module_t* dfa_modules[] =
 	&dfa_module_init_data,
 	&dfa_module_va_arg,
 
+	&dfa_module_enum,
 	&dfa_module_union,
 	&dfa_module_class,
 

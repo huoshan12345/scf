@@ -67,6 +67,20 @@ static inline int scf_dfa_is_semicolon(scf_dfa_t* dfa, void* word)
 	return SCF_LEX_WORD_SEMICOLON == w->type;
 }
 
+static inline int scf_dfa_is_enum(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_KEY_ENUM == w->type;
+}
+
+static inline int scf_dfa_is_union(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_KEY_UNION == w->type;
+}
+
 static inline int scf_dfa_is_end_struct(scf_dfa_t* dfa, void* word)
 {
 	scf_lex_word_t* w = word;

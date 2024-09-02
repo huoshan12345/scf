@@ -132,6 +132,7 @@ CFILES += scf_dfa_container.c
 CFILES += scf_dfa_va_arg.c
 CFILES += scf_dfa_expr.c
 
+CFILES += scf_dfa_enum.c
 CFILES += scf_dfa_union.c
 CFILES += scf_dfa_class.c
 

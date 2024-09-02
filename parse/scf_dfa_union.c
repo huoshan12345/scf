@@ -18,12 +18,6 @@ typedef struct {
 
 } union_module_data_t;
 
-static int _union_is_union(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-	return SCF_LEX_WORD_KEY_UNION == w->type;
-}
-
 static int _union_action_identity(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*          parse = dfa->priv;
@@ -224,7 +218,7 @@ static int _union_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* da
 
 static int _dfa_init_module_union(scf_dfa_t* dfa)
 {
-	SCF_DFA_MODULE_NODE(dfa, union, _union,    _union_is_union,      NULL);
+	SCF_DFA_MODULE_NODE(dfa, union, _union,    scf_dfa_is_union,     NULL);
 
 	SCF_DFA_MODULE_NODE(dfa, union, identity,  scf_dfa_is_identity,  _union_action_identity);
 
@@ -314,4 +308,3 @@ scf_dfa_module_t dfa_module_union =
 
 	.fini_module = _dfa_fini_module_union,
 };
-

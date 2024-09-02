@@ -36,6 +36,7 @@ struct scf_node_s {
 
 	uint32_t            root_flag   :1; // set when node is root block
 	uint32_t            file_flag   :1; // set when node is a file block
+	uint32_t            enum_flag   :1; // set when node is a enum type
 	uint32_t            class_flag  :1; // set when node is a class type
 	uint32_t            union_flag  :1; // set when node is a union type
 	uint32_t            define_flag :1; // set when node is a function & is defined not only declared

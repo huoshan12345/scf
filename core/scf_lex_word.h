@@ -165,6 +165,7 @@ enum scf_lex_words
 	SCF_LEX_WORD_KEY_ASYNC,     // async
 	SCF_LEX_WORD_KEY_AWAIT,     // await
 
+	SCF_LEX_WORD_KEY_ENUM,      // enum
 	SCF_LEX_WORD_KEY_UNION,     // union
 	SCF_LEX_WORD_KEY_STRUCT,    // struct
 	SCF_LEX_WORD_KEY_END_STRUCT,// end struct
