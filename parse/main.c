@@ -5,45 +5,88 @@
 
 static char* __objs[] =
 {
-	"../lib/_start.o",
-	"../lib/scf_object.o",
-	"../lib/scf_atomic.o",
+	"_start.o",
+	"scf_object.o",
+	"scf_atomic.o",
 };
 
 static char* __sofiles[] =
 {
-	"../lib/x64//lib64/ld-linux-x86-64.so.2",
-	"../lib/x64/libc.so.6",
+	"/lib64/ld-linux-x86-64.so.2",
+	"libc.so.6",
 };
 
 static char* __arm64_objs[] =
 {
-	"../lib/arm64/_start.o",
+	"_start.o",
 };
 
 static char* __arm64_sofiles[] =
 {
-	"../lib/arm64//lib/ld-linux-aarch64.so.1",
-	"../lib/arm64/libc.so.6",
+	"/lib/ld-linux-aarch64.so.1",
+	"libc.so.6",
 };
 
 static char* __arm32_objs[] =
 {
-	"../lib/arm32/_start.o",
+	"_start.o",
 };
 
 static char* __arm32_sofiles[] =
 {
-	"../lib/arm32//lib/ld-linux-armhf.so.3",
-	"../lib/arm32/libc.so.6",
+	"/lib/ld-linux-armhf.so.3",
+	"libc.so.6",
 };
 
 void usage(char* path)
 {
-	fprintf(stderr, "Usage: %s [-c] [-t] [-a arch] [-o out] src0 [src1]\n\n", path);
+	fprintf(stderr, "Usage: %s [-c] [-t] [-a arch] [-s sysroot] [-o out] src0 [src1]\n\n", path);
 	fprintf(stderr, "-c: only compile,  not link\n");
 	fprintf(stderr, "-t: only 3ac code, not compile\n");
 	fprintf(stderr, "-a: select cpu arch (x64, arm64, naja, or eda), default is x64\n");
+	fprintf(stderr, "-s: sysroot dir, default is '../lib'\n");
+}
+
+int add_sys_files(scf_vector_t* vec, const char* sysroot, const char* arch, char* files[], int n_files)
+{
+	int len0 = strlen(sysroot);
+	int len1 = strlen(arch);
+	int i;
+
+	for (i = 0; i < n_files; i++) {
+
+		int len2 = strlen(files[i]);
+
+		char* fname = calloc(1, len0 + len1 + len2 + 3);
+		if (!fname)
+			return -ENOMEM;
+
+		int len = len0;
+		memcpy(fname, sysroot, len0);
+		if (fname[len - 1] != '/') {
+			fname[len]      = '/';
+			len++;
+		}
+
+		memcpy(fname + len, arch, len1);
+		len += len1;
+		if (fname[len - 1] != '/') {
+			fname[len]      = '/';
+			len++;
+		}
+
+		memcpy(fname + len, files[i], len2);
+		len += len2;
+		fname[len] = '\0';
+
+		scf_logi("add file: %s\n", fname);
+
+		int ret = scf_vector_add(vec, fname);
+		if (ret < 0)
+			return ret;
+	}
+
+	return 0;
 }
 
 int main(int argc, char* argv[])
@@ -58,10 +101,11 @@ int main(int argc, char* argv[])
 	scf_vector_t* srcs    = scf_vector_alloc();
 	scf_vector_t* objs    = scf_vector_alloc();
 
-	char* out  = NULL;
-	char* arch = "x64";
-	int   link = 1;
-	int   _3ac = 0;
+	char* sysroot = "../lib";
+	char* arch    = "x64";
+	char* out     = NULL;
+	int   link    = 1;
+	int   _3ac    = 0;
 
 	int   i;
 
@@ -88,6 +132,17 @@ int main(int argc, char* argv[])
 				}
 
 				arch = argv[i];
+				continue;
+			}
+
+			if ('s' == argv[i][1]) {
+
+				if (++i >= argc) {
+					usage(argv[0]);
+					return -EINVAL;
+				}
+
+				sysroot = argv[i];
 				continue;
 			}
 
@@ -180,19 +235,13 @@ int main(int argc, char* argv[])
 
 #define MAIN_ADD_FILES(_objs, _sofiles) \
 	do { \
-		for (i  = 0; i < sizeof(_objs) / sizeof(_objs[0]); i++) { \
-			\
-			int ret = scf_vector_add(objs, _objs[i]); \
-			if (ret < 0) \
-			return ret; \
-		} \
+		int ret = add_sys_files(objs, sysroot, arch, _objs, sizeof(_objs) / sizeof(_objs[0])); \
+		if (ret < 0) \
+		    return ret; \
 		\
-		for (i  = 0; i < sizeof(_sofiles) / sizeof(_sofiles[0]); i++) { \
-			\
-			int ret = scf_vector_add(sofiles, _sofiles[i]); \
-			if (ret < 0) \
-			return ret; \
-		} \
+		ret = add_sys_files(sofiles, sysroot, arch, _sofiles, sizeof(_sofiles) / sizeof(_sofiles[0])); \
+		if (ret < 0) \
+		    return ret; \
 	} while (0)
 
 
@@ -210,7 +259,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	if (scf_elf_link(objs, afiles, sofiles, arch, exec) < 0) {
+	if (scf_elf_link(objs, afiles, sofiles, sysroot, arch, exec) < 0) {
 		scf_loge("\n");
 		return -1;
 	}

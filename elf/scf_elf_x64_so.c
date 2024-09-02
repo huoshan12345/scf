@@ -426,7 +426,7 @@ static int _section_cmp(const void* v0, const void* v1)
 	return 0;
 }
 
-int __x64_elf_add_dyn (elf_native_t* x64)
+int __x64_elf_add_dyn(elf_native_t* x64, const char* sysroot)
 {
 	elf_section_t* s;
 	elf_sym_t*     sym;
@@ -543,7 +543,12 @@ int __x64_elf_add_dyn (elf_native_t* x64)
 
 	Elf64_Dyn* dyns = (Elf64_Dyn*)x64->dynamic->data;
 
-	size_t prefix   = strlen("../lib/x64/");
+	size_t prefix   = strlen(sysroot);
+
+	if ('/' != sysroot[prefix - 1])
+		prefix++;
+
+	prefix += strlen("x64/");
 
 	for (i = 0; i < x64->dyn_needs->size; i++) {
 		scf_string_t* needed = x64->dyn_needs->data[i];

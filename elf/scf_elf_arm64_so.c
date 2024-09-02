@@ -422,11 +422,11 @@ static int _section_cmp(const void* v0, const void* v1)
 	return 0;
 }
 
-int __arm64_elf_add_dyn (elf_native_t* arm64)
+int __arm64_elf_add_dyn(elf_native_t* arm64, const char* sysroot)
 {
 	elf_section_t* s;
 	elf_sym_t*     sym;
-	Elf64_Rela*            rela;
+	Elf64_Rela*    rela;
 
 	int i;
 	for (i  = arm64->symbols->size - 1; i >= 0; i--) {
@@ -539,7 +539,12 @@ int __arm64_elf_add_dyn (elf_native_t* arm64)
 
 	Elf64_Dyn* dyns = (Elf64_Dyn*)arm64->dynamic->data;
 
-	size_t prefix   = strlen("../lib/arm64/");
+	size_t prefix   = strlen(sysroot);
+
+	if ('/' != sysroot[prefix - 1])
+		prefix++;
+
+	prefix += strlen("arm64/");
 
 	for (i = 0; i < arm64->dyn_needs->size; i++) {
 		scf_string_t* needed = arm64->dyn_needs->data[i];

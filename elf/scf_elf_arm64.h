@@ -6,7 +6,7 @@
 #include"scf_vector.h"
 #include"scf_string.h"
 
-int __arm64_elf_add_dyn (elf_native_t* arm64);
+int __arm64_elf_add_dyn (elf_native_t* arm64, const char* sysroot);
 int __arm64_elf_post_dyn(elf_native_t* arm64, uint64_t rx_base, uint64_t rw_base, elf_section_t* cs);
 
 int __arm64_elf_write_phdr   (scf_elf_context_t* elf, uint64_t rx_base, uint64_t offset, uint32_t nb_phdrs);

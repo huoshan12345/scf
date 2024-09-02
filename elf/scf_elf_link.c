@@ -1036,7 +1036,7 @@ static int link_relas(scf_elf_file_t* exec, char* afiles[], int nb_afiles, char*
 	return 0;
 }
 
-int scf_elf_link(scf_vector_t* objs, scf_vector_t* afiles, scf_vector_t* sofiles, const char* arch, const char* out)
+int scf_elf_link(scf_vector_t* objs, scf_vector_t* afiles, scf_vector_t* sofiles, const char* sysroot, const char* arch, const char* out)
 {
 	scf_elf_file_t* exec = NULL;
 	scf_elf_file_t* so   = NULL;
@@ -1171,7 +1171,7 @@ int scf_elf_link(scf_vector_t* objs, scf_vector_t* afiles, scf_vector_t* sofiles
 	ADD_RELA_SECTION(debug_info, SCF_ELF_FILE_SHNDX(debug_info));
 	ADD_RELA_SECTION(debug_line, SCF_ELF_FILE_SHNDX(debug_line));
 
-	ret = scf_elf_write_exec(exec->elf);
+	ret = scf_elf_write_exec(exec->elf, sysroot);
 	if (ret < 0)
 		return ret;
 
@@ -1179,4 +1179,3 @@ int scf_elf_link(scf_vector_t* objs, scf_vector_t* afiles, scf_vector_t* sofiles
 
 	return 0;
 }
-
