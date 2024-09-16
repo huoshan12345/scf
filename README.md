@@ -90,9 +90,9 @@ though every name except .o,.a,.so will be considered as the source code,
 
 but .c is supported by all editors in syntax high-lighting.
 
-8，scf对源文件扩展名的检测在main.c里，你可以把第127行的.c改成任何你想要的扩展名:( 但不能是.a,.so,.o。
+8，scf对源文件扩展名的检测在main.c里，你可以把第182行的.c改成任何你想要的扩展名:( 但不能是.a,.so,.o。
 
-scf checks the extended name in Line 66 of main.c, you can revise to 'any' you want, except .a,.so,.o.
+scf checks the extended name in Line 182 of main.c, you can revise to 'any' you want, except .a,.so,.o.
 
 9，details in the code:(
 
