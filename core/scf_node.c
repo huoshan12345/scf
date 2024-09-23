@@ -130,10 +130,8 @@ scf_node_t*	scf_node_alloc_label(scf_label_t* l)
 
 int scf_node_add_child(scf_node_t* parent, scf_node_t* child)
 {
-	if (!parent) {
-		scf_loge("invalid, parent is NULL\n");
-		return -1;
-	}
+	if (!parent)
+		return -EINVAL;
 
 	void* p = realloc(parent->nodes, sizeof(scf_node_t*) * (parent->nb_nodes + 1));
 	if (!p) {
@@ -148,6 +146,23 @@ int scf_node_add_child(scf_node_t* parent, scf_node_t* child)
 		child->parent = parent;
 
 	return 0;
+}
+
+void scf_node_del_child(scf_node_t* parent, scf_node_t* child)
+{
+	if (!parent)
+		return;
+
+	int i;
+	for (i = 0; i  < parent->nb_nodes; i++) {
+		if (child == parent->nodes[i])
+			break;
+	}
+
+	for (++i; i < parent->nb_nodes; i++)
+		parent->nodes[i - 1] = parent->nodes[i];
+
+	parent->nodes[--parent->nb_nodes] = NULL;
 }
 
 void scf_node_free_data(scf_node_t* node)
@@ -354,4 +369,3 @@ failed:
 	checked = NULL;
 	return ret;
 }
-

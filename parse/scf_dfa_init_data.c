@@ -279,4 +279,3 @@ scf_dfa_module_t dfa_module_init_data =
 	.init_module = _dfa_init_module_init_data,
 	.init_syntax = _dfa_init_syntax_init_data,
 };
-

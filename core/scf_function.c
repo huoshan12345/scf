@@ -294,4 +294,3 @@ error:
 	scf_string_free(s);
 	return -1;
 }
-

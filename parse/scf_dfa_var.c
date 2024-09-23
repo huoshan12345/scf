@@ -348,7 +348,6 @@ static int _var_action_ls(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	d->current_var->const_literal_flag = 1;
 
 	SCF_DFA_PUSH_HOOK(scf_dfa_find_node(dfa, "var_rs"), SCF_DFA_HOOK_POST);
-	//SCF_DFA_PUSH_END_WORD(SCF_LEX_WORD_RS, var, 0);
 
 	d->nb_lss++;
 

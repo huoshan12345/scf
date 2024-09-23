@@ -55,8 +55,14 @@ enum scf_lex_words
 	SCF_LEX_WORD_LA,            // << left angle brackets
 	SCF_LEX_WORD_RA,            // >> right angle brackets
 
+	SCF_LEX_WORD_KEY_SIZEOF,    // sizeof
+	SCF_LEX_WORD_KEY_CREATE,    // create class object
+	SCF_LEX_WORD_KEY_CONTAINER, // container_of
+	SCF_LEX_WORD_KEY_VA_ARG,    // va_arg
+
 	SCF_LEX_WORD_ARROW,         // ->  arrow
 	SCF_LEX_WORD_DOT,           // .   dot
+
 	SCF_LEX_WORD_RANGE,         // ..  range
 	SCF_LEX_WORD_VAR_ARGS,      // ... variable args
 
@@ -74,61 +80,32 @@ enum scf_lex_words
 	// key words
 	SCF_LEX_WORD_KEY_IF,		// if
 	SCF_LEX_WORD_KEY_ELSE,		// else
-	SCF_LEX_WORD_KEY_THEN,      // then
-	SCF_LEX_WORD_KEY_ELSIF,     // else if
-	SCF_LEX_WORD_KEY_END_IF,    // end if
 
 	SCF_LEX_WORD_KEY_FOR,       // for
-	SCF_LEX_WORD_KEY_TO,        // to
-	SCF_LEX_WORD_KEY_BY,        // by
 	SCF_LEX_WORD_KEY_DO,        // do
-	SCF_LEX_WORD_KEY_END_FOR,   // end for
-
 	SCF_LEX_WORD_KEY_WHILE,     // while
-	SCF_LEX_WORD_KEY_END_WHILE, // end while
-
-	SCF_LEX_WORD_KEY_REPEAT,    // repeat
-	SCF_LEX_WORD_KEY_UNTIL,     // until
-	SCF_LEX_WORD_KEY_END_REPEAT,//
 
 	SCF_LEX_WORD_KEY_BREAK,     // break
 	SCF_LEX_WORD_KEY_CONTINUE,  // continue
-	SCF_LEX_WORD_KEY_EXIT,      // exit
 
 	SCF_LEX_WORD_KEY_SWITCH,	// switch
 	SCF_LEX_WORD_KEY_CASE,		// case
 	SCF_LEX_WORD_KEY_DEFAULT,	// default
-	SCF_LEX_WORD_KEY_END_CASE,  // end case
 
 	SCF_LEX_WORD_KEY_RETURN,	// return
 
 	SCF_LEX_WORD_KEY_GOTO,		// goto
 
-	SCF_LEX_WORD_KEY_SIZEOF,    // sizeof
-
-	SCF_LEX_WORD_KEY_CREATE,    // create class object
-
-	SCF_LEX_WORD_KEY_CONTAINER, // container_of
-	SCF_LEX_WORD_KEY_OF,        // of
-	SCF_LEX_WORD_KEY_AT,        // at
-	SCF_LEX_WORD_KEY_EN,        // enable
-	SCF_LEX_WORD_KEY_ENO,       // enable output
 
 	SCF_LEX_WORD_KEY_OPERATOR,  // operator
-
 	SCF_LEX_WORD_KEY_UNDERLINE, // _ underline
 
 	SCF_LEX_WORD_KEY_INCLUDE,   // include
+	SCF_LEX_WORD_KEY_DEFINE,    // define
 
 	// data types
 	SCF_LEX_WORD_KEY_CHAR,		// char
 	SCF_LEX_WORD_KEY_BIT,       // bit
-
-	SCF_LEX_WORD_KEY_TIME,          // time
-	SCF_LEX_WORD_KEY_TIME_OF_DATE,  // time of date
-	SCF_LEX_WORD_KEY_DATE,          // date
-	SCF_LEX_WORD_KEY_DATE_AND_TIME, // date and time
-	SCF_LEX_WORD_KEY_STRING,        // string
 
 	SCF_LEX_WORD_KEY_INT,		// int
 	SCF_LEX_WORD_KEY_FLOAT,     // float
@@ -150,7 +127,6 @@ enum scf_lex_words
 	SCF_LEX_WORD_KEY_VOID,      // void
 
 	SCF_LEX_WORD_KEY_VA_START,  // va_start
-	SCF_LEX_WORD_KEY_VA_ARG,    // va_arg
 	SCF_LEX_WORD_KEY_VA_END,    // va_end
 
 	// class
@@ -168,38 +144,8 @@ enum scf_lex_words
 	SCF_LEX_WORD_KEY_ENUM,      // enum
 	SCF_LEX_WORD_KEY_UNION,     // union
 	SCF_LEX_WORD_KEY_STRUCT,    // struct
-	SCF_LEX_WORD_KEY_END_STRUCT,// end struct
-	SCF_LEX_WORD_KEY_ARRAY,     // array
 
-	SCF_LEX_WORD_KEY_TASK,      // task
-
-	SCF_LEX_WORD_KEY_TON,       // ton
-	SCF_LEX_WORD_KEY_F_TRIG,    // f trig
-
-	SCF_LEX_WORD_KEY_CONFIG,       // config
-	SCF_LEX_WORD_KEY_END_CONFIG,   // end config
-
-	SCF_LEX_WORD_KEY_RESOURCE,     // config
-	SCF_LEX_WORD_KEY_END_RESOURCE, // end config
-
-	SCF_LEX_WORD_KEY_PROGRAM,     // program
-	SCF_LEX_WORD_KEY_END_PROGRAM,
-
-	SCF_LEX_WORD_KEY_FUNCTION,    // function
-	SCF_LEX_WORD_KEY_END_FUNCTION,
-
-	SCF_LEX_WORD_KEY_FUNCTION_BLOCK,    // function block
-	SCF_LEX_WORD_KEY_END_FUNCTION_BLOCK,
-
-	SCF_LEX_WORD_KEY_VAR,          // var
-	SCF_LEX_WORD_KEY_VAR_INPUT,    // var input
-	SCF_LEX_WORD_KEY_VAR_OUTPUT,   // var output
-	SCF_LEX_WORD_KEY_VAR_IN_OUT,   // var in out
-	SCF_LEX_WORD_KEY_VAR_GLOBAL,   // var global
-	SCF_LEX_WORD_KEY_VAR_EXTERNAL, // var external
-	SCF_LEX_WORD_KEY_VAR_TEMP,     // var temp
-	SCF_LEX_WORD_KEY_VAR_CONSTANT, // var const
-	SCF_LEX_WORD_KEY_END_VAR,
+	SCF_LEX_WORD_KEY_VAR,       // var
 
 	// const literal value
 	SCF_LEX_WORD_CONST_CHAR,
@@ -253,11 +199,7 @@ static inline int scf_lex_is_identity(scf_lex_word_t* w)
 
 static inline int scf_lex_is_operator(scf_lex_word_t* w)
 {
-	return (w->type >= SCF_LEX_WORD_PLUS && w->type <= SCF_LEX_WORD_DOT)
-		|| SCF_LEX_WORD_KEY_SIZEOF == w->type
-		|| SCF_LEX_WORD_KEY_VA_ARG == w->type
-		|| SCF_LEX_WORD_KEY_CREATE == w->type
-		|| SCF_LEX_WORD_KEY_CONTAINER == w->type;
+	return w->type >= SCF_LEX_WORD_PLUS && w->type <= SCF_LEX_WORD_DOT;
 }
 
 static inline int scf_lex_is_const(scf_lex_word_t* w)
