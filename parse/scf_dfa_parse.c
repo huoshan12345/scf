@@ -30,14 +30,14 @@ extern scf_dfa_module_t  dfa_module_do;
 extern scf_dfa_module_t  dfa_module_for;
 extern scf_dfa_module_t  dfa_module_switch;
 
-#if 1
+
 extern scf_dfa_module_t  dfa_module_break;
 extern scf_dfa_module_t  dfa_module_continue;
 extern scf_dfa_module_t  dfa_module_return;
 extern scf_dfa_module_t  dfa_module_goto;
 extern scf_dfa_module_t  dfa_module_label;
 extern scf_dfa_module_t  dfa_module_async;
-#endif
+
 extern scf_dfa_module_t  dfa_module_block;
 
 scf_dfa_module_t* dfa_modules[] =
@@ -167,13 +167,7 @@ static void dfa_free_word(void* word)
 	scf_lex_word_t* w = word;
 	scf_lex_word_free(w);
 }
-#if 0
-static int dfa_same_type(void* word, scf_dfa_word_t* dfa_word)
-{
-	scf_lex_word_t* w = word;
-	return w->type == dfa_word->type;
-}
-#endif
+
 scf_dfa_ops_t dfa_ops_parse = 
 {
 	.name      = "parse",
@@ -181,5 +175,4 @@ scf_dfa_ops_t dfa_ops_parse =
 	.pop_word  = dfa_pop_word,
 	.push_word = dfa_push_word,
 	.free_word = dfa_free_word,
-//	.same_type = dfa_same_type,
 };

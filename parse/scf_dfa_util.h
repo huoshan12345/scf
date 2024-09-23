@@ -81,13 +81,6 @@ static inline int scf_dfa_is_union(scf_dfa_t* dfa, void* word)
 	return SCF_LEX_WORD_KEY_UNION == w->type;
 }
 
-static inline int scf_dfa_is_end_struct(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_END_STRUCT == w->type;
-}
-
 static inline int scf_dfa_is_colon(scf_dfa_t* dfa, void* word)
 {
 	scf_lex_word_t* w = word;
@@ -107,20 +100,6 @@ static inline int scf_dfa_is_assign(scf_dfa_t* dfa, void* word)
 	scf_lex_word_t* w = word;
 
 	return SCF_LEX_WORD_ASSIGN == w->type;
-}
-
-static inline int scf_dfa_is_array(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_ARRAY == w->type;
-}
-
-static inline int scf_dfa_is_of(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_OF == w->type;
 }
 
 static inline int scf_dfa_is_identity(scf_dfa_t* dfa, void* word)
@@ -235,27 +214,6 @@ static inline int scf_dfa_is_else(scf_dfa_t* dfa, void* word)
 	return SCF_LEX_WORD_KEY_ELSE == w->type;
 }
 
-static inline int scf_dfa_is_then(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_THEN == w->type;
-}
-
-static inline int scf_dfa_is_elsif(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_ELSIF == w->type;
-}
-
-static inline int scf_dfa_is_end_if(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_END_IF == w->type;
-}
-
 static inline int scf_dfa_is_continue(scf_dfa_t* dfa, void* word)
 {
 	scf_lex_word_t* w = word;
@@ -284,13 +242,6 @@ static inline int scf_dfa_is_goto(scf_dfa_t* dfa, void* word)
 	return SCF_LEX_WORD_KEY_GOTO == w->type;
 }
 
-static inline int scf_dfa_is_exit(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_EXIT == w->type;
-}
-
 static inline int scf_dfa_is_while(scf_dfa_t* dfa, void* word)
 {
 	scf_lex_word_t* w = word;
@@ -305,39 +256,11 @@ static inline int scf_dfa_is_do(scf_dfa_t* dfa, void* word)
 	return SCF_LEX_WORD_KEY_DO == w->type;
 }
 
-static inline int scf_dfa_is_to(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_TO == w->type;
-}
-
-static inline int scf_dfa_is_by(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_BY == w->type;
-}
-
-static inline int scf_dfa_is_end_while(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_END_WHILE == w->type;
-}
-
 static inline int scf_dfa_is_for(scf_dfa_t* dfa, void* word)
 {
 	scf_lex_word_t* w = word;
 
 	return SCF_LEX_WORD_KEY_FOR == w->type;
-}
-
-static inline int scf_dfa_is_end_for(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_END_FOR == w->type;
 }
 
 static inline int scf_dfa_is_switch(scf_dfa_t* dfa, void* word)
@@ -361,109 +284,11 @@ static inline int scf_dfa_is_case(scf_dfa_t* dfa, void* word)
 	return SCF_LEX_WORD_KEY_CASE == w->type;
 }
 
-static inline int scf_dfa_is_end_case(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_END_CASE == w->type;
-}
-
-static inline int scf_dfa_is_repeat(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_REPEAT == w->type;
-}
-
-static inline int scf_dfa_is_until(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_UNTIL == w->type;
-}
-
-static inline int scf_dfa_is_end_repeat(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_END_REPEAT == w->type;
-}
-
-static inline int scf_dfa_is_function(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_FUNCTION == w->type;
-}
-
-static inline int scf_dfa_is_end_function(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_END_FUNCTION == w->type;
-}
-
 static inline int scf_dfa_is_var(scf_dfa_t* dfa, void* word)
 {
 	scf_lex_word_t* w = word;
 
 	return SCF_LEX_WORD_KEY_VAR == w->type;
-}
-
-static inline int scf_dfa_is_var_input(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_VAR_INPUT == w->type;
-}
-
-static inline int scf_dfa_is_var_output(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_VAR_OUTPUT == w->type;
-}
-
-static inline int scf_dfa_is_var_in_out(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_VAR_IN_OUT == w->type;
-}
-
-static inline int scf_dfa_is_var_temp(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_VAR_TEMP == w->type;
-}
-
-static inline int scf_dfa_is_var_const(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_VAR_CONSTANT == w->type;
-}
-
-static inline int scf_dfa_is_var_global(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_VAR_GLOBAL == w->type;
-}
-
-static inline int scf_dfa_is_var_external(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_VAR_EXTERNAL == w->type;
-}
-
-static inline int scf_dfa_is_end_var(scf_dfa_t* dfa, void* word)
-{
-	scf_lex_word_t* w = word;
-
-	return SCF_LEX_WORD_KEY_END_VAR == w->type;
 }
 
 #endif

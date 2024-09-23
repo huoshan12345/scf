@@ -64,7 +64,8 @@ scf_node_t*		scf_node_alloc_label(scf_label_t* l);
 
 scf_node_t*		scf_node_clone(scf_node_t* node);
 
-int				scf_node_add_child(scf_node_t* parent, scf_node_t* child);
+int             scf_node_add_child(scf_node_t* parent, scf_node_t* child);
+void            scf_node_del_child(scf_node_t* parent, scf_node_t* child);
 
 void			scf_node_free(scf_node_t* node);
 void			scf_node_free_data(scf_node_t* node);
@@ -82,4 +83,3 @@ scf_label_t*	scf_label_alloc(scf_lex_word_t* w);
 void			scf_label_free(scf_label_t* l);
 
 #endif
-

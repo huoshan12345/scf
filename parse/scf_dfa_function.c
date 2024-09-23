@@ -18,16 +18,20 @@ int _function_add_function(scf_dfa_t* dfa, dfa_parse_data_t* d)
 	}
 
 	scf_parse_t*    parse = dfa->priv;
+	scf_ast_t*      ast   = parse->ast;
 	dfa_identity_t* id    = scf_stack_pop(d->current_identities);
+	dfa_fun_data_t* fd    = d->module_datas[dfa_module_function.index];
+
 	scf_function_t* f;
 	scf_variable_t* v;
+	scf_block_t*    b;
 
 	if (!id || !id->identity) {
 		scf_loge("function identity not found\n");
 		return SCF_DFA_ERROR;
 	}
 
-	scf_block_t* b = parse->ast->current_block;
+	b = ast->current_block;
 	while (b) {
 		if (b->node.type >= SCF_STRUCT)
 			break;
@@ -103,6 +107,13 @@ int _function_add_function(scf_dfa_t* dfa, dfa_parse_data_t* d)
 		SCF_XCHG(f->rets->data[i], f->rets->data[j]);
 	}
 
+	scf_scope_push_function(ast->current_block->scope, f);
+
+	scf_node_add_child((scf_node_t*)ast->current_block, (scf_node_t*)f);
+
+	fd ->parent_block  = ast->current_block;
+	ast->current_block = (scf_block_t*)f;
+
 	d->current_function = f;
 
 	return SCF_DFA_NEXT_WORD;
@@ -144,12 +155,35 @@ int _function_add_arg(scf_dfa_t* dfa, dfa_parse_data_t* d)
 			return SCF_DFA_ERROR;
 		}
 
-		arg = SCF_VAR_ALLOC_BY_TYPE(w, t->type, t->const_flag, t->nb_pointers, t->func_ptr);
-		if (!arg)
-			return SCF_DFA_ERROR;
+		if (!d->current_var) {
+			arg = SCF_VAR_ALLOC_BY_TYPE(w, t->type, t->const_flag, t->nb_pointers, t->func_ptr);
+			if (!arg)
+				return SCF_DFA_ERROR;
+
+			scf_scope_push_var(d->current_function->scope, arg);
+		} else {
+			arg = d->current_var;
+
+			if (arg->nb_dimentions > 0) {
+				arg->nb_pointers += arg->nb_dimentions;
+				arg->nb_dimentions = 0;
+			}
+
+			if (arg->dimentions) {
+				free(arg->dimentions);
+				arg->dimentions = NULL;
+			}
+
+			arg->const_literal_flag = 0;
+
+			d->current_var = NULL;
+		}
+
+		scf_logi("d->argc: %d, arg->nb_pointers: %d, arg->nb_dimentions: %d\n",
+				d->argc, arg->nb_pointers, arg->nb_dimentions);
 
 		scf_vector_add(d->current_function->argv, arg);
-		scf_scope_push_var(d->current_function->scope, arg);
+
 		arg->refs++;
 		arg->arg_flag   = 1;
 		arg->local_flag = 1;
@@ -195,10 +229,12 @@ static int _function_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 	assert(!d->current_node);
 
+	d->current_var = NULL;
+
 	if (_function_add_function(dfa, d) < 0)
 		return SCF_DFA_ERROR;
 
-	SCF_DFA_PUSH_HOOK(scf_dfa_find_node(dfa, "function_rp"), SCF_DFA_HOOK_PRE);
+	SCF_DFA_PUSH_HOOK(scf_dfa_find_node(dfa, "function_rp"),    SCF_DFA_HOOK_PRE);
 	SCF_DFA_PUSH_HOOK(scf_dfa_find_node(dfa, "function_comma"), SCF_DFA_HOOK_PRE);
 
 	d->argc = 0;
@@ -212,6 +248,8 @@ static int _function_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	scf_parse_t*      parse = dfa->priv;
 	dfa_parse_data_t* d     = data;
 	dfa_fun_data_t*   fd    = d->module_datas[dfa_module_function.index];
+	scf_function_t*   f     = d->current_function;
+	scf_function_t*   fprev = NULL;
 
 	d->nb_rps++;
 
@@ -225,11 +263,12 @@ static int _function_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 		return SCF_DFA_ERROR;
 	}
 
-	scf_function_t* f = NULL;
+	scf_list_del(&f->list);
+	scf_node_del_child((scf_node_t*)fd->parent_block, (scf_node_t*)f);
 
-	if (parse->ast->current_block->node.type >= SCF_STRUCT) {
+	if (fd->parent_block->node.type >= SCF_STRUCT) {
 
-		scf_type_t* t = (scf_type_t*)parse->ast->current_block;
+		scf_type_t* t = (scf_type_t*)fd->parent_block;
 
 		if (!t->node.class_flag) {
 			scf_loge("only class has member function\n");
@@ -238,66 +277,65 @@ static int _function_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 		assert(t->scope);
 
-		if (!strcmp(d->current_function->node.w->text->data, "__init")) {
+		if (!strcmp(f->node.w->text->data, "__init")) {
 
-			f = scf_scope_find_same_function(t->scope, d->current_function);
+			fprev = scf_scope_find_same_function(t->scope, f);
 
-		} else if (!strcmp(d->current_function->node.w->text->data, "__release")) {
+		} else if (!strcmp(f->node.w->text->data, "__release")) {
 
-			f = scf_scope_find_function(t->scope, d->current_function->node.w->text->data);
+			fprev = scf_scope_find_function(t->scope, f->node.w->text->data);
 
-			if (f && !scf_function_same(f, d->current_function)) {
-
+			if (fprev && !scf_function_same(fprev, f)) {
 				scf_loge("function '%s' can't be overloaded, repeated declare first in line: %d, second in line: %d\n",
-						f->node.w->text->data, f->node.w->line, d->current_function->node.w->line);
+						f->node.w->text->data, fprev->node.w->line, f->node.w->line);
 				return SCF_DFA_ERROR;
 			}
 		} else {
-			scf_loge("class member function must be '__init()' or '__release()'\n");
+			scf_loge("class member function must be '__init()' or '__release()', file: %s, line: %d\n", f->node.w->file->data, f->node.w->line);
 			return SCF_DFA_ERROR;
 		}
 	} else {
-		scf_block_t* b = parse->ast->current_block;
+		scf_block_t* b = fd->parent_block;
 
-		while (b) {
-			if (!b->node.root_flag && !b->node.file_flag) {
-				scf_loge("function should be defined in file or global, or class\n");
-				return SCF_DFA_ERROR;
-			}
+		if (!b->node.root_flag && !b->node.file_flag) {
+			scf_loge("function should be defined in file, global, or class\n");
+			return SCF_DFA_ERROR;
+		}
 
-			assert(b->scope);
+		assert(b->scope);
 
-			f = scf_scope_find_function(b->scope, d->current_function->node.w->text->data);
-			if (f) {
-				if (scf_function_same(f, d->current_function))
-					break;
+		if (f->static_flag)
+			fprev = scf_scope_find_function(b->scope, f->node.w->text->data);
+		else {
+			int ret = scf_ast_find_global_function(&fprev, parse->ast, f->node.w->text->data);
+			if (ret < 0)
+				return ret;
+		}
 
-				scf_loge("repeated declare function '%s', first in line: %d, second in line: %d, function overloading only can do in class\n",
-						f->node.w->text->data, f->node.w->line, d->current_function->node.w->line);
-				return SCF_DFA_ERROR;
-			}
+		if (fprev && !scf_function_same(fprev, f)) {
 
-			b = (scf_block_t*)b->node.parent;
+			scf_loge("repeated declare function '%s', first in line: %d, second in line: %d, function overloading only can do in class\n",
+					f->node.w->text->data, fprev->node.w->line, f->node.w->line);
+			return SCF_DFA_ERROR;
 		}
 	}
 
-	if (f) {
-		if (!f->node.define_flag) {
+	if (fprev) {
+		if (!fprev->node.define_flag) {
 			int i;
+			scf_variable_t* v0;
+			scf_variable_t* v1;
 
-			for (i = 0; i < f->argv->size; i++) {
-				scf_variable_t* v0 = f->argv->data[i];
-				scf_variable_t* v1 = d->current_function->argv->data[i];
+			for (i = 0; i < fprev->argv->size; i++) {
+				v0 =        fprev->argv->data[i];
+				v1 =        f    ->argv->data[i];
 
-				if (v1->w) {
-					if (v0->w)
-						scf_lex_word_free(v0->w);
-					v0->w = scf_lex_word_clone(v1->w);
-				}
+				if (v1->w)
+					SCF_XCHG(v0->w, v1->w);
 			}
 
-			scf_function_free(d->current_function);
-			d->current_function = f;
+			scf_function_free(f);
+			d->current_function = fprev;
 
 		} else {
 			scf_lex_word_t* w = dfa->ops->pop_word(dfa);
@@ -305,7 +343,7 @@ static int _function_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 			if (SCF_LEX_WORD_SEMICOLON != w->type) {
 
 				scf_loge("repeated define function '%s', first in line: %d, second in line: %d\n",
-						f->node.w->text->data, f->node.w->line, d->current_function->node.w->line); 
+						f->node.w->text->data, fprev->node.w->line, f->node.w->line); 
 
 				dfa->ops->push_word(dfa, w);
 				return SCF_DFA_ERROR;
@@ -314,13 +352,13 @@ static int _function_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 			dfa->ops->push_word(dfa, w);
 		}
 	} else {
-		scf_scope_push_function(parse->ast->current_block->scope, d->current_function);
-		scf_node_add_child((scf_node_t*)parse->ast->current_block, (scf_node_t*)d->current_function);
+		scf_scope_push_function(fd->parent_block->scope, f);
+
+		scf_node_add_child((scf_node_t*)fd->parent_block, (scf_node_t*)f);
 	}
 
 	SCF_DFA_PUSH_HOOK(scf_dfa_find_node(dfa, "function_end"), SCF_DFA_HOOK_END);
 
-	fd->parent_block = parse->ast->current_block;
 	parse->ast->current_block = (scf_block_t*)d->current_function;
 
 	return SCF_DFA_NEXT_WORD;
@@ -446,4 +484,3 @@ scf_dfa_module_t dfa_module_function =
 
 	.fini_module = _dfa_fini_module_function,
 };
-
