@@ -211,7 +211,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	char* obj  = "1.elf";
+	char* obj  = "1.o";
 	char* exec = "1.out";
 
 	if (out) {

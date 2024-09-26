@@ -1,4 +1,4 @@
-#include"scf_dwarf_def.h"
+#include"scf_dwarf.h"
 #include"scf_leb128.h"
 
 static scf_dwarf_abbrev_attribute_t abbrev_cu[] =
@@ -224,7 +224,7 @@ int scf_dwarf_abbrev_add_cu(scf_vector_t* abbrevs)
 	return scf_dwarf_abbrev_add_subprogram(abbrevs);
 }
 
-int scf_dwarf_debug_encode(scf_dwarf_debug_t* debug)
+int scf_dwarf_debug_encode(scf_dwarf_t* debug)
 {
 	if (0 == debug->infos->size)
 		return 0;
@@ -335,9 +335,9 @@ int scf_dwarf_debug_encode(scf_dwarf_debug_t* debug)
 	return 0;
 }
 
-scf_dwarf_debug_t* scf_dwarf_debug_alloc()
+scf_dwarf_t* scf_dwarf_debug_alloc()
 {
-	scf_dwarf_debug_t* debug = calloc(1, sizeof(scf_dwarf_debug_t));
+	scf_dwarf_t* debug = calloc(1, sizeof(scf_dwarf_t));
 	if (!debug)
 		return NULL;
 
@@ -423,7 +423,7 @@ scf_dwarf_debug_t* scf_dwarf_debug_alloc()
 	return debug;
 }
 
-void scf_dwarf_debug_free (scf_dwarf_debug_t* debug)
+void scf_dwarf_debug_free (scf_dwarf_t* debug)
 {
 	if (debug) {
 		if (debug->base_types)
@@ -465,4 +465,3 @@ void scf_dwarf_debug_free (scf_dwarf_debug_t* debug)
 		free(debug);
 	}
 }
-

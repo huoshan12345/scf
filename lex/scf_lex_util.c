@@ -7,15 +7,16 @@ scf_char_t* _lex_pop_char(scf_lex_t* lex)
 
 	scf_char_t* c;
 
-	if (lex->char_list_head) {
-		c                   = lex->char_list_head;
-		lex->char_list_head = c->next;
+	if (lex->char_list) {
+		c              = lex->char_list;
+		lex->char_list = c->next;
 		return c;
 	}
 
 	c = malloc(sizeof(scf_char_t));
 	if (!c)
 		return NULL;
+	c->next = NULL;
 
 	int ret = fgetc(lex->fp);
 	if (EOF == ret) {
@@ -82,8 +83,8 @@ void _lex_push_char(scf_lex_t* lex, scf_char_t* c)
 	assert(lex);
 	assert(c);
 
-	c->next             = lex->char_list_head;
-	lex->char_list_head = c;
+	c->next        = lex->char_list;
+	lex->char_list = c;
 }
 
 int _lex_op1_ll1(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0, int type0)

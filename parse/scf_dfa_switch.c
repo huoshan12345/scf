@@ -24,12 +24,12 @@ static int _switch_is_end(scf_dfa_t* dfa, void* word)
 
 static int _switch_action_switch(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
-	scf_lex_word_t*   w     = words->data[words->size - 1];
-	scf_stack_t*      s     = d->module_datas[dfa_module_switch.index];
-
+	scf_parse_t*     parse  = dfa->priv;
+	dfa_data_t*      d      = data;
+	scf_lex_word_t*  w      = words->data[words->size - 1];
+	scf_stack_t*     s      = d->module_datas[dfa_module_switch.index];
 	scf_node_t*     _switch = scf_node_alloc(w, SCF_OP_SWITCH, NULL);
+
 	if (!_switch) {
 		scf_loge("node alloc failed\n");
 		return SCF_DFA_ERROR;
@@ -58,8 +58,8 @@ static int _switch_action_switch(scf_dfa_t* dfa, scf_vector_t* words, void* data
 
 static int _switch_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = data;
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = data;
 
 	assert(!d->expr);
 	d->expr_local_flag = 1;
@@ -72,7 +72,7 @@ static int _switch_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _switch_action_lp_stat(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t*  d  = data;
+	dfa_data_t*        d  = data;
 	scf_stack_t*       s  = d->module_datas[dfa_module_switch.index];
 	dfa_switch_data_t* sd = scf_stack_top(s);
 
@@ -86,7 +86,7 @@ static int _switch_action_lp_stat(scf_dfa_t* dfa, scf_vector_t* words, void* dat
 static int _switch_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = data;
+	dfa_data_t*        d     = data;
 	scf_stack_t*       s     = d->module_datas[dfa_module_switch.index];
 	dfa_switch_data_t* sd    = scf_stack_top(s);
 
@@ -119,7 +119,7 @@ static int _switch_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _switch_action_case(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = data;
+	dfa_data_t*        d     = data;
 	scf_lex_word_t*    w     = words->data[words->size - 1];
 	scf_stack_t*       s     = d->module_datas[dfa_module_switch.index];
 	dfa_switch_data_t* sd    = scf_stack_top(s);
@@ -139,7 +139,7 @@ static int _switch_action_case(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _switch_action_default(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = data;
+	dfa_data_t*        d     = data;
 	scf_lex_word_t*    w     = words->data[words->size - 1];
 	scf_stack_t*       s     = d->module_datas[dfa_module_switch.index];
 	dfa_switch_data_t* sd    = scf_stack_top(s);
@@ -158,7 +158,7 @@ static int _switch_action_default(scf_dfa_t* dfa, scf_vector_t* words, void* dat
 static int _switch_action_colon(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = data;
+	dfa_data_t*        d     = data;
 	scf_stack_t*       s     = d->module_datas[dfa_module_switch.index];
 	dfa_switch_data_t* sd    = scf_stack_top(s);
 
@@ -184,7 +184,7 @@ static int _switch_action_colon(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _switch_action_end(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = data;
+	dfa_data_t*        d     = data;
 	scf_stack_t*       s     = d->module_datas[dfa_module_switch.index];
 	dfa_switch_data_t* sd    = scf_stack_pop(s);
 
@@ -215,7 +215,7 @@ static int _dfa_init_module_switch(scf_dfa_t* dfa)
 	SCF_DFA_MODULE_NODE(dfa, switch, end,       _switch_is_end,     _switch_action_end);
 
 	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = parse->dfa_data;
+	dfa_data_t* d     = parse->dfa_data;
 	scf_stack_t*      s     = d->module_datas[dfa_module_switch.index];
 
 	assert(!s);
@@ -233,9 +233,9 @@ static int _dfa_init_module_switch(scf_dfa_t* dfa)
 
 static int _dfa_fini_module_switch(scf_dfa_t* dfa)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = parse->dfa_data;
-	scf_stack_t*      s     = d->module_datas[dfa_module_switch.index];
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = parse->dfa_data;
+	scf_stack_t*  s     = d->module_datas[dfa_module_switch.index];
 
 	if (s) {
 		scf_stack_free(s);
@@ -270,7 +270,6 @@ static int _dfa_init_syntax_switch(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(expr,     colon);
 	scf_dfa_node_add_child(_default, colon);
 
-	scf_logi("\n");
 	return 0;
 }
 

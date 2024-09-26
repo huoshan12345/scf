@@ -40,18 +40,17 @@ int _check_recursive(scf_type_t* parent, scf_type_t* child, scf_lex_word_t* w)
 	return SCF_DFA_OK;
 }
 
-static int _var_add_var(scf_dfa_t* dfa, dfa_parse_data_t* d)
+static int _var_add_var(scf_dfa_t* dfa, dfa_data_t* d)
 {
-	scf_parse_t* parse = dfa->priv;
-
-	dfa_identity_t* id = scf_stack_top(d->current_identities);
+	scf_parse_t*     parse = dfa->priv;
+	dfa_identity_t*  id    = scf_stack_top(d->current_identities);
 
 	if (id && id->identity) {
 
 		scf_logd("d->current_identity: %p\n", id->identity);
 
-		scf_variable_t* var = scf_scope_find_variable(parse->ast->current_block->scope, id->identity->text->data);
-		if (var) {
+		scf_variable_t* v = scf_scope_find_variable(parse->ast->current_block->scope, id->identity->text->data);
+		if (v) {
 			scf_loge("repeated declare var '%s', line: %d\n", id->identity->text->data, id->identity->line);
 			return SCF_DFA_ERROR;
 		}
@@ -123,27 +122,27 @@ static int _var_add_var(scf_dfa_t* dfa, dfa_parse_data_t* d)
 			return SCF_DFA_ERROR;
 		}
 
-		var = SCF_VAR_ALLOC_BY_TYPE(id->identity, id0->type, id0->const_flag, id0->nb_pointers, id0->func_ptr);
-		if (!var) {
+		v = SCF_VAR_ALLOC_BY_TYPE(id->identity, id0->type, id0->const_flag, id0->nb_pointers, id0->func_ptr);
+		if (!v) {
 			scf_loge("alloc var failed\n");
 			return SCF_DFA_ERROR;
 		}
-		var->local_flag  = local_flag;
-		var->global_flag = global_flag;
-		var->member_flag = member_flag;
+		v->local_flag  = local_flag;
+		v->global_flag = global_flag;
+		v->member_flag = member_flag;
 
-		var->static_flag = id0->static_flag;
-		var->extern_flag = id0->extern_flag;
+		v->static_flag = id0->static_flag;
+		v->extern_flag = id0->extern_flag;
 
 		scf_logi("type: %d, nb_pointers: %d,nb_dimentions: %d, var: %s,line:%d,pos:%d, local: %d, global: %d, member: %d, extern: %d, static: %d\n\n",
-				var->type, var->nb_pointers, var->nb_dimentions,
-				var->w->text->data, var->w->line, var->w->pos,
-				var->local_flag,  var->global_flag, var->member_flag,
-				var->extern_flag, var->static_flag);
+				v->type, v->nb_pointers, v->nb_dimentions,
+				v->w->text->data, v->w->line, v->w->pos,
+				v->local_flag,  v->global_flag, v->member_flag,
+				v->extern_flag, v->static_flag);
 
-		scf_scope_push_var(parse->ast->current_block->scope, var);
+		scf_scope_push_var(parse->ast->current_block->scope, v);
 
-		d->current_var   = var;
+		d->current_var   = v;
 		d->current_var_w = id->identity;
 		id0->nb_pointers = 0;
 		id0->const_flag  = 0;
@@ -158,7 +157,7 @@ static int _var_add_var(scf_dfa_t* dfa, dfa_parse_data_t* d)
 	return 0;
 }
 
-static int _var_init_expr(scf_dfa_t* dfa, dfa_parse_data_t* d, int semi_flag)
+static int _var_init_expr(scf_dfa_t* dfa, dfa_data_t* d, int semi_flag)
 {
 	scf_parse_t* parse = dfa->priv;
 
@@ -205,8 +204,8 @@ static int _var_init_expr(scf_dfa_t* dfa, dfa_parse_data_t* d, int semi_flag)
 
 static int _var_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = data;
 
 	if (_var_add_var(dfa, d) < 0) {
 		scf_loge("add var error\n");
@@ -227,9 +226,9 @@ static int _var_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _var_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
-	dfa_identity_t*   id    = NULL;
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = data;
+	dfa_identity_t*  id    = NULL;
 
 	d->var_semicolon_flag = 0;
 
@@ -238,8 +237,8 @@ static int _var_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* data
 		return SCF_DFA_ERROR;
 	}
 
-	d->nb_lss   = 0;
-	d->nb_rss   = 0;
+	d->nb_lss = 0;
+	d->nb_rss = 0;
 
 	id = scf_stack_pop(d->current_identities);
 	assert(id && id->type);
@@ -270,8 +269,8 @@ static int _var_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* data
 
 static int _var_action_assign(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = data;
 
 	if (_var_add_var(dfa, d) < 0) {
 		scf_loge("add var error\n");
@@ -281,7 +280,7 @@ static int _var_action_assign(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	d->nb_lss = 0;
 	d->nb_rss = 0;
 
-	scf_lex_word_t*   w = words->data[words->size - 1];
+	scf_lex_word_t*  w = words->data[words->size - 1];
 
 	if (!d->current_var) {
 		scf_loge("\n");
@@ -327,8 +326,8 @@ static int _var_action_assign(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _var_action_ls(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = data;
 
 	if (_var_add_var(dfa, d) < 0) {
 		scf_loge("add var error\n");
@@ -356,8 +355,8 @@ static int _var_action_ls(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _var_action_rs(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = data;
 
 	d->nb_rss++;
 
@@ -450,8 +449,6 @@ static int _dfa_init_syntax_var(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(init_data_rb, semicolon);
 
 	scf_dfa_node_add_child(identity,  semicolon);
-
-	printf("%s(),%d\n\n", __func__, __LINE__);
 	return 0;
 }
 

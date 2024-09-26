@@ -1,5 +1,5 @@
 
-include "../lib/scf_capi.c";
+#include "../lib/scf_capi.c"
 
 struct str
 {

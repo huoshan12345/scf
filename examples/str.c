@@ -1,5 +1,5 @@
 
-include "../lib/scf_capi.c";
+#include "../lib/scf_capi.c"
 
 struct str
 {
@@ -39,4 +39,3 @@ int main()
 	printf("%s\n", p0->data);
 	return 0;
 }
-

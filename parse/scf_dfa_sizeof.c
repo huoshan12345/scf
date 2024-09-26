@@ -18,9 +18,9 @@ typedef struct {
 
 static int _sizeof_action_lp_stat(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t*  d     = data;
-	scf_stack_t*       s     = d->module_datas[dfa_module_sizeof.index];
-	dfa_sizeof_data_t* sd    = scf_stack_top(s);
+	dfa_data_t*         d  = data;
+	scf_stack_t*        s  = d->module_datas[dfa_module_sizeof.index];
+	dfa_sizeof_data_t*  sd = scf_stack_top(s);
 
 	if (!sd) {
 		scf_loge("\n");
@@ -36,10 +36,10 @@ static int _sizeof_action_lp_stat(scf_dfa_t* dfa, scf_vector_t* words, void* dat
 
 static int _sizeof_action_sizeof(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = data;
-	scf_lex_word_t*    w     = words->data[words->size - 1];
-	scf_stack_t*       s     = d->module_datas[dfa_module_sizeof.index];
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = data;
+	scf_lex_word_t*  w     = words->data[words->size - 1];
+	scf_stack_t*     s     = d->module_datas[dfa_module_sizeof.index];
 
 	dfa_sizeof_data_t* sd    = calloc(1, sizeof(dfa_sizeof_data_t));
 	if (!sd) {
@@ -77,7 +77,7 @@ static int _sizeof_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _sizeof_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = data;
+	dfa_data_t*        d     = data;
 	scf_lex_word_t*    w     = words->data[words->size - 1];
 	scf_stack_t*       s     = d->module_datas[dfa_module_sizeof.index];
 	dfa_sizeof_data_t* sd    = scf_stack_top(s);
@@ -196,9 +196,9 @@ static int _dfa_init_module_sizeof(scf_dfa_t* dfa)
 	SCF_DFA_MODULE_NODE(dfa, sizeof, rp,       scf_dfa_is_rp,     _sizeof_action_rp);
 	SCF_DFA_MODULE_NODE(dfa, sizeof, lp_stat,  scf_dfa_is_lp,     _sizeof_action_lp_stat);
 
-	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = parse->dfa_data;
-	scf_stack_t*       s     = d->module_datas[dfa_module_sizeof.index];
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = parse->dfa_data;
+	scf_stack_t*  s     = d->module_datas[dfa_module_sizeof.index];
 
 	assert(!s);
 
@@ -215,9 +215,9 @@ static int _dfa_init_module_sizeof(scf_dfa_t* dfa)
 
 static int _dfa_fini_module_sizeof(scf_dfa_t* dfa)
 {
-	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = parse->dfa_data;
-	scf_stack_t*       s     = d->module_datas[dfa_module_sizeof.index];
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = parse->dfa_data;
+	scf_stack_t*  s     = d->module_datas[dfa_module_sizeof.index];
 
 	if (s) {
 		scf_stack_free(s);
@@ -250,7 +250,6 @@ static int _dfa_init_syntax_sizeof(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(identity,  rp);
 	scf_dfa_node_add_child(star,      rp);
 
-	scf_logi("\n");
 	return 0;
 }
 
@@ -262,4 +261,3 @@ scf_dfa_module_t dfa_module_sizeof =
 
 	.fini_module = _dfa_fini_module_sizeof,
 };
-

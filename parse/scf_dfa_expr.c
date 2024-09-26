@@ -18,8 +18,7 @@ int _type_find_type(scf_dfa_t* dfa, dfa_identity_t* id);
 
 static int _expr_is_expr(scf_dfa_t* dfa, void* word)
 {
-	scf_parse_t*    parse = dfa->priv;
-	scf_lex_word_t* w     = word;
+	scf_lex_word_t* w = word;
 
 	if (SCF_LEX_WORD_SEMICOLON == w->type
 			|| scf_lex_is_operator(w)
@@ -31,15 +30,14 @@ static int _expr_is_expr(scf_dfa_t* dfa, void* word)
 
 static int _expr_is_number(scf_dfa_t* dfa, void* word)
 {
-	scf_lex_word_t* w     = word;
+	scf_lex_word_t* w = word;
 
 	return scf_lex_is_const(w);
 }
 
 static int _expr_is_unary_op(scf_dfa_t* dfa, void* word)
 {
-	scf_parse_t*    parse = dfa->priv;
-	scf_lex_word_t* w     = word;
+	scf_lex_word_t* w = word;
 
 	if (SCF_LEX_WORD_LS == w->type
 			|| SCF_LEX_WORD_RS == w->type
@@ -64,8 +62,7 @@ static int _expr_is_unary_post(scf_dfa_t* dfa, void* word)
 
 static int _expr_is_binary_op(scf_dfa_t* dfa, void* word)
 {
-	scf_parse_t*    parse = dfa->priv;
-	scf_lex_word_t* w     = word;
+	scf_lex_word_t* w = word;
 
 	if (SCF_LEX_WORD_LS == w->type
 			|| SCF_LEX_WORD_RS == w->type
@@ -79,7 +76,7 @@ static int _expr_is_binary_op(scf_dfa_t* dfa, void* word)
 	return 0;
 }
 
-int _expr_add_var(scf_parse_t* parse, dfa_parse_data_t* d)
+int _expr_add_var(scf_parse_t* parse, dfa_data_t* d)
 {
 	expr_module_data_t* md   = d->module_datas[dfa_module_expr.index];
 	scf_variable_t*     var  = NULL;
@@ -155,8 +152,8 @@ int _expr_add_var(scf_parse_t* parse, dfa_parse_data_t* d)
 
 static int _expr_action_expr(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = data;
 
 	if (!d->expr) {
 		d->expr = scf_expr_alloc();
@@ -173,9 +170,9 @@ static int _expr_action_expr(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _expr_action_number(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
-	scf_lex_word_t*   w     = words->data[words->size - 1];
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = data;
+	scf_lex_word_t*  w     = words->data[words->size - 1];
 
 	scf_logd("w: %s\n", w->text->data);
 
@@ -279,12 +276,12 @@ static int _expr_action_number(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _expr_action_op(scf_dfa_t* dfa, scf_vector_t* words, void* data, int nb_operands)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
-	scf_lex_word_t*   w     = words->data[words->size - 1];
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = data;
+	scf_lex_word_t*  w     = words->data[words->size - 1];
 
-	scf_operator_t*   op;
-	scf_node_t*       node;
+	scf_operator_t*  op;
+	scf_node_t*      node;
 
 	op = scf_find_base_operator(w->text->data, nb_operands);
 	if (!op) {
@@ -317,20 +314,18 @@ static int _expr_action_binary_op(scf_dfa_t* dfa, scf_vector_t* words, void* dat
 	scf_logd("\n");
 
 	scf_parse_t*        parse = dfa->priv;
-	dfa_parse_data_t*   d     = data;
+	dfa_data_t*         d     = data;
 	scf_lex_word_t*     w     = words->data[words->size - 1];
 	expr_module_data_t* md    = d->module_datas[dfa_module_expr.index];
-
 	dfa_identity_t*     id    = scf_stack_top(d->current_identities);
+	scf_variable_t*     v;
 
 	if (SCF_LEX_WORD_STAR == w->type) {
 
 		if (id && id->identity) {
 
-			scf_variable_t* var = scf_block_find_variable(parse->ast->current_block,
-					id->identity->text->data);
-
-			if (!var) {
+			v = scf_block_find_variable(parse->ast->current_block, id->identity->text->data);
+			if (!v) {
 				scf_logw("'%s' not var\n", id->identity->text->data);
 
 				if (d->expr) {
@@ -366,7 +361,7 @@ static int _expr_action_binary_op(scf_dfa_t* dfa, scf_vector_t* words, void* dat
 static int _expr_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*        parse = dfa->priv;
-	dfa_parse_data_t*   d     = data;
+	dfa_data_t*         d     = data;
 	expr_module_data_t* md    = d->module_datas[dfa_module_expr.index];
 
 	scf_expr_t* e = scf_expr_alloc();
@@ -391,9 +386,8 @@ static int _expr_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _expr_action_rp_cast(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*        parse = dfa->priv;
-	dfa_parse_data_t*   d     = data;
+	dfa_data_t*         d     = data;
 	expr_module_data_t* md    = d->module_datas[dfa_module_expr.index];
-
 	dfa_identity_t*     id    = scf_stack_top(d->current_identities);
 
 	if (!id) {
@@ -480,11 +474,10 @@ static int _expr_action_rp_cast(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _expr_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*        parse = dfa->priv;
-	dfa_parse_data_t*   d     = data;
-	expr_module_data_t* md    = d->module_datas[dfa_module_expr.index];
-
-	dfa_identity_t*     id    = scf_stack_top(d->current_identities);
+	scf_parse_t*         parse = dfa->priv;
+	dfa_data_t*          d     = data;
+	expr_module_data_t*  md    = d->module_datas[dfa_module_expr.index];
+	dfa_identity_t*      id    = scf_stack_top(d->current_identities);
 
 	if (id && id->identity) {
 
@@ -531,12 +524,11 @@ static int _expr_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _expr_action_unary_post(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	scf_lex_word_t*   w     = words->data[words->size - 1];
-	dfa_parse_data_t* d     = data;
-	scf_node_t*       n     = NULL;
-
-	dfa_identity_t*   id    = scf_stack_top(d->current_identities);
+	scf_parse_t*     parse = dfa->priv;
+	scf_lex_word_t*  w     = words->data[words->size - 1];
+	dfa_data_t*      d     = data;
+	scf_node_t*      n     = NULL;
+	dfa_identity_t*  id    = scf_stack_top(d->current_identities);
 
 	if (id && id->identity) {
 		if (_expr_add_var(parse, d) < 0) {
@@ -569,11 +561,11 @@ static int _expr_action_unary_post(scf_dfa_t* dfa, scf_vector_t* words, void* da
 
 static int _expr_action_ls(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*        parse = dfa->priv;
-	scf_lex_word_t*     w     = words->data[words->size - 1];
-	dfa_parse_data_t*   d     = data;
-	expr_module_data_t* md    = d->module_datas[dfa_module_expr.index];
-	dfa_identity_t*     id    = scf_stack_top(d->current_identities);
+	scf_parse_t*         parse = dfa->priv;
+	scf_lex_word_t*      w     = words->data[words->size - 1];
+	dfa_data_t*          d     = data;
+	expr_module_data_t*  md    = d->module_datas[dfa_module_expr.index];
+	dfa_identity_t*      id    = scf_stack_top(d->current_identities);
 
 	if (id && id->identity) {
 		if (_expr_add_var(parse, d) < 0) {
@@ -614,11 +606,10 @@ static int _expr_action_ls(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _expr_action_rs(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*        parse = dfa->priv;
-	dfa_parse_data_t*   d     = data;
-	expr_module_data_t* md    = d->module_datas[dfa_module_expr.index];
-
-	dfa_identity_t*     id    = scf_stack_top(d->current_identities);
+	scf_parse_t*         parse = dfa->priv;
+	dfa_data_t*          d     = data;
+	expr_module_data_t*  md    = d->module_datas[dfa_module_expr.index];
+	dfa_identity_t*      id    = scf_stack_top(d->current_identities);
 
 	if (id && id->identity) {
 		if (_expr_add_var(parse, d) < 0) {
@@ -739,10 +730,9 @@ int _expr_multi_rets(scf_expr_t* e)
 	return 0;
 }
 
-static int _expr_fini_expr(scf_parse_t* parse, dfa_parse_data_t* d, int semi_flag)
+static int _expr_fini_expr(scf_parse_t* parse, dfa_data_t* d, int semi_flag)
 {
 	expr_module_data_t* md = d->module_datas[dfa_module_expr.index];
-
 	dfa_identity_t*     id = scf_stack_top(d->current_identities);
 
 	if (id && id->identity) {
@@ -796,8 +786,8 @@ static int _expr_fini_expr(scf_parse_t* parse, dfa_parse_data_t* d, int semi_fla
 
 static int _expr_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*        parse = dfa->priv;
-	dfa_parse_data_t*   d     = data;
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = data;
 
 	if (_expr_fini_expr(parse, d, 0) < 0)
 		return SCF_DFA_ERROR;
@@ -807,9 +797,9 @@ static int _expr_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _expr_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*        parse = dfa->priv;
-	dfa_parse_data_t*   d     = data;
-	expr_module_data_t* md    = d->module_datas[dfa_module_expr.index];
+	scf_parse_t*         parse = dfa->priv;
+	dfa_data_t*          d     = data;
+	expr_module_data_t*  md    = d->module_datas[dfa_module_expr.index];
 
 	if (_expr_fini_expr(parse, d, 1) < 0)
 		return SCF_DFA_ERROR;
@@ -835,9 +825,9 @@ static int _dfa_init_module_expr(scf_dfa_t* dfa)
 	SCF_DFA_MODULE_NODE(dfa, expr, comma,      scf_dfa_is_comma,     _expr_action_comma);
 	SCF_DFA_MODULE_NODE(dfa, expr, semicolon,  scf_dfa_is_semicolon, _expr_action_semicolon);
 
-	scf_parse_t*        parse = dfa->priv;
-	dfa_parse_data_t*   d     = parse->dfa_data;
-	expr_module_data_t* md    = d->module_datas[dfa_module_expr.index];
+	scf_parse_t*         parse = dfa->priv;
+	dfa_data_t*          d     = parse->dfa_data;
+	expr_module_data_t*  md    = d->module_datas[dfa_module_expr.index];
 
 	assert(!md);
 
@@ -871,9 +861,9 @@ _ls_exprs:
 
 static int _dfa_fini_module_expr(scf_dfa_t* dfa)
 {
-	scf_parse_t*        parse = dfa->priv;
-	dfa_parse_data_t*   d     = parse->dfa_data;
-	expr_module_data_t* md    = d->module_datas[dfa_module_expr.index];
+	scf_parse_t*         parse = dfa->priv;
+	dfa_data_t*          d     = parse->dfa_data;
+	expr_module_data_t*  md    = d->module_datas[dfa_module_expr.index];
 
 	if (md) {
 		if (md->ls_exprs)
@@ -1047,7 +1037,6 @@ static int _dfa_init_syntax_expr(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(identity,   semicolon);
 	scf_dfa_node_add_child(rs,         semicolon);
 
-	scf_logi("\n\n");
 	return 0;
 }
 

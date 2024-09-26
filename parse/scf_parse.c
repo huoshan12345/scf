@@ -157,24 +157,22 @@ static int _scf_parse_add_sym(scf_parse_t* parse, const char* name,
 
 int scf_parse_file(scf_parse_t* parse, const char* path)
 {
-	assert(parse);
+	if (!parse || !path)
+		return -EINVAL;
 
-	scf_block_t* root = parse->ast->root_block;
-	scf_block_t* b    = NULL;
+	scf_lex_t* lex = parse->lex_list;
 
-	int i;
-	for (i = 0; i < root->node.nb_nodes; i++) {
-		b  = (scf_block_t*)root->node.nodes[i];
-
-		if (SCF_OP_BLOCK != b->node.type)
-			continue;
-
-		if (!strcmp(b->name->data, path))
+	while (lex) {
+		if (!strcmp(lex->file->data, path))
 			break;
+
+		lex = lex->next;
 	}
 
-	if (i < root->node.nb_nodes)
+	if (lex) {
+		parse->lex = lex;
 		return 0;
+	}
 
 	if (scf_lex_open(&parse->lex, path) < 0) {
 		scf_loge("\n");
@@ -182,16 +180,19 @@ int scf_parse_file(scf_parse_t* parse, const char* path)
 	}
 	scf_ast_add_file_block(parse->ast, path);
 
+	parse->lex->next = parse->lex_list;
+	parse->lex_list  = parse->lex;
 
-	dfa_parse_data_t* d = parse->dfa_data;
+	dfa_data_t*       d = parse->dfa_data;
+	scf_lex_word_t*   w = NULL;
+
+	int ret = 0;
 
 	while (1) {
-		scf_lex_word_t* w = NULL;
-
-		int ret = scf_lex_pop_word(parse->lex, &w);
+		ret = scf_lex_pop_word(parse->lex, &w);
 		if (ret < 0) {
 			scf_loge("lex pop word failed\n");
-			return ret;
+			break;
 		}
 
 		if (SCF_LEX_WORD_EOF == w->type) {
@@ -215,13 +216,16 @@ int scf_parse_file(scf_parse_t* parse, const char* path)
 
 		assert(!d->expr);
 
-		if (scf_dfa_parse_word(parse->dfa, w, d) < 0) {
+		ret = scf_dfa_parse_word(parse->dfa, w, d);
+		if (ret < 0) {
 			scf_loge("dfa parse failed\n");
-			return -1;
+			break;
 		}
 	}
 
-	return 0;
+	fclose(parse->lex->fp);
+	parse->lex->fp = NULL;
+	return ret;
 }
 
 static int _debug_abbrev_find_by_tag(const void* v0, const void* v1)

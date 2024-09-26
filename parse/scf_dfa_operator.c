@@ -26,7 +26,7 @@ static int _operator_is_op(scf_dfa_t* dfa, void* word)
 	return (SCF_LEX_WORD_PLUS <= w->type && SCF_LEX_WORD_GE >= w->type);
 }
 
-int _operator_add_operator(scf_dfa_t* dfa, dfa_parse_data_t* d)
+int _operator_add_operator(scf_dfa_t* dfa, dfa_data_t* d)
 {
 	scf_parse_t*     parse = dfa->priv;
 	dfa_op_data_t*   opd   = d->module_datas[dfa_module_operator.index];
@@ -45,8 +45,7 @@ int _operator_add_operator(scf_dfa_t* dfa, dfa_parse_data_t* d)
 		return SCF_DFA_ERROR;
 	}
 
-	scf_logi("operator: %s,line:%d,pos:%d\n",
-			f->node.w->text->data, f->node.w->line, f->node.w->pos);
+	scf_logi("operator: %s,line:%d,pos:%d\n", f->node.w->text->data, f->node.w->line, f->node.w->pos);
 
 	while (d->current_identities->size > 0) {
 
@@ -91,7 +90,7 @@ int _operator_add_operator(scf_dfa_t* dfa, dfa_parse_data_t* d)
 	return SCF_DFA_NEXT_WORD;
 }
 
-int _operator_add_arg(scf_dfa_t* dfa, dfa_parse_data_t* d)
+int _operator_add_arg(scf_dfa_t* dfa, dfa_data_t* d)
 {
 	scf_variable_t* arg = NULL;
 
@@ -127,8 +126,7 @@ int _operator_add_arg(scf_dfa_t* dfa, dfa_parse_data_t* d)
 		arg->arg_flag   = 1;
 		arg->local_flag = 1;
 
-		scf_logi("d->current_function->argv->size: %d, %p\n",
-				d->current_function->argv->size, d->current_function);
+		scf_logi("d->current_function->argv->size: %d, %p\n", d->current_function->argv->size, d->current_function);
 
 		free(id0);
 		free(id1);
@@ -141,7 +139,7 @@ int _operator_add_arg(scf_dfa_t* dfa, dfa_parse_data_t* d)
 
 static int _operator_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t* d   = data;
+	dfa_data_t* d = data;
 
 	if (_operator_add_arg(dfa, d) < 0) {
 		scf_loge("add arg failed\n");
@@ -155,9 +153,9 @@ static int _operator_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* dat
 
 static int _operator_action_op(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
-	dfa_op_data_t*    opd   = d->module_datas[dfa_module_operator.index];
+	scf_parse_t*    parse = dfa->priv;
+	dfa_data_t*     d     = data;
+	dfa_op_data_t*  opd   = d->module_datas[dfa_module_operator.index];
 
 	opd->word_op = words->data[words->size - 1];
 
@@ -166,9 +164,9 @@ static int _operator_action_op(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _operator_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
-	dfa_op_data_t*    opd   = d->module_datas[dfa_module_operator.index];
+	scf_parse_t*    parse = dfa->priv;
+	dfa_data_t*     d     = data;
+	dfa_op_data_t*  opd   = d->module_datas[dfa_module_operator.index];
 
 	assert(!d->current_node);
 
@@ -188,10 +186,10 @@ static int _operator_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _operator_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
-	dfa_op_data_t*    opd   = d->module_datas[dfa_module_operator.index];
-	scf_function_t*   f     = NULL;
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = data;
+	dfa_op_data_t*   opd   = d->module_datas[dfa_module_operator.index];
+	scf_function_t*  f     = NULL;
 
 	d->nb_rps++;
 
@@ -278,10 +276,10 @@ static int _operator_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _operator_action_end(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
-	scf_lex_word_t*   w     = words->data[words->size - 1];
-	dfa_op_data_t*   opd    = d->module_datas[dfa_module_operator.index];
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = data;
+	scf_lex_word_t*  w     = words->data[words->size - 1];
+	dfa_op_data_t*   opd   = d->module_datas[dfa_module_operator.index];
 
 	parse->ast->current_block  = (scf_block_t*)(opd->parent_block);
 
@@ -313,9 +311,9 @@ static int _dfa_init_module_operator(scf_dfa_t* dfa)
 	SCF_DFA_MODULE_NODE(dfa, operator, key,    _operator_is_key, NULL);
 	SCF_DFA_MODULE_NODE(dfa, operator, op,     _operator_is_op,  _operator_action_op);
 
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = parse->dfa_data;
-	dfa_op_data_t*   opd    = d->module_datas[dfa_module_operator.index];
+	scf_parse_t*    parse = dfa->priv;
+	dfa_data_t*     d     = parse->dfa_data;
+	dfa_op_data_t*  opd   = d->module_datas[dfa_module_operator.index];
 
 	assert(!opd);
 
@@ -332,9 +330,9 @@ static int _dfa_init_module_operator(scf_dfa_t* dfa)
 
 static int _dfa_fini_module_operator(scf_dfa_t* dfa)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = parse->dfa_data;
-	dfa_op_data_t*   opd    = d->module_datas[dfa_module_operator.index];
+	scf_parse_t*    parse = dfa->priv;
+	dfa_data_t*     d     = parse->dfa_data;
+	dfa_op_data_t*  opd    = d->module_datas[dfa_module_operator.index];
 
 	if (opd) {
 		free(opd);
@@ -400,7 +398,6 @@ static int _dfa_init_syntax_operator(scf_dfa_t* dfa)
 	// operator body
 	scf_dfa_node_add_child(rp,        block);
 
-	scf_logi("\n");
 	return 0;
 }
 
@@ -413,4 +410,3 @@ scf_dfa_module_t dfa_module_operator =
 
 	.fini_module = _dfa_fini_module_operator,
 };
-

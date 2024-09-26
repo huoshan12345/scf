@@ -1,4 +1,4 @@
-#include"scf_dwarf_def.h"
+#include"scf_dwarf.h"
 #include"scf_leb128.h"
 #include"scf_native.h"
 #include"scf_elf.h"
@@ -542,7 +542,7 @@ int scf_dwarf_line_decode(scf_dwarf_line_machine_t* lm, scf_vector_t* line_resul
 	return 0;
 }
 
-int scf_dwarf_line_encode(scf_dwarf_debug_t* debug, scf_dwarf_line_machine_t* lm, scf_vector_t* line_results, scf_string_t* debug_line)
+int scf_dwarf_line_encode(scf_dwarf_t* debug, scf_dwarf_line_machine_t* lm, scf_vector_t* line_results, scf_string_t* debug_line)
 {
 	if (!debug || !lm || !line_results || !debug_line)
 		return -EINVAL;

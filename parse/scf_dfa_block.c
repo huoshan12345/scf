@@ -19,7 +19,7 @@ typedef struct {
 static int _block_action_entry(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*      parse     = dfa->priv;
-	dfa_parse_data_t* d         = data;
+	dfa_data_t* d         = data;
 	scf_stack_t*      s         = d->module_datas[dfa_module_block.index];
 	dfa_block_data_t* bd        = scf_stack_top(s);
 
@@ -34,10 +34,9 @@ static int _block_action_entry(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 		scf_stack_push(s, bd);
 
-		scf_logi("\033[31m new bd: %p, s->size: %d\033[0m\n", bd, s->size);
-	} else {
-		scf_logi("\033[31m new bd: %p, s->size: %d\033[0m\n", bd, s->size);
-	}
+		scf_logi("new bd: %p, s->size: %d\n", bd, s->size);
+	} else
+		scf_logi("new bd: %p, s->size: %d\n", bd, s->size);
 
 	return words->size > 0 ? SCF_DFA_CONTINUE : SCF_DFA_NEXT_WORD;
 }
@@ -45,12 +44,12 @@ static int _block_action_entry(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _block_action_end(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*      parse     = dfa->priv;
-	dfa_parse_data_t* d         = data;
+	dfa_data_t* d         = data;
 	scf_stack_t*      s         = d->module_datas[dfa_module_block.index];
 	dfa_block_data_t* bd        = scf_stack_top(s);
 
 	if (bd->nb_rbs < bd->nb_lbs) {
-		scf_logi("\033[31m end bd: %p, bd->nb_lbs: %d, bd->nb_rbs: %d, s->size: %d\033[0m\n",
+		scf_logi("end bd: %p, bd->nb_lbs: %d, bd->nb_rbs: %d, s->size: %d\n",
 				bd, bd->nb_lbs, bd->nb_rbs, s->size);
 
 		SCF_DFA_PUSH_HOOK(scf_dfa_find_node(dfa, "block_end"), SCF_DFA_HOOK_END);
@@ -64,7 +63,7 @@ static int _block_action_end(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 	scf_stack_pop(s);
 
-	scf_logi("\033[31m end bd: %p, bd->nb_lbs: %d, bd->nb_rbs: %d, s->size: %d\033[0m\n",
+	scf_logi("end bd: %p, bd->nb_lbs: %d, bd->nb_rbs: %d, s->size: %d\n",
 			bd, bd->nb_lbs, bd->nb_rbs, s->size);
 
 	free(bd);
@@ -76,7 +75,7 @@ static int _block_action_end(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _block_action_lb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
+	dfa_data_t* d     = data;
 	scf_lex_word_t*   w     = words->data[words->size - 1];
 	scf_stack_t*      s     = d->module_datas[dfa_module_block.index];
 
@@ -102,7 +101,7 @@ static int _block_action_lb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	bd->nb_lbs++;
 	scf_stack_push(s, bd);
 
-	scf_logi("\033[31m new bd: %p, s->size: %d\033[0m\n", bd, s->size);
+	scf_logi("new bd: %p, s->size: %d\n", bd, s->size);
 
 	return SCF_DFA_NEXT_WORD;
 }
@@ -110,14 +109,14 @@ static int _block_action_lb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _block_action_rb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
+	dfa_data_t* d     = data;
 	scf_lex_word_t*   w     = words->data[words->size - 1];
 	scf_stack_t*      s     = d->module_datas[dfa_module_block.index];
 	dfa_block_data_t* bd    = scf_stack_top(s);
 
 	bd->nb_rbs++;
 
-	scf_logi("\033[31m bd: %p, bd->nb_lbs: %d, bd->nb_rbs: %d, s->size: %d\033[0m\n",
+	scf_logi("bd: %p, bd->nb_lbs: %d, bd->nb_rbs: %d, s->size: %d\n",
 			bd, bd->nb_lbs, bd->nb_rbs, s->size);
 
 	assert(bd->nb_lbs == bd->nb_rbs);
@@ -142,6 +141,8 @@ static int _dfa_init_module_block(scf_dfa_t* dfa)
 
 	SCF_DFA_GET_MODULE_NODE(dfa, expr,      entry,     expr);
 	SCF_DFA_GET_MODULE_NODE(dfa, type,      entry,     type);
+
+	SCF_DFA_GET_MODULE_NODE(dfa, macro,     hash,      macro);
 
 	SCF_DFA_GET_MODULE_NODE(dfa, if,       _if,       _if);
 	SCF_DFA_GET_MODULE_NODE(dfa, while,    _while,    _while);
@@ -171,6 +172,8 @@ static int _dfa_init_module_block(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(entry, expr);
 	scf_dfa_node_add_child(entry, type);
 
+	scf_dfa_node_add_child(entry, macro);
+
 	scf_dfa_node_add_child(entry, _if);
 	scf_dfa_node_add_child(entry, _while);
 	scf_dfa_node_add_child(entry, _do);
@@ -188,7 +191,7 @@ static int _dfa_init_module_block(scf_dfa_t* dfa)
 
 
 	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = parse->dfa_data;
+	dfa_data_t* d     = parse->dfa_data;
 	scf_stack_t*      s     = d->module_datas[dfa_module_block.index];
 
 	assert(!s);
@@ -206,7 +209,7 @@ static int _dfa_init_module_block(scf_dfa_t* dfa)
 static int _dfa_fini_module_block(scf_dfa_t* dfa)
 {
 	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = parse->dfa_data;
+	dfa_data_t* d     = parse->dfa_data;
 	scf_stack_t*      s     = d->module_datas[dfa_module_block.index];
 
 	if (s) {

@@ -10,7 +10,7 @@ typedef struct {
 
 } dfa_fun_data_t;
 
-int _function_add_function(scf_dfa_t* dfa, dfa_parse_data_t* d)
+int _function_add_function(scf_dfa_t* dfa, dfa_data_t* d)
 {
 	if (d->current_identities->size < 2) {
 		scf_loge("d->current_identities->size: %d\n", d->current_identities->size);
@@ -119,7 +119,7 @@ int _function_add_function(scf_dfa_t* dfa, dfa_parse_data_t* d)
 	return SCF_DFA_NEXT_WORD;
 }
 
-int _function_add_arg(scf_dfa_t* dfa, dfa_parse_data_t* d)
+int _function_add_arg(scf_dfa_t* dfa, dfa_data_t* d)
 {
 	dfa_identity_t* t = NULL;
 	dfa_identity_t* v = NULL;
@@ -200,7 +200,7 @@ int _function_add_arg(scf_dfa_t* dfa, dfa_parse_data_t* d)
 
 static int _function_action_vargs(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t* d = data;
+	dfa_data_t* d = data;
 
 	d->current_function->vargs_flag = 1;
 
@@ -209,7 +209,7 @@ static int _function_action_vargs(scf_dfa_t* dfa, scf_vector_t* words, void* dat
 
 static int _function_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t* d   = data;
+	dfa_data_t* d = data;
 
 	if (_function_add_arg(dfa, d) < 0) {
 		scf_loge("function add arg failed\n");
@@ -223,9 +223,9 @@ static int _function_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* dat
 
 static int _function_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
-	dfa_fun_data_t*   fd    = d->module_datas[dfa_module_function.index];
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = data;
+	dfa_fun_data_t*  fd    = d->module_datas[dfa_module_function.index];
 
 	assert(!d->current_node);
 
@@ -245,11 +245,11 @@ static int _function_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _function_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
-	dfa_fun_data_t*   fd    = d->module_datas[dfa_module_function.index];
-	scf_function_t*   f     = d->current_function;
-	scf_function_t*   fprev = NULL;
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = data;
+	dfa_fun_data_t*  fd    = d->module_datas[dfa_module_function.index];
+	scf_function_t*  f     = d->current_function;
+	scf_function_t*  fprev = NULL;
 
 	d->nb_rps++;
 
@@ -366,12 +366,12 @@ static int _function_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _function_action_end(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
-	scf_lex_word_t*   w     = words->data[words->size - 1];
-	dfa_fun_data_t*   fd    = d->module_datas[dfa_module_function.index];
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = data;
+	scf_lex_word_t*  w     = words->data[words->size - 1];
+	dfa_fun_data_t*  fd    = d->module_datas[dfa_module_function.index];
 
-	parse->ast->current_block  = (scf_block_t*)(fd->parent_block);
+	parse->ast->current_block = (scf_block_t*)(fd->parent_block);
 
 	if (d->current_function->node.nb_nodes > 0)
 		d->current_function->node.define_flag = 1;
@@ -395,9 +395,9 @@ static int _dfa_init_module_function(scf_dfa_t* dfa)
 	SCF_DFA_MODULE_NODE(dfa, function, lp,     scf_dfa_is_lp,    _function_action_lp);
 	SCF_DFA_MODULE_NODE(dfa, function, rp,     scf_dfa_is_rp,    _function_action_rp);
 
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = parse->dfa_data;
-	dfa_fun_data_t*   fd    = d->module_datas[dfa_module_function.index];
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = parse->dfa_data;
+	dfa_fun_data_t*  fd    = d->module_datas[dfa_module_function.index];
 
 	assert(!fd);
 
@@ -414,9 +414,9 @@ static int _dfa_init_module_function(scf_dfa_t* dfa)
 
 static int _dfa_fini_module_function(scf_dfa_t* dfa)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = parse->dfa_data;
-	dfa_fun_data_t*   fd    = d->module_datas[dfa_module_function.index];
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = parse->dfa_data;
+	dfa_fun_data_t*  fd    = d->module_datas[dfa_module_function.index];
 
 	if (fd) {
 		free(fd);
@@ -471,7 +471,6 @@ static int _dfa_init_syntax_function(scf_dfa_t* dfa)
 	// function body
 	scf_dfa_node_add_child(rp,        block);
 
-	scf_logi("\n");
 	return 0;
 }
 

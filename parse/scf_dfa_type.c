@@ -14,7 +14,7 @@ static int _type_is__struct(scf_dfa_t* dfa, void* word)
 
 static int _type_action_const(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t* d = data;
+	dfa_data_t* d = data;
 
 	d->const_flag = 1;
 
@@ -23,7 +23,7 @@ static int _type_action_const(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _type_action_extern(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t* d = data;
+	dfa_data_t* d = data;
 
 	d->extern_flag = 1;
 
@@ -32,7 +32,7 @@ static int _type_action_extern(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _type_action_static(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t* d = data;
+	dfa_data_t* d = data;
 
 	d->static_flag = 1;
 
@@ -41,7 +41,7 @@ static int _type_action_static(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _type_action_inline(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t* d = data;
+	dfa_data_t* d = data;
 
 	d->inline_flag = 1;
 
@@ -50,12 +50,12 @@ static int _type_action_inline(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _type_action_base_type(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	scf_lex_word_t*   w     = words->data[words->size - 1];
-	dfa_parse_data_t* d     = data;
-	scf_stack_t*      s     = d->current_identities;
+	scf_parse_t*     parse = dfa->priv;
+	scf_lex_word_t*  w     = words->data[words->size - 1];
+	dfa_data_t*      d     = data;
+	scf_stack_t*     s     = d->current_identities;
+	dfa_identity_t*  id    = calloc(1, sizeof(dfa_identity_t));
 
-	dfa_identity_t*   id    = calloc(1, sizeof(dfa_identity_t));
 	if (!id)
 		return SCF_DFA_ERROR;
 
@@ -150,11 +150,11 @@ int _type_find_type(scf_dfa_t* dfa, dfa_identity_t* id)
 
 static int _type_action_identity(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	scf_lex_word_t*   w     = words->data[words->size - 1];
-	dfa_parse_data_t* d     = data;
-	scf_stack_t*      s     = d->current_identities;
-	dfa_identity_t*   id    = NULL;
+	scf_parse_t*     parse = dfa->priv;
+	scf_lex_word_t*  w     = words->data[words->size - 1];
+	dfa_data_t*      d     = data;
+	scf_stack_t*     s     = d->current_identities;
+	dfa_identity_t*  id    = NULL;
 
 	if (s->size > 0) {
 		id = scf_stack_top(s);
@@ -181,7 +181,7 @@ static int _type_action_identity(scf_dfa_t* dfa, scf_vector_t* words, void* data
 
 static int _type_action_star(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t* d  = data;
+	dfa_data_t* d  = data;
 	dfa_identity_t*   id = scf_stack_top(d->current_identities);
 
 	assert(id);
@@ -201,8 +201,8 @@ static int _type_action_star(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _type_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t* d  = data;
-	dfa_identity_t*   id = scf_stack_top(d->current_identities);
+	dfa_data_t*      d  = data;
+	dfa_identity_t*  id = scf_stack_top(d->current_identities);
 
 	assert(id);
 
@@ -312,7 +312,6 @@ static int _dfa_init_syntax_type(scf_dfa_t* dfa)
 		scf_logd("n->name: %s\n", n->name);
 	}
 
-	scf_logi("\n");
 	return SCF_DFA_OK;
 }
 

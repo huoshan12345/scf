@@ -27,7 +27,7 @@ static int _class_is_class(scf_dfa_t* dfa, void* word)
 static int _class_action_identity(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*          parse = dfa->priv;
-	dfa_parse_data_t*     d     = data;
+	dfa_data_t*           d     = data;
 	class_module_data_t*  md    = d->module_datas[dfa_module_class.index];
 	scf_lex_word_t*       w     = words->data[words->size - 1];
 
@@ -54,7 +54,7 @@ static int _class_action_identity(scf_dfa_t* dfa, scf_vector_t* words, void* dat
 	md->parent_block     = parse->ast->current_block;
 	SCF_DFA_PUSH_HOOK(scf_dfa_find_node(dfa, "class_end"), SCF_DFA_HOOK_END);
 
-	printf("\033[31m%s(), %d, t: %p, t->type: %d\033[0m\n", __func__, __LINE__, t, t->type);
+	scf_logi("\033[31m t: %p, t->type: %d\033[0m\n", t, t->type);
 
 	return SCF_DFA_NEXT_WORD;
 }
@@ -62,7 +62,7 @@ static int _class_action_identity(scf_dfa_t* dfa, scf_vector_t* words, void* dat
 static int _class_action_lb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*          parse = dfa->priv;
-	dfa_parse_data_t*     d     = data;
+	dfa_data_t*           d     = data;
 	class_module_data_t*  md    = d->module_datas[dfa_module_class.index];
 	scf_lex_word_t*       w     = words->data[words->size - 1];
 
@@ -122,8 +122,7 @@ static int _class_calculate_size(scf_dfa_t* dfa, scf_type_t* s)
 
 			for (j = 0; j < v->nb_dimentions; j++) {
 				if (v->dimentions[j] < 0) {
-
-					printf("%s(), %d, error: v: '%s'\n", __func__, __LINE__, v->w->text->data);
+					scf_loge("v: '%s'\n", v->w->text->data);
 					return SCF_DFA_ERROR;
 				}
 
@@ -136,20 +135,20 @@ static int _class_calculate_size(scf_dfa_t* dfa, scf_type_t* s)
 			size = v->offset + v->size;
 		}
 
-		printf("%s(), %d, class '%s', member: '%s', offset: %d, size: %d, v->dim: %d, v->capacity: %d\n", __func__, __LINE__,
+		scf_logi("class '%s', member: '%s', offset: %d, size: %d, v->dim: %d, v->capacity: %d\n",
 				s->name->data, v->w->text->data, v->offset, v->size, v->nb_dimentions, v->capacity);
 	}
 	s->size = size;
 	s->node.define_flag = 1;
 
-	printf("%s(), %d, class '%s', size: %d\n", __func__, __LINE__, s->name->data, s->size);
+	scf_logi("class '%s', size: %d\n", s->name->data, s->size);
 	return 0;
 }
 
 static int _class_action_rb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*          parse = dfa->priv;
-	dfa_parse_data_t*     d     = data;
+	dfa_data_t*           d     = data;
 	class_module_data_t*  md    = d->module_datas[dfa_module_class.index];
 
 	if (_class_calculate_size(dfa, md->current_class) < 0) {
@@ -170,7 +169,7 @@ static int _class_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* da
 static int _class_action_end(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*          parse = dfa->priv;
-	dfa_parse_data_t*     d     = data;
+	dfa_data_t*           d     = data;
 	class_module_data_t*  md    = d->module_datas[dfa_module_class.index];
 
 	if (md->nb_rbs == md->nb_lbs) {
@@ -204,16 +203,14 @@ static int _dfa_init_module_class(scf_dfa_t* dfa)
 	SCF_DFA_MODULE_NODE(dfa, class, end,       scf_dfa_is_entry,     _class_action_end);
 
 	scf_parse_t*          parse = dfa->priv;
-	dfa_parse_data_t*     d     = parse->dfa_data;
+	dfa_data_t*           d     = parse->dfa_data;
 	class_module_data_t*  md    = d->module_datas[dfa_module_class.index];
 
 	assert(!md);
 
 	md = calloc(1, sizeof(class_module_data_t));
-	if (!md) {
-		printf("%s(),%d, error: \n", __func__, __LINE__);
+	if (!md)
 		return SCF_DFA_ERROR;
-	}
 
 	d->module_datas[dfa_module_class.index] = md;
 
@@ -223,7 +220,7 @@ static int _dfa_init_module_class(scf_dfa_t* dfa)
 static int _dfa_fini_module_class(scf_dfa_t* dfa)
 {
 	scf_parse_t*          parse = dfa->priv;
-	dfa_parse_data_t*     d     = parse->dfa_data;
+	dfa_data_t*           d     = parse->dfa_data;
 	class_module_data_t*  md    = d->module_datas[dfa_module_class.index];
 
 	if (md) {
@@ -266,7 +263,6 @@ static int _dfa_init_syntax_class(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(end,       member);
 	scf_dfa_node_add_child(end,       rb);
 
-	printf("%s(),%d\n\n", __func__, __LINE__);
 	return 0;
 }
 
@@ -278,4 +274,3 @@ scf_dfa_module_t dfa_module_class =
 
 	.fini_module = _dfa_fini_module_class,
 };
-

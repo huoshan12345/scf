@@ -14,7 +14,7 @@ static int _async_is_async(scf_dfa_t* dfa, void* word)
 static int _async_action_async(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
+	dfa_data_t*       d     = data;
 	scf_lex_word_t*   w     = words->data[words->size - 1];
 
 	if (d->expr) {
@@ -33,8 +33,8 @@ static int _async_action_async(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _async_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = data;
 
 	if (!d->expr) {
 		scf_loge("\n");
@@ -122,7 +122,6 @@ static int _dfa_init_syntax_async(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(async, expr);
 	scf_dfa_node_add_child(expr,  semicolon);
 
-	scf_logi("\n");
 	return 0;
 }
 
@@ -132,4 +131,3 @@ scf_dfa_module_t dfa_module_async =
 	.init_module = _dfa_init_module_async,
 	.init_syntax = _dfa_init_syntax_async,
 };
-

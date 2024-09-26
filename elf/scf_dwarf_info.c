@@ -1,4 +1,4 @@
-#include"scf_dwarf_def.h"
+#include"scf_dwarf.h"
 #include"scf_leb128.h"
 #include"scf_native.h"
 #include"scf_elf.h"
@@ -291,7 +291,7 @@ int scf_dwarf_info_decode(scf_vector_t* infos, scf_vector_t* abbrevs, scf_string
 	return 0;
 }
 
-static int _add_rela_common(scf_dwarf_debug_t* debug, const char* sym, uint64_t offset, int type, int addend)
+static int _add_rela_common(scf_dwarf_t* debug, const char* sym, uint64_t offset, int type, int addend)
 {
 	scf_rela_t* rela = calloc(1, sizeof(scf_rela_t));
 	if (!rela)
@@ -350,7 +350,7 @@ static int _add_rela_common(scf_dwarf_debug_t* debug, const char* sym, uint64_t 
 	return 0;
 }
 
-static int _add_rela_subprogram(scf_dwarf_debug_t* debug, scf_dwarf_info_entry_t* ie, uint64_t offset, int type)
+static int _add_rela_subprogram(scf_dwarf_t* debug, scf_dwarf_info_entry_t* ie, uint64_t offset, int type)
 {
 	scf_dwarf_info_attr_t* iattr = NULL;
 
@@ -368,7 +368,7 @@ static int _add_rela_subprogram(scf_dwarf_debug_t* debug, scf_dwarf_info_entry_t
 	return _add_rela_common(debug, iattr->data->data, offset, type, 0);
 }
 
-int scf_dwarf_info_encode(scf_dwarf_debug_t* debug, scf_dwarf_info_header_t* header)
+int scf_dwarf_info_encode(scf_dwarf_t* debug, scf_dwarf_info_header_t* header)
 {
 	if (!debug || !header) {
 		scf_loge("\n");
@@ -845,4 +845,3 @@ void scf_dwarf_info_print(scf_vector_t* infos)
 		}
 	}
 }
-

@@ -19,13 +19,13 @@ typedef struct {
 
 static int _do_action_do(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
-	scf_lex_word_t*   w     = words->data[words->size - 1];
-	scf_stack_t*      s     = d->module_datas[dfa_module_do.index];
-	scf_block_t*      b     = NULL;
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = data;
+	scf_lex_word_t*  w     = words->data[words->size - 1];
+	scf_stack_t*     s     = d->module_datas[dfa_module_do.index];
+	scf_block_t*     b     = NULL;
+	scf_node_t*     _do    = scf_node_alloc(w, SCF_OP_DO, NULL);
 
-	scf_node_t* _do = scf_node_alloc(w, SCF_OP_DO, NULL);
 	if (!_do) {
 		scf_loge("node alloc failed\n");
 		return SCF_DFA_ERROR;
@@ -66,8 +66,8 @@ static int _do_action_while(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _do_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = data;
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = data;
 
 	assert(!d->expr);
 	d->expr_local_flag = 1;
@@ -80,9 +80,9 @@ static int _do_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _do_action_lp_stat(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t*  d  = data;
-	scf_stack_t*       s  = d->module_datas[dfa_module_do.index];
-	dfa_do_data_t*     dd = scf_stack_top(s);
+	dfa_data_t*     d  = data;
+	scf_stack_t*    s  = d->module_datas[dfa_module_do.index];
+	dfa_do_data_t*  dd = scf_stack_top(s);
 
 	SCF_DFA_PUSH_HOOK(scf_dfa_find_node(dfa, "do_lp_stat"), SCF_DFA_HOOK_POST);
 
@@ -93,11 +93,11 @@ static int _do_action_lp_stat(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _do_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = data;
-	scf_lex_word_t*    w     = words->data[words->size - 1];
-	scf_stack_t*       s     = d->module_datas[dfa_module_do.index];
-	dfa_do_data_t*     dd    = scf_stack_top(s);
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = data;
+	scf_lex_word_t*  w     = words->data[words->size - 1];
+	scf_stack_t*     s     = d->module_datas[dfa_module_do.index];
+	dfa_do_data_t*   dd    = scf_stack_top(s);
 
 	if (!d->expr) {
 		scf_loge("\n");
@@ -126,10 +126,10 @@ static int _do_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _do_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = data;
-	scf_stack_t*       s     = d->module_datas[dfa_module_do.index];
-	dfa_do_data_t*     dd    = scf_stack_pop(s);
+	scf_parse_t*    parse = dfa->priv;
+	dfa_data_t*     d     = data;
+	scf_stack_t*    s     = d->module_datas[dfa_module_do.index];
+	dfa_do_data_t*  dd    = scf_stack_pop(s);
 
 	assert(parse->ast->current_block == dd->parent_block);
 
@@ -156,9 +156,9 @@ static int _dfa_init_module_do(scf_dfa_t* dfa)
 	SCF_DFA_MODULE_NODE(dfa, do, _do,       scf_dfa_is_do,        _do_action_do);
 	SCF_DFA_MODULE_NODE(dfa, do, _while,    scf_dfa_is_while,     _do_action_while);
 
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = parse->dfa_data;
-	scf_stack_t*      s     = d->module_datas[dfa_module_do.index];
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = parse->dfa_data;
+	scf_stack_t*  s     = d->module_datas[dfa_module_do.index];
 
 	assert(!s);
 
@@ -175,9 +175,9 @@ static int _dfa_init_module_do(scf_dfa_t* dfa)
 
 static int _dfa_fini_module_do(scf_dfa_t* dfa)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = parse->dfa_data;
-	scf_stack_t*      s     = d->module_datas[dfa_module_do.index];
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = parse->dfa_data;
+	scf_stack_t*  s     = d->module_datas[dfa_module_do.index];
 
 	if (s) {
 		scf_stack_free(s);
@@ -211,7 +211,6 @@ static int _dfa_init_syntax_do(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(expr,     rp);
 	scf_dfa_node_add_child(rp,       semicolon);
 
-	scf_logi("\n");
 	return 0;
 }
 

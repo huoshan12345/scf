@@ -7,7 +7,7 @@ extern scf_dfa_module_t dfa_module_goto;
 static int _goto_action_goto(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*      parse  = dfa->priv;
-	dfa_parse_data_t* d      = data;
+	dfa_data_t*       d      = data;
 	scf_lex_word_t*   w      = words->data[words->size - 1];
 
 	scf_node_t*       _goto  = scf_node_alloc(w, SCF_OP_GOTO, NULL);
@@ -29,7 +29,7 @@ static int _goto_action_goto(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _goto_action_identity(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*      parse  = dfa->priv;
-	dfa_parse_data_t* d      = data;
+	dfa_data_t*       d      = data;
 	scf_lex_word_t*   w      = words->data[words->size - 1];
 
 	scf_label_t*      l      = scf_label_alloc(w);
@@ -42,7 +42,7 @@ static int _goto_action_identity(scf_dfa_t* dfa, scf_vector_t* words, void* data
 
 static int _goto_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t* d     = data;
+	dfa_data_t* d = data;
 
 	d->current_goto = NULL;
 
@@ -67,7 +67,6 @@ static int _dfa_init_syntax_goto(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(_goto,    identity);
 	scf_dfa_node_add_child(identity, semicolon);
 
-	scf_logi("\n");
 	return 0;
 }
 
@@ -77,4 +76,3 @@ scf_dfa_module_t dfa_module_goto =
 	.init_module = _dfa_init_module_goto,
 	.init_syntax = _dfa_init_syntax_goto,
 };
-
