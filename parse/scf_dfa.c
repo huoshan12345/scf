@@ -399,7 +399,7 @@ static int _scf_dfa_node_parse_word(scf_dfa_t* dfa, scf_dfa_node_t* node, scf_ve
 		scf_logd("pop w->type: %d, '%s', line: %d, pos: %d\n", w->type, w->text->data, w->line, w->pos);
 
 	} else if (SCF_DFA_OK == ret) {
-		scf_logi("SCF_DFA_OK\n");
+		scf_logi("SCF_DFA_OK\n\n");
 		return SCF_DFA_OK;
 
 	} else if (SCF_DFA_CONTINUE == ret) {
