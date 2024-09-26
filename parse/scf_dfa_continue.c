@@ -13,9 +13,9 @@ static int _continue_is_continue(scf_dfa_t* dfa, void* word)
 
 static int _continue_action_continue(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse  = dfa->priv;
-	dfa_parse_data_t* d      = data;
-	scf_lex_word_t*   w      = words->data[words->size - 1];
+	scf_parse_t*     parse  = dfa->priv;
+	dfa_data_t*      d      = data;
+	scf_lex_word_t*  w      = words->data[words->size - 1];
 
 	scf_node_t*       _continue = scf_node_alloc(w, SCF_OP_CONTINUE, NULL);
 	if (!_continue) {
@@ -50,8 +50,6 @@ static int _dfa_init_syntax_continue(scf_dfa_t* dfa)
 	SCF_DFA_GET_MODULE_NODE(dfa, continue,   _continue, _continue);
 
 	scf_dfa_node_add_child(_continue, semicolon);
-
-	scf_logi("\n");
 	return 0;
 }
 
@@ -61,4 +59,3 @@ scf_dfa_module_t dfa_module_continue =
 	.init_module = _dfa_init_module_continue,
 	.init_syntax = _dfa_init_syntax_continue,
 };
-

@@ -2,12 +2,12 @@
 #include"scf_dfa_util.h"
 #include"scf_parse.h"
 
-extern scf_dfa_module_t dfa_module_init_data;
+extern scf_dfa_module_t  dfa_module_init_data;
 
-int scf_array_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* var, scf_vector_t* init_exprs);
+int scf_array_init (scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* var, scf_vector_t* init_exprs);
 int scf_struct_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* var, scf_vector_t* init_exprs);
 
-int _expr_add_var(scf_parse_t* parse, dfa_parse_data_t* d);
+int _expr_add_var(scf_parse_t* parse, dfa_data_t* d);
 
 typedef struct {
 	int              nb_lbs;
@@ -15,7 +15,7 @@ typedef struct {
 
 } data_module_data_t;
 
-static int _do_data_init(scf_dfa_t* dfa, scf_vector_t* words, dfa_parse_data_t* d)
+static int _do_data_init(scf_dfa_t* dfa, scf_vector_t* words, dfa_data_t* d)
 {
 	scf_parse_t*        parse = dfa->priv;
 	scf_variable_t*     var   = d->current_var;
@@ -89,7 +89,7 @@ error:
 	return ret;
 }
 
-static int _add_data_init_expr(scf_dfa_t* dfa, scf_vector_t* words, dfa_parse_data_t* d)
+static int _add_data_init_expr(scf_dfa_t* dfa, scf_vector_t* words, dfa_data_t* d)
 {
 	assert(!d->expr->parent);
 	assert(d->current_dim >= 0);
@@ -113,7 +113,7 @@ static int _add_data_init_expr(scf_dfa_t* dfa, scf_vector_t* words, dfa_parse_da
 static int _data_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*        parse = dfa->priv;
-	dfa_parse_data_t*   d     = data;
+	dfa_data_t*         d     = data;
 	data_module_data_t* md    = d->module_datas[dfa_module_init_data.index];
 
 	if (d->current_dim < 0) {
@@ -145,7 +145,7 @@ static int _data_action_lb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	}
 
 	scf_parse_t*        parse = dfa->priv;
-	dfa_parse_data_t*   d     = data;
+	dfa_data_t*         d     = data;
 	scf_lex_word_t*     w     = words->data[words->size - 2];
 	data_module_data_t* md    = d->module_datas[dfa_module_init_data.index]; 
 
@@ -183,7 +183,7 @@ static int _data_action_lb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _data_action_rb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*        parse = dfa->priv;
-	dfa_parse_data_t*   d     = data;
+	dfa_data_t*         d     = data;
 	data_module_data_t* md    = d->module_datas[dfa_module_init_data.index]; 
 
 	if (d->expr) {
@@ -224,12 +224,11 @@ static int _data_action_rb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _dfa_init_module_init_data(scf_dfa_t* dfa)
 {
 	SCF_DFA_MODULE_NODE(dfa, init_data, comma, scf_dfa_is_comma, _data_action_comma);
-
 	SCF_DFA_MODULE_NODE(dfa, init_data, lb,    scf_dfa_is_lb,    _data_action_lb);
 	SCF_DFA_MODULE_NODE(dfa, init_data, rb,    scf_dfa_is_rb,    _data_action_rb);
 
 	scf_parse_t*        parse = dfa->priv;
-	dfa_parse_data_t*   d     = parse->dfa_data;
+	dfa_data_t*         d     = parse->dfa_data;
 	data_module_data_t* md    = d->module_datas[dfa_module_init_data.index];
 
 	assert(!md);
@@ -247,12 +246,10 @@ static int _dfa_init_module_init_data(scf_dfa_t* dfa)
 
 static int _dfa_init_syntax_init_data(scf_dfa_t* dfa)
 {
-	SCF_DFA_GET_MODULE_NODE(dfa, init_data, comma,     comma);
-
-	SCF_DFA_GET_MODULE_NODE(dfa, init_data, lb,        lb);
-	SCF_DFA_GET_MODULE_NODE(dfa, init_data, rb,        rb);
-
-	SCF_DFA_GET_MODULE_NODE(dfa, expr, entry,     expr);
+	SCF_DFA_GET_MODULE_NODE(dfa, init_data, comma, comma);
+	SCF_DFA_GET_MODULE_NODE(dfa, init_data, lb,    lb);
+	SCF_DFA_GET_MODULE_NODE(dfa, init_data, rb,    rb);
+	SCF_DFA_GET_MODULE_NODE(dfa, expr,      entry, expr);
 
 	// empty init, use 0 to fill the data
 	scf_dfa_node_add_child(lb,        rb);
@@ -269,7 +266,6 @@ static int _dfa_init_syntax_init_data(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(comma,     expr);
 	scf_dfa_node_add_child(expr,      rb);
 
-	scf_logi("\n");
 	return 0;
 }
 

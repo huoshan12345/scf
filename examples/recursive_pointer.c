@@ -1,4 +1,4 @@
-include "../lib/scf_capi.c";
+#include "../lib/scf_capi.c"
 
 int f(int** t0, int **t1);
 

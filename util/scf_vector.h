@@ -29,23 +29,23 @@ static inline scf_vector_t* scf_vector_alloc()
 	return v;
 }
 
-static inline scf_vector_t* scf_vector_clone(scf_vector_t* origin)
+static inline scf_vector_t* scf_vector_clone(scf_vector_t* src)
 {
-	scf_vector_t* clone = calloc(1, sizeof(scf_vector_t));
-	if (!clone)
+	scf_vector_t* dst = calloc(1, sizeof(scf_vector_t));
+	if (!dst)
 		return NULL;
 
-	clone->data = calloc(origin->capacity, sizeof(void*));
-	if (!clone->data) {
-		free(clone);
-		clone = NULL;
+	dst->data = calloc(src->capacity, sizeof(void*));
+	if (!dst->data) {
+		free(dst);
 		return NULL;
 	}
 
-	clone->capacity = origin->capacity;
-	clone->size		= origin->size;
-	memcpy(clone->data, origin->data, origin->size * sizeof(void*));
-	return clone;
+	dst->capacity = src->capacity;
+	dst->size     = src->size;
+
+	memcpy(dst->data, src->data, src->size * sizeof(void*));
+	return dst;
 }
 
 static inline int scf_vector_cat(scf_vector_t* dst, scf_vector_t* src)

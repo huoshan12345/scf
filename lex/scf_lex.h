@@ -4,6 +4,7 @@
 #include"scf_lex_word.h"
 
 typedef struct scf_char_s  scf_char_t;
+typedef struct scf_lex_s   scf_lex_t;
 
 typedef struct {
 	char*   text;
@@ -16,6 +17,7 @@ typedef struct {
 } scf_escape_char_t;
 
 #define SCF_UTF8_MAX 6
+#define SCF_UTF8_LF  1
 struct scf_char_s
 {
 	scf_char_t*     next;
@@ -23,29 +25,35 @@ struct scf_char_s
 
 	int             len;
 	uint8_t         utf8[SCF_UTF8_MAX];
+	uint8_t         flag;
 };
 
-typedef struct {
-	scf_list_t      word_list_head; // word list head
-	scf_char_t*     char_list_head; // temp char list head
+struct scf_lex_s
+{
+	scf_lex_t*      next;
+
+	scf_lex_word_t* word_list;
+	scf_char_t*     char_list;
+
+	scf_vector_t*   macros;
 
 	FILE*           fp; // file pointer to the code
 
 	scf_string_t*   file; // original code file name
 	int             nb_lines;
 	int             pos;
-} scf_lex_t;
+};
 
 
 scf_char_t*  _lex_pop_char (scf_lex_t* lex);
 void         _lex_push_char(scf_lex_t* lex, scf_char_t* c);
 
 
-int	scf_lex_open (scf_lex_t** plex, const char* path);
-int scf_lex_close(scf_lex_t*   lex);
+int	 scf_lex_open (scf_lex_t** plex, const char* path);
+int  scf_lex_close(scf_lex_t*   lex);
 
-int scf_lex_push_word(scf_lex_t* lex, scf_lex_word_t*   word);
-int scf_lex_pop_word (scf_lex_t* lex, scf_lex_word_t** pword);
+void scf_lex_push_word(scf_lex_t* lex, scf_lex_word_t*   word);
+int  scf_lex_pop_word (scf_lex_t* lex, scf_lex_word_t** pword);
 
 
 int _lex_number_base_16(scf_lex_t* lex, scf_lex_word_t** pword, scf_string_t* s);

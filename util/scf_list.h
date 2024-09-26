@@ -65,6 +65,16 @@ static inline void scf_list_add_front(scf_list_t* h, scf_list_t* n)
 		}\
 	} while(0)
 
+#define scf_slist_clear(h, type, next, type_free) \
+	do { \
+		while (h) { \
+			type* p = h; \
+			h = p->next; \
+			type_free(p); \
+			p = NULL; \
+		} \
+	} while (0)
+
 #define scf_list_mov(dst, src, type, member) \
 	do {\
 		scf_list_t* l;\
@@ -78,4 +88,3 @@ static inline void scf_list_add_front(scf_list_t* h, scf_list_t* n)
 	} while(0)
 
 #endif
-

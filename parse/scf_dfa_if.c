@@ -29,13 +29,13 @@ static int _if_is_end(scf_dfa_t* dfa, void* word)
 
 static int _if_action_if(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
-	scf_lex_word_t*   w     = words->data[words->size - 1];
-	scf_stack_t*      s     = d->module_datas[dfa_module_if.index];
-	dfa_if_data_t*    ifd   = scf_stack_top(s);
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = data;
+	scf_lex_word_t*  w     = words->data[words->size - 1];
+	scf_stack_t*     s     = d->module_datas[dfa_module_if.index];
+	dfa_if_data_t*   ifd   = scf_stack_top(s);
+	scf_node_t*     _if    = scf_node_alloc(w, SCF_OP_IF, NULL);
 
-	scf_node_t*       _if   = scf_node_alloc(w, SCF_OP_IF, NULL);
 	if (!_if) {
 		scf_loge("\n");
 		return SCF_DFA_ERROR;
@@ -68,11 +68,11 @@ static int _if_action_if(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _if_action_else(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
-	scf_lex_word_t*   w     = words->data[words->size - 1];
-	scf_stack_t*      s     = d->module_datas[dfa_module_if.index];
-	dfa_if_data_t*    ifd   = scf_stack_top(s);
+	scf_parse_t*     parse = dfa->priv;
+	dfa_data_t*      d     = data;
+	scf_lex_word_t*  w     = words->data[words->size - 1];
+	scf_stack_t*     s     = d->module_datas[dfa_module_if.index];
+	dfa_if_data_t*   ifd   = scf_stack_top(s);
 
 	if (!ifd) {
 		scf_loge("no 'if' before 'else' in line: %d\n", w->line);
@@ -97,9 +97,9 @@ static int _if_action_else(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _if_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t* d     = data;
-	scf_stack_t*      s     = d->module_datas[dfa_module_if.index];
-	dfa_if_data_t*    ifd   = scf_stack_top(s);
+	dfa_data_t*     d   = data;
+	scf_stack_t*    s   = d->module_datas[dfa_module_if.index];
+	dfa_if_data_t*  ifd = scf_stack_top(s);
 
 	if (d->expr) {
 		scf_expr_free(d->expr);
@@ -117,9 +117,9 @@ static int _if_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _if_action_lp_stat(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t* d     = data;
-	scf_stack_t*      s     = d->module_datas[dfa_module_if.index];
-	dfa_if_data_t*    ifd   = scf_stack_top(s);
+	dfa_data_t*     d   = data;
+	scf_stack_t*    s   = d->module_datas[dfa_module_if.index];
+	dfa_if_data_t*  ifd = scf_stack_top(s);
 
 	ifd->nb_lps++;
 
@@ -130,9 +130,9 @@ static int _if_action_lp_stat(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _if_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t* d     = data;
-	scf_stack_t*      s     = d->module_datas[dfa_module_if.index];
-	dfa_if_data_t*    ifd   = scf_stack_top(s);
+	dfa_data_t*     d   = data;
+	scf_stack_t*    s   = d->module_datas[dfa_module_if.index];
+	dfa_if_data_t*  ifd = scf_stack_top(s);
 
 	if (!d->expr) {
 		scf_loge("\n");
@@ -172,11 +172,11 @@ static int _is_end(scf_dfa_t* dfa)
 
 static int _if_action_end(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse     = dfa->priv;
-	dfa_parse_data_t* d         = data;
-	scf_stack_t*      s         = d->module_datas[dfa_module_if.index];
-	dfa_if_data_t*    ifd       = scf_stack_top(s);
-	scf_lex_word_t*   prev_else = ifd->prev_else;
+	scf_parse_t*     parse     = dfa->priv;
+	dfa_data_t*      d         = data;
+	scf_stack_t*     s         = d->module_datas[dfa_module_if.index];
+	dfa_if_data_t*   ifd       = scf_stack_top(s);
+	scf_lex_word_t*  prev_else = ifd->prev_else;
 
 	if (!_is_end(dfa)) {
 
@@ -216,9 +216,9 @@ static int _dfa_init_module_if(scf_dfa_t* dfa)
 	SCF_DFA_MODULE_NODE(dfa, if, _if,       scf_dfa_is_if,    _if_action_if);
 	SCF_DFA_MODULE_NODE(dfa, if, _else,     scf_dfa_is_else,  _if_action_else);
 
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = parse->dfa_data;
-	scf_stack_t*      s     = d->module_datas[dfa_module_if.index];
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = parse->dfa_data;
+	scf_stack_t*  s     = d->module_datas[dfa_module_if.index];
 
 	assert(!s);
 
@@ -235,9 +235,9 @@ static int _dfa_init_module_if(scf_dfa_t* dfa)
 
 static int _dfa_fini_module_if(scf_dfa_t* dfa)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = parse->dfa_data;
-	scf_stack_t*      s     = d->module_datas[dfa_module_if.index];
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = parse->dfa_data;
+	scf_stack_t*  s     = d->module_datas[dfa_module_if.index];
 
 	if (s) {
 		scf_stack_free(s);
@@ -278,7 +278,6 @@ static int _dfa_init_syntax_if(scf_dfa_t* dfa)
 	// last else block
 	scf_dfa_node_add_child(_else,  block);
 
-	scf_logi("\n");
 	return 0;
 }
 
@@ -291,4 +290,3 @@ scf_dfa_module_t dfa_module_if =
 
 	.fini_module = _dfa_fini_module_if,
 };
-

@@ -2,14 +2,14 @@
 #include"scf_dfa_util.h"
 #include"scf_parse.h"
 
-extern scf_dfa_module_t dfa_module_return;
+extern scf_dfa_module_t  dfa_module_return;
 
 static int _return_action_return(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse   = dfa->priv;
-	dfa_parse_data_t* d       = data;
-	scf_lex_word_t*   w       = words->data[words->size - 1];
-	scf_node_t*       _return = NULL;
+	scf_parse_t*     parse   = dfa->priv;
+	dfa_data_t*      d       = data;
+	scf_lex_word_t*  w       = words->data[words->size - 1];
+	scf_node_t*      _return = NULL;
 
 	if (d->expr) {
 		scf_loge("\n");
@@ -38,8 +38,8 @@ static int _return_action_return(scf_dfa_t* dfa, scf_vector_t* words, void* data
 
 static int _return_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = data;
 
 	if (d->expr) {
 		scf_node_add_child(d->current_return, d->expr);
@@ -53,8 +53,8 @@ static int _return_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _return_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*      parse = dfa->priv;
-	dfa_parse_data_t* d     = data;
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = data;
 
 	if (d->expr) {
 		scf_node_add_child(d->current_return, d->expr);
@@ -95,7 +95,6 @@ static int _dfa_init_syntax_return(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(comma,      expr);
 	scf_dfa_node_add_child(expr,       semicolon);
 
-	scf_logi("\n");
 	return 0;
 }
 
@@ -105,4 +104,3 @@ scf_dfa_module_t dfa_module_return =
 	.init_module = _dfa_init_module_return,
 	.init_syntax = _dfa_init_syntax_return,
 };
-

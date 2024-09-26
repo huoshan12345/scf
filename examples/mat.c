@@ -1,5 +1,5 @@
 
-include "../lib/scf_capi.c";
+#include"../lib/scf_capi.c"
 
 const int    MAT_TYPE_NONE   = 0;
 const int    MAT_TYPE_U8     = 1;

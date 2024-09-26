@@ -1,6 +1,7 @@
 #include"scf_dfa.h"
 #include"scf_parse.h"
 
+extern scf_dfa_module_t  dfa_module_macro;
 extern scf_dfa_module_t  dfa_module_include;
 
 extern scf_dfa_module_t  dfa_module_identity;
@@ -42,6 +43,7 @@ extern scf_dfa_module_t  dfa_module_block;
 
 scf_dfa_module_t* dfa_modules[] =
 {
+	&dfa_module_macro,
 	&dfa_module_include,
 
 	&dfa_module_identity,
@@ -91,7 +93,7 @@ int scf_parse_dfa_init(scf_parse_t* parse)
 
 	int nb_modules  = sizeof(dfa_modules) / sizeof(dfa_modules[0]);
 
-	parse->dfa_data = calloc(1, sizeof(dfa_parse_data_t));
+	parse->dfa_data = calloc(1, sizeof(dfa_data_t));
 	if (!parse->dfa_data) {
 		scf_loge("\n");
 		return -1;

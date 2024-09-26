@@ -6,9 +6,9 @@ extern scf_dfa_module_t dfa_module_identity;
 
 static int _identity_action_identity(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_lex_word_t*   w = words->data[words->size - 1];
-	dfa_parse_data_t* d = data;
-	scf_stack_t*      s = d->current_identities;
+	scf_lex_word_t*  w = words->data[words->size - 1];
+	dfa_data_t*      d = data;
+	scf_stack_t*     s = d->current_identities;
 
 	scf_logd("w: '%s'\n", w->text->data);
 
@@ -37,8 +37,6 @@ static int _dfa_init_module_identity(scf_dfa_t* dfa)
 
 static int _dfa_init_syntax_identity(scf_dfa_t* dfa)
 {
-	scf_logi("\n");
-
 	SCF_DFA_GET_MODULE_NODE(dfa, identity, identity,  identity);
 
 	scf_vector_add(dfa->syntaxes, identity);

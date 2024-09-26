@@ -322,4 +322,3 @@ static int scf_type_is_setcc(int type)
 }
 
 #endif
-

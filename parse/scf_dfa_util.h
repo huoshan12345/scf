@@ -4,6 +4,20 @@
 #include"scf_lex_word.h"
 #include"scf_dfa.h"
 
+static inline int scf_dfa_is_hash(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_HASH == w->type;
+}
+
+static inline int scf_dfa_is_LF(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_LF == w->type;
+}
+
 static inline int scf_dfa_is_lp(scf_dfa_t* dfa, void* word)
 {
 	scf_lex_word_t* w = word;
@@ -128,6 +142,13 @@ static inline int scf_dfa_is_include(scf_dfa_t* dfa, void* word)
 	scf_lex_word_t* w = word;
 
 	return SCF_LEX_WORD_KEY_INCLUDE == w->type;
+}
+
+static inline int scf_dfa_is_define(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_KEY_DEFINE == w->type;
 }
 
 static inline int scf_dfa_is_vargs(scf_dfa_t* dfa, void* word)

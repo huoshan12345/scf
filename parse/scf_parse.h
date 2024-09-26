@@ -5,10 +5,10 @@
 #include"scf_ast.h"
 #include"scf_dfa.h"
 #include"scf_stack.h"
-#include"scf_dwarf_def.h"
+#include"scf_dwarf.h"
 
-typedef struct scf_parse_s		scf_parse_t;
-typedef struct dfa_parse_data_s dfa_parse_data_t;
+typedef struct scf_parse_s   scf_parse_t;
+typedef struct dfa_data_s    dfa_data_t;
 
 #define SCF_SHNDX_TEXT   1
 #define SCF_SHNDX_RODATA 2
@@ -21,17 +21,18 @@ typedef struct dfa_parse_data_s dfa_parse_data_t;
 
 struct scf_parse_s
 {
-	scf_lex_t*		   lex;
+	scf_lex_t*         lex_list;
+	scf_lex_t*         lex;
 
-	scf_ast_t*		   ast;
+	scf_ast_t*         ast;
 
-	scf_dfa_t*		   dfa;
-	dfa_parse_data_t*  dfa_data;
+	scf_dfa_t*         dfa;
+	dfa_data_t*        dfa_data;
 
 	scf_vector_t*      symtab;
 	scf_vector_t*      global_consts;
 
-	scf_dwarf_debug_t* debug;
+	scf_dwarf_t*       debug;
 };
 
 typedef struct {
@@ -56,7 +57,7 @@ typedef struct {
 
 } dfa_identity_t;
 
-struct dfa_parse_data_s {
+struct dfa_data_s {
 	void**               module_datas;
 
 	scf_expr_t*          expr;
@@ -114,8 +115,8 @@ struct dfa_parse_data_s {
 
 int scf_parse_dfa_init(scf_parse_t* parse);
 
-int	scf_parse_open(scf_parse_t** pparse);
-int scf_parse_close(scf_parse_t* parse);
+int scf_parse_open (scf_parse_t** pparse);
+int scf_parse_close(scf_parse_t*   parse);
 
 int scf_parse_file(scf_parse_t* parse, const char* path);
 
@@ -125,4 +126,3 @@ int _find_global_var(scf_node_t* node, void* arg, scf_vector_t* vec);
 int _find_function  (scf_node_t* node, void* arg, scf_vector_t* vec);
 
 #endif
-

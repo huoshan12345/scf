@@ -18,16 +18,16 @@ typedef struct {
 
 static int _create_is_create(scf_dfa_t* dfa, void* word)
 {
-	scf_lex_word_t* w     = word;
+	scf_lex_word_t* w = word;
 
 	return SCF_LEX_WORD_KEY_CREATE == w->type;
 }
 
 static int _create_action_lp_stat(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	dfa_parse_data_t*     d     = data;
-	scf_stack_t*          s     = d->module_datas[dfa_module_create.index];
-	create_module_data_t* md    = d->module_datas[dfa_module_create.index];
+	dfa_data_t*           d  = data;
+	scf_stack_t*          s  = d->module_datas[dfa_module_create.index];
+	create_module_data_t* md = d->module_datas[dfa_module_create.index];
 
 	md->nb_lps++;
 
@@ -39,7 +39,7 @@ static int _create_action_lp_stat(scf_dfa_t* dfa, scf_vector_t* words, void* dat
 static int _create_action_create(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*          parse = dfa->priv;
-	dfa_parse_data_t*     d     = data;
+	dfa_data_t*           d     = data;
 	scf_lex_word_t*       w     = words->data[words->size - 1];
 	create_module_data_t* md    = d->module_datas[dfa_module_create.index];
 
@@ -59,7 +59,7 @@ static int _create_action_create(scf_dfa_t* dfa, scf_vector_t* words, void* data
 static int _create_action_identity(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*          parse = dfa->priv;
-	dfa_parse_data_t*     d     = data;
+	dfa_data_t*           d     = data;
 	scf_lex_word_t*       w     = words->data[words->size - 1];
 	create_module_data_t* md    = d->module_datas[dfa_module_create.index];
 
@@ -107,7 +107,7 @@ static int _create_action_identity(scf_dfa_t* dfa, scf_vector_t* words, void* da
 static int _create_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*          parse = dfa->priv;
-	dfa_parse_data_t*     d     = data;
+	dfa_data_t*           d     = data;
 	scf_lex_word_t*       w     = words->data[words->size - 1];
 	create_module_data_t* md    = d->module_datas[dfa_module_create.index];
 
@@ -126,7 +126,7 @@ static int _create_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _create_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*          parse = dfa->priv;
-	dfa_parse_data_t*     d     = data;
+	dfa_data_t*           d     = data;
 	scf_lex_word_t*       w     = words->data[words->size - 1];
 	create_module_data_t* md    = d->module_datas[dfa_module_create.index];
 
@@ -169,7 +169,7 @@ static int _create_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _create_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*          parse = dfa->priv;
-	dfa_parse_data_t*     d     = data;
+	dfa_data_t*           d     = data;
 	scf_lex_word_t*       w     = words->data[words->size - 1];
 	create_module_data_t* md    = d->module_datas[dfa_module_create.index];
 
@@ -199,7 +199,7 @@ static int _dfa_init_module_create(scf_dfa_t* dfa)
 	SCF_DFA_MODULE_NODE(dfa, create, comma,     scf_dfa_is_comma,     _create_action_comma);
 
 	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = parse->dfa_data;
+	dfa_data_t*  d     = parse->dfa_data;
 	create_module_data_t* md    = d->module_datas[dfa_module_create.index];
 
 	assert(!md);
@@ -217,8 +217,8 @@ static int _dfa_init_module_create(scf_dfa_t* dfa)
 
 static int _dfa_fini_module_create(scf_dfa_t* dfa)
 {
-	scf_parse_t*       parse = dfa->priv;
-	dfa_parse_data_t*  d     = parse->dfa_data;
+	scf_parse_t*          parse = dfa->priv;
+	dfa_data_t*           d     = parse->dfa_data;
 	create_module_data_t* md    = d->module_datas[dfa_module_create.index];
 
 	if (md) {
@@ -250,7 +250,6 @@ static int _dfa_init_syntax_create(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(comma,    expr);
 	scf_dfa_node_add_child(expr,     rp);
 
-	scf_logi("\n");
 	return 0;
 }
 

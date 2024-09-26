@@ -7,7 +7,7 @@ extern scf_dfa_module_t dfa_module_label;
 static int _label_action_colon(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*      parse  = dfa->priv;
-	dfa_parse_data_t* d      = data;
+	dfa_data_t*       d      = data;
 	dfa_identity_t*   id     = scf_stack_top(d->current_identities);
 
 	if (!id || !id->identity) {

@@ -59,6 +59,4 @@ int                scf_rbtree_foreach(scf_rbtree_t* tree, scf_rbtree_node_t* roo
 
 int                scf_rbtree_foreach_reverse(scf_rbtree_t* tree, scf_rbtree_node_t* root, void* data, scf_rbtree_node_do_pt done);
 
-
 #endif
-

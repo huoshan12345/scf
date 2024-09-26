@@ -66,6 +66,7 @@ static scf_key_word_t  key_words[] =
 	{"async",     SCF_LEX_WORD_KEY_ASYNC},
 
 	{"include",   SCF_LEX_WORD_KEY_INCLUDE},
+	{"define",    SCF_LEX_WORD_KEY_DEFINE},
 
 	{"enum",      SCF_LEX_WORD_KEY_ENUM},
 	{"union",     SCF_LEX_WORD_KEY_UNION},
@@ -114,10 +115,6 @@ int	scf_lex_open(scf_lex_t** plex, const char* path)
 	if (!lex)
 		return -ENOMEM;
 
-	scf_list_init(&lex->word_list_head);
-
-	lex->char_list_head = NULL;
-
 	lex->fp = fopen(path, "r");
 	if (!lex->fp) {
 		char cwd[4096];
@@ -144,18 +141,28 @@ int	scf_lex_open(scf_lex_t** plex, const char* path)
 int scf_lex_close(scf_lex_t* lex)
 {
 	if (lex) {
-		scf_list_clear(&lex->word_list_head, scf_lex_word_t, list, scf_lex_word_free);
+		scf_slist_clear(lex->char_list, scf_char_t,     next, free);
+		scf_slist_clear(lex->word_list, scf_lex_word_t, next, scf_lex_word_free);
 
+		if (lex->macros) {
+			scf_vector_clear(lex->macros, ( void (*)(void*) )scf_macro_free);
+			scf_vector_free (lex->macros);
+		}
+
+		scf_string_free(lex->file);
+
+		fclose(lex->fp);
 		free(lex);
 	}
 	return 0;
 }
 
-int scf_lex_push_word(scf_lex_t* lex, scf_lex_word_t* word)
+void scf_lex_push_word(scf_lex_t* lex, scf_lex_word_t* w)
 {
-	if (lex && word)
-		scf_list_add_front(&lex->word_list_head, &word->list);
-	return 0;
+	if (lex && w) {
+		w->next        = lex->word_list;
+		lex->word_list = w;
+	}
 }
 
 static int _lex_plus(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
@@ -613,28 +620,87 @@ static int _lex_string(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 	}
 }
 
-int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
+static int _lex_macro(scf_lex_t* lex)
 {
-	if (!lex || !lex->fp || !pword)
-		return -EINVAL;
+	scf_char_t*  h  =  NULL;
+	scf_char_t** pp = &h;
+	scf_char_t*  c;
+	scf_char_t*  c2;
 
+	while (1) {
+		c = _lex_pop_char(lex);
+		if (!c) {
+			scf_slist_clear(h, scf_char_t, next, free);
+			return -1;
+		}
+
+		*pp =  c;
+		pp  = &c->next;
+
+		if (EOF == c->c)
+			break;
+
+		if ('\n' == c->c) {
+			c->flag = SCF_UTF8_LF;
+			break;
+		}
+
+		if ('\\' == c->c) {
+
+			c2 = _lex_pop_char(lex);
+			if (!c2) {
+				scf_slist_clear(h, scf_char_t, next, free);
+				return -1;
+			}
+
+			*pp =  c2;
+			pp  = &c2->next;
+
+			if (EOF == c2->c)
+				break;
+
+			if ('\n' == c2->c)
+				c->c = ' ';
+		}
+	}
+
+	*pp = lex->char_list;
+	lex->char_list = h;
+	return 0;
+}
+
+static int __lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
+{
 	scf_list_t*		l = NULL;
 	scf_char_t*     c = NULL;
 	scf_lex_word_t*	w = NULL;
 
-	if (!scf_list_empty(&lex->word_list_head)) {
-		l = scf_list_head(&lex->word_list_head);
-		w = scf_list_data(l, scf_lex_word_t, list);
+	if (lex->word_list) {
+		w              = lex->word_list;
+		lex->word_list = w->next;
 
-		scf_list_del(&w->list);
 		*pword = w;
 		return 0;
 	}
 
 	c = _lex_pop_char(lex);
 
-	while  ('\n' == c->c || '\r' == c->c || '\t' == c->c || ' ' == c->c) {
+	while ('\n' == c->c || '\r' == c->c || '\t' == c->c || ' ' == c->c) {
+
 		if ('\n' == c->c) {
+			if (SCF_UTF8_LF == c->flag) {
+				w       = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_LF);
+				w->text = scf_string_cstr("LF");
+				*pword  = w;
+
+				lex->nb_lines++;
+				lex->pos = 0;
+
+				free(c);
+				c = NULL;
+				return 0;
+			}
+
 			lex->nb_lines++;
 			lex->pos = 0;
 		} else
@@ -696,7 +762,7 @@ int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 				}
 			}
 
-			return scf_lex_pop_word(lex, pword);
+			return __lex_pop_word(lex, pword);
 
 		} else if ('*' == c2->c) {
 			free(c);
@@ -736,7 +802,7 @@ int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 				}
 			}
 
-			return scf_lex_pop_word(lex, pword);
+			return __lex_pop_word(lex, pword);
 
 		} else {
 			_lex_push_char(lex, c2);
@@ -838,6 +904,7 @@ int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 
 	if ('\"' == c->c) {
 		scf_lex_word_t* w0 = NULL;
+		scf_lex_word_t* w1 = NULL;
 
 		int ret = _lex_string(lex, &w0, c);
 		if (ret < 0) {
@@ -846,9 +913,7 @@ int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 		}
 
 		while (1) {
-			scf_lex_word_t* w1 = NULL;
-
-			ret = scf_lex_pop_word(lex, &w1);
+			ret = __lex_pop_word(lex, &w1);
 			if (ret < 0) {
 				scf_lex_word_free(w0);
 				*pword = NULL;
@@ -888,6 +953,312 @@ int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 		return _lex_identity(lex, pword, c);
 	}
 
+	if ('#' == c->c) {
+		w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_HASH);
+
+		free(c);
+		c = _lex_pop_char(lex);
+
+		if ('#' == c->c) {
+			w->type = SCF_LEX_WORD_HASH2;
+			w->text = scf_string_cstr("##");
+
+			lex->pos += 2;
+			free(c);
+		} else {
+			w->text = scf_string_cstr("#");
+
+			lex->pos++;
+			_lex_push_char(lex, c);
+		}
+
+		c = NULL;
+		*pword = w;
+		return _lex_macro(lex);
+	}
+
 	scf_loge("unknown char: %c, utf: %#x, in file: %s, line: %d\n", c->c, c->c, lex->file->data, lex->nb_lines);
 	return -1;
+}
+
+static int __parse_macro_argv(scf_lex_t* lex, scf_macro_t* m)
+{
+	scf_lex_word_t* w = NULL;
+	scf_lex_word_t* w2;
+
+	int comma = 0;
+	int id    = 0;
+
+	while (1) {
+		int ret = __lex_pop_word(lex, &w);
+		if (ret < 0)
+			return ret;
+
+		if (!comma) {
+			if (SCF_LEX_WORD_RP == w->type) {
+				scf_lex_word_free(w);
+				break;
+			}
+
+			if (SCF_LEX_WORD_COMMA == w->type) {
+				scf_lex_word_free(w);
+				w = NULL;
+
+				if (!id) {
+					scf_loge("an identity is needed before ',' in file: %s, line: %d\n", w->file->data, w->line);
+					return -1;
+				}
+
+				id    = 0;
+				comma = 1;
+				continue;
+			}
+		}
+
+		if (!scf_lex_is_identity(w)) {
+			scf_loge("macro arg '%s' should be an identity, file: %s, line: %d\n", w->text->data, w->file->data, w->line);
+			scf_lex_word_free(w);
+			return -1;
+		}
+
+		if (id) {
+			scf_loge("',' is needed before macro arg '%s', file: %s, line: %d\n", w->text->data, w->file->data, w->line);
+			scf_lex_word_free(w);
+			return -1;
+		}
+
+		int i;
+		for (i = 0; i < m->argv->size; i++) {
+			w2 =        m->argv->data[i];
+
+			if (!scf_string_cmp(w2->text, w->text)) {
+				scf_loge("macro has same args '%s', file: %s, line: %d\n", w->text->data, w->file->data, w->line);
+				scf_lex_word_free(w);
+				return -1;
+			}
+		}
+
+		ret = scf_vector_add(m->argv, w);
+		if (ret < 0) {
+			scf_lex_word_free(w);
+			return ret;
+		}
+		w = NULL;
+
+		id    = 1;
+		comma = 0;
+	}
+
+	return 0;
+}
+
+static int __parse_macro_define(scf_lex_t* lex, scf_lex_word_t* w0, scf_lex_word_t* w1)
+{
+	scf_lex_word_t** pp;
+	scf_lex_word_t*  w = NULL;
+	scf_macro_t*     m;
+	scf_macro_t*     m0;
+
+	scf_lex_word_free(w0);
+	scf_lex_word_free(w1);
+	w0 = NULL;
+	w1 = NULL;
+
+	int ret = __lex_pop_word(lex, &w);
+	if (ret < 0)
+		return ret;
+
+	if (!scf_lex_is_identity(w)) {
+		scf_loge("macro '%s' should be an identity, file: %s, line: %d\n", w->text->data, w->file->data, w->line);
+		scf_lex_word_free(w);
+		return -1;
+	}
+
+	m = scf_macro_alloc(w);
+	if (!m) {
+		scf_lex_word_free(w);
+		return -ENOMEM;
+	}
+
+	w   = NULL;
+	ret = __lex_pop_word(lex, &w);
+	if (ret < 0) {
+		scf_macro_free(m);
+		return ret;
+	}
+
+	pp = &m->text_list;
+
+	if (SCF_LEX_WORD_LP == w->type) {
+		scf_lex_word_free(w);
+		w = NULL;
+
+		m->argv = scf_vector_alloc();
+		if (!m->argv) {
+			scf_macro_free(m);
+			return -ENOMEM;
+		}
+
+		ret = __parse_macro_argv(lex, m);
+		if (ret < 0) {
+			scf_macro_free(m);
+			return ret;
+		}
+	} else {
+		*pp =  w;
+		pp  = &w->next;
+		w   = NULL;
+	}
+
+	while (1) {
+		ret = __lex_pop_word(lex, &w);
+		if (ret < 0) {
+			scf_macro_free(m);
+			return ret;
+		}
+
+		if (SCF_LEX_WORD_LF == w->type) {
+			scf_lex_word_free(w);
+			w = NULL;
+			break;
+		}
+
+		*pp =  w;
+		pp  = &w->next;
+		w   = NULL;
+	}
+
+	if (!lex->macros) {
+		lex->macros = scf_vector_alloc();
+		if (!lex->macros)
+			return -ENOMEM;
+
+	} else {
+		int i;
+		for (i = lex->macros->size - 1; i >= 0; i--) {
+			m0 = lex->macros->data[i];
+
+			if (!scf_string_cmp(m->w->text, m0->w->text)) {
+				scf_logw("macro '%s' defined before in file: %s, line: %d\n",
+						m0->w->text->data, m0->w->file->data, m0->w->line);
+				break;
+			}
+		}
+	}
+
+	ret = scf_vector_add(lex->macros, m);
+	if (ret < 0) {
+		scf_macro_free(m);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int __parse_macro(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_word_t* w0)
+{
+	scf_lex_word_t* w1 = NULL;
+
+	int ret = __lex_pop_word(lex, &w1);
+	if (ret < 0) {
+		scf_lex_word_free(w0);
+		return ret;
+	}
+
+	switch (w1->type) {
+
+		case SCF_LEX_WORD_KEY_INCLUDE:
+
+			scf_lex_push_word(lex, w1);
+			*pword = w0;
+			return 0;
+
+			break;
+		case SCF_LEX_WORD_KEY_DEFINE:
+
+			ret = __parse_macro_define(lex, w0, w1);
+			if (ret < 0)
+				return ret;
+			break;
+
+		default:
+			scf_loge("unknown macro '%s', file: %s, line: %d\n", w1->text->data, w1->file->data, w1->line);
+
+			scf_lex_word_free(w0);
+			scf_lex_word_free(w1);
+			return -1;
+			break;
+	};
+
+	return scf_lex_pop_word(lex, pword);
+}
+
+static int __use_macro(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_word_t* w)
+{
+	scf_lex_word_t** pp;
+	scf_lex_word_t*  p;
+	scf_lex_word_t*  h;
+	scf_macro_t*     m;
+
+	if (!lex->macros) {
+		*pword = w;
+		return 0;
+	}
+
+	int i;
+	for (i = lex->macros->size - 1; i >= 0; i--) {
+		m  = lex->macros->data[i];
+
+		if (!scf_string_cmp(m->w->text, w->text))
+			break;
+	}
+
+	if (i < 0) {
+		*pword = w;
+		return 0;
+	}
+
+	scf_lex_word_free(w);
+	w = NULL;
+
+	h  = NULL;
+	pp = &h;
+	for (p = m->text_list; p; p = p->next) {
+
+		w  = scf_lex_word_clone(p);
+		if (!w) {
+			scf_slist_clear(h, scf_lex_word_t, next, scf_lex_word_free);
+			return -ENOMEM;
+		}
+
+		*pp =  w;
+		pp  = &w->next;
+	}
+
+	*pp            = lex->word_list;
+	lex->word_list = h;
+
+	return scf_lex_pop_word(lex, pword);
+}
+
+int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
+{
+	if (!lex || !lex->fp || !pword)
+		return -EINVAL;
+
+	scf_lex_word_t* w = NULL;
+
+	int ret = __lex_pop_word(lex, &w);
+	if (ret < 0)
+		return ret;
+
+	if (SCF_LEX_WORD_HASH == w->type)
+		return __parse_macro(lex, pword, w);
+
+	//use macro to identity
+	if (scf_lex_is_identity(w))
+		return __use_macro(lex, pword, w);
+
+	*pword = w;
+	return 0;
 }

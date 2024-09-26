@@ -4,6 +4,10 @@
 #include"scf_string.h"
 #include"scf_list.h"
 
+typedef struct scf_lex_word_s   scf_lex_word_t;
+typedef struct scf_complex_s    scf_complex_t;
+typedef struct scf_macro_s      scf_macro_t;
+
 enum scf_lex_words
 {
 	SCF_LEX_WORD_PLUS = 0,		// +
@@ -66,11 +70,15 @@ enum scf_lex_words
 	SCF_LEX_WORD_RANGE,         // ..  range
 	SCF_LEX_WORD_VAR_ARGS,      // ... variable args
 
-	SCF_LEX_WORD_LB,			// { left brace
-	SCF_LEX_WORD_RB,			// } right brace
+	SCF_LEX_WORD_LB,            // { left brace
+	SCF_LEX_WORD_RB,            // } right brace
 
-	SCF_LEX_WORD_COMMA,			// , comma
-	SCF_LEX_WORD_SEMICOLON,		// ;
+	SCF_LEX_WORD_LF,            // '\n', line feed, LF
+	SCF_LEX_WORD_HASH,          // #  hash
+	SCF_LEX_WORD_HASH2,         // ## hash2
+
+	SCF_LEX_WORD_COMMA,         // , comma
+	SCF_LEX_WORD_SEMICOLON,     // ;
 	SCF_LEX_WORD_COLON,			// : colon
 	SCF_LEX_WORD_SPACE,			// ' ' space
 
@@ -160,19 +168,30 @@ enum scf_lex_words
 	SCF_LEX_WORD_CONST_I64,
 	SCF_LEX_WORD_CONST_U64,
 
-	// identity
 	SCF_LEX_WORD_ID, // identity, start of _, a-z, A-Z, may include 0-9
 };
 
-typedef struct {
+struct scf_complex_s
+{
 	float real;
 	float imag;
-} scf_complex_t;
+};
 
-typedef struct {
-	scf_list_t		list;	// manage list, all words in this list, FIFO
+struct scf_macro_s
+{
+	int              refs;
 
-	int				type;
+	scf_lex_word_t*  w;
+	scf_vector_t*    argv;
+
+	scf_lex_word_t*  text_list;
+};
+
+struct scf_lex_word_s
+{
+	scf_lex_word_t*  next;
+	int              type;
+
 	union {
 		int32_t         i;    // value for <= int32_t
 		uint32_t        u32;  // value for <= uint32_t
@@ -189,8 +208,7 @@ typedef struct {
 	scf_string_t*	file;	// original code file name
 	int				line;	// line in the code file above	
 	int				pos;	// position in the line above
-
-} scf_lex_word_t;
+};
 
 static inline int scf_lex_is_identity(scf_lex_word_t* w)
 {
@@ -212,7 +230,10 @@ static inline int scf_lex_is_base_type(scf_lex_word_t* w)
 	return SCF_LEX_WORD_KEY_CHAR <= w->type && SCF_LEX_WORD_KEY_VOID >= w->type;
 }
 
-scf_lex_word_t*  scf_lex_word_alloc(scf_string_t* file, int line, int pos, int type);
+scf_macro_t*     scf_macro_alloc(scf_lex_word_t* w);
+void             scf_macro_free (scf_macro_t*    m);
+
+scf_lex_word_t*  scf_lex_word_alloc(scf_string_t*   file, int line, int pos, int type);
 scf_lex_word_t*  scf_lex_word_clone(scf_lex_word_t* w);
 void             scf_lex_word_free (scf_lex_word_t* w);
 

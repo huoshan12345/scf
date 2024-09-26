@@ -20,7 +20,7 @@ typedef struct {
 static int _enum_action_type(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*         parse = dfa->priv;
-	dfa_parse_data_t*    d     = data;
+	dfa_data_t*          d     = data;
 	enum_module_data_t*  md    = d->module_datas[dfa_module_enum.index];
 	scf_lex_word_t*      w     = words->data[words->size - 1];
 
@@ -50,7 +50,7 @@ static int _enum_action_type(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _enum_action_lb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*         parse = dfa->priv;
-	dfa_parse_data_t*    d     = data;
+	dfa_data_t*          d     = data;
 	enum_module_data_t*  md    = d->module_datas[dfa_module_enum.index];
 	scf_lex_word_t*      w     = words->data[words->size - 1];
 	scf_type_t*          t     = NULL;
@@ -89,7 +89,7 @@ static int _enum_action_lb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _enum_action_var(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*         parse = dfa->priv;
-	dfa_parse_data_t*    d     = data;
+	dfa_data_t*          d     = data;
 	enum_module_data_t*  md    = d->module_datas[dfa_module_enum.index];
 	scf_lex_word_t*      w     = words->data[words->size - 1];
 
@@ -144,7 +144,7 @@ static int _enum_action_var(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _enum_action_assign(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*         parse = dfa->priv;
-	dfa_parse_data_t*    d     = data;
+	dfa_data_t*          d     = data;
 	enum_module_data_t*  md    = d->module_datas[dfa_module_enum.index];
 	scf_lex_word_t*      w     = words->data[words->size - 1];
 
@@ -164,7 +164,7 @@ static int _enum_action_assign(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _enum_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*         parse = dfa->priv;
-	dfa_parse_data_t*    d     = data;
+	dfa_data_t*          d     = data;
 	enum_module_data_t*  md    = d->module_datas[dfa_module_enum.index];
 	scf_lex_word_t*      w     = words->data[words->size - 1];
 	scf_variable_t*      r     = NULL;
@@ -200,8 +200,8 @@ static int _enum_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _enum_action_rb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	scf_parse_t*          parse = dfa->priv;
-	dfa_parse_data_t*     d     = data;
+	scf_parse_t*         parse = dfa->priv;
+	dfa_data_t*          d     = data;
 	enum_module_data_t*  md    = d->module_datas[dfa_module_enum.index];
 	scf_lex_word_t*      w     = words->data[words->size - 1];
 	scf_variable_t*      r     = NULL;
@@ -253,7 +253,7 @@ static int _enum_action_rb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _enum_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*         parse = dfa->priv;
-	dfa_parse_data_t*    d     = data;
+	dfa_data_t*          d     = data;
 	enum_module_data_t*  md    = d->module_datas[dfa_module_enum.index];
 	scf_lex_word_t*      w     = words->data[words->size - 1];
 
@@ -293,7 +293,7 @@ static int _dfa_init_module_enum(scf_dfa_t* dfa)
 	SCF_DFA_MODULE_NODE(dfa, enum, comma,     scf_dfa_is_comma,     _enum_action_comma);
 
 	scf_parse_t*         parse = dfa->priv;
-	dfa_parse_data_t*    d     = parse->dfa_data;
+	dfa_data_t*          d     = parse->dfa_data;
 	enum_module_data_t*  md    = d->module_datas[dfa_module_enum.index];
 
 	assert(!md);
@@ -318,8 +318,8 @@ static int _dfa_init_module_enum(scf_dfa_t* dfa)
 
 static int _dfa_fini_module_enum(scf_dfa_t* dfa)
 {
-	scf_parse_t*          parse = dfa->priv;
-	dfa_parse_data_t*     d     = parse->dfa_data;
+	scf_parse_t*         parse = dfa->priv;
+	dfa_data_t*          d     = parse->dfa_data;
 	enum_module_data_t*  md    = d->module_datas[dfa_module_enum.index];
 
 	if (md) {
@@ -371,7 +371,6 @@ static int _dfa_init_syntax_enum(scf_dfa_t* dfa)
 	// end
 	scf_dfa_node_add_child(rb,      semicolon);
 
-	scf_logi("\n");
 	return 0;
 }
 

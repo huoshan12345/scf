@@ -118,13 +118,14 @@ CFILES += ../core/scf_optimizer_group.c
 CFILES += ../core/scf_optimizer_generate_loads_saves.c
 
 CFILES += ../core/scf_ast.c
-
 CFILES += ../core/scf_calculate.c
 
 CFILES += scf_dfa.c
 CFILES += scf_dfa_parse.c
 
+CFILES += scf_dfa_macro.c
 CFILES += scf_dfa_include.c
+
 CFILES += scf_dfa_call.c
 CFILES += scf_dfa_create.c
 CFILES += scf_dfa_sizeof.c

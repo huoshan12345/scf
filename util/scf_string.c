@@ -103,9 +103,6 @@ void scf_string_print_bin(scf_string_t* s)
 
 int	scf_string_cmp(const scf_string_t* s0, const scf_string_t* s1)
 {
-	if (!s0 || !s1 || !s0->data || !s1->data)
-		return -EINVAL;
-
 	if (s0->len < s1->len)
 		return -1;
 
@@ -116,17 +113,11 @@ int	scf_string_cmp(const scf_string_t* s0, const scf_string_t* s1)
 
 int	scf_string_cmp_cstr(const scf_string_t* s0, const char* str)
 {
-	if (!s0 || !s0->data || !str)
-		return -EINVAL;
-
 	return scf_string_cmp_cstr_len(s0, str, strlen(str));
 }
 
 int	scf_string_cmp_cstr_len(const scf_string_t* s0, const char* str, size_t len)
 {
-	if (!s0 || !s0->data || !str)
-		return -EINVAL;
-
 	scf_string_t s1;
 	s1.capacity	= -1;
 	s1.len		= len;
