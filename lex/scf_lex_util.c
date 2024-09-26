@@ -13,10 +13,9 @@ scf_char_t* _lex_pop_char(scf_lex_t* lex)
 		return c;
 	}
 
-	c = malloc(sizeof(scf_char_t));
+	c = calloc(1, sizeof(scf_char_t));
 	if (!c)
 		return NULL;
-	c->next = NULL;
 
 	int ret = fgetc(lex->fp);
 	if (EOF == ret) {
