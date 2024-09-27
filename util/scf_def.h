@@ -43,6 +43,8 @@ static inline uint64_t scf_zero_extend(uint64_t src, int src_bits)
 	return src;
 }
 
+#define scf_object_of(mp, type, member) ((type*)((char*)mp - offsetof(type, member)))
+
 #define SCF_XCHG(x, y) \
 	do {\
 		typeof(x) tmp = x; \

@@ -1054,17 +1054,12 @@ static int __parse_macro_argv(scf_lex_t* lex, scf_macro_t* m)
 	return 0;
 }
 
-static int __parse_macro_define(scf_lex_t* lex, scf_lex_word_t* w0, scf_lex_word_t* w1)
+static int __parse_macro_define(scf_lex_t* lex)
 {
 	scf_lex_word_t** pp;
 	scf_lex_word_t*  w = NULL;
 	scf_macro_t*     m;
 	scf_macro_t*     m0;
-
-	scf_lex_word_free(w0);
-	scf_lex_word_free(w1);
-	w0 = NULL;
-	w1 = NULL;
 
 	int ret = __lex_pop_word(lex, &w);
 	if (ret < 0)
@@ -1155,44 +1150,6 @@ static int __parse_macro_define(scf_lex_t* lex, scf_lex_word_t* w0, scf_lex_word
 	}
 
 	return 0;
-}
-
-static int __parse_macro(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_word_t* w0)
-{
-	scf_lex_word_t* w1 = NULL;
-
-	int ret = __lex_pop_word(lex, &w1);
-	if (ret < 0) {
-		scf_lex_word_free(w0);
-		return ret;
-	}
-
-	switch (w1->type) {
-
-		case SCF_LEX_WORD_KEY_INCLUDE:
-
-			scf_lex_push_word(lex, w1);
-			*pword = w0;
-			return 0;
-
-			break;
-		case SCF_LEX_WORD_KEY_DEFINE:
-
-			ret = __parse_macro_define(lex, w0, w1);
-			if (ret < 0)
-				return ret;
-			break;
-
-		default:
-			scf_loge("unknown macro '%s', file: %s, line: %d\n", w1->text->data, w1->file->data, w1->line);
-
-			scf_lex_word_free(w0);
-			scf_lex_word_free(w1);
-			return -1;
-			break;
-	};
-
-	return scf_lex_pop_word(lex, pword);
 }
 
 static int __fill_macro_argv(scf_lex_t* lex, scf_macro_t* m, scf_lex_word_t* use, scf_vector_t* argv)
@@ -1316,55 +1273,51 @@ static int __convert_str(scf_lex_word_t* h)
 	return 0;
 }
 
-static int __use_macro(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_word_t* w)
+static scf_macro_t* __find_macro(scf_lex_t* lex, scf_lex_word_t* w)
 {
-	scf_lex_word_t** pp;
-	scf_lex_word_t*  p;
-	scf_lex_word_t*  h;
-	scf_vector_t*    argv = NULL;
-	scf_macro_t*     m;
+	if (!lex->macros)
+		return NULL;
 
-	if (!lex->macros) {
-		*pword = w;
-		return 0;
-	}
-
+	scf_macro_t* m;
 	int i;
+
 	for (i = lex->macros->size - 1; i >= 0; i--) {
 		m  = lex->macros->data[i];
 
 		if (!scf_string_cmp(m->w->text, w->text))
-			break;
+			return m;
 	}
 
-	if (i < 0) {
-		*pword = w;
-		return 0;
-	}
+	return NULL;
+}
+
+static int __use_macro(scf_lex_t* lex, scf_macro_t* m, scf_lex_word_t* use)
+{
+	scf_lex_word_t** pp;
+	scf_lex_word_t*  p;
+	scf_lex_word_t*  h;
+	scf_lex_word_t*  w;
+	scf_lex_word_t*  prev;
+	scf_vector_t*    argv = NULL;
 
 	if (m->argv) {
 		argv = scf_vector_alloc();
-		if (!argv) {
-			scf_lex_word_free(w);
+		if (!argv)
 			return -ENOMEM;
-		}
 
-		int ret = __fill_macro_argv(lex, m, w, argv);
+		int ret = __fill_macro_argv(lex, m, use, argv);
 		if (ret < 0) {
-			scf_lex_word_free(w);
 			scf_vector_free(argv);
 			return ret;
 		}
 	}
-
-	scf_lex_word_free(w);
-	w  = NULL;
 
 	h  = NULL;
 	pp = &h;
 
 	int ret  = 0;
 	int hash = 0;
+	int i;
 
 	for (p = m->text_list; p; p = p->next) {
 
@@ -1373,10 +1326,7 @@ static int __use_macro(scf_lex_t* lex, scf_lex_word_t** pword, scf_lex_word_t* w
 			continue;
 		}
 
-		if (SCF_LEX_WORD_HASH2 == p->type) {
-			hash = 2;
-			continue;
-		}
+		scf_logd("p: %s, line: %d, hash: %d\n", p->text->data, p->line, hash);
 
 		if (m->argv) {
 			assert(argv);
@@ -1452,8 +1402,81 @@ error:
 #endif
 	*pp            = lex->word_list;
 	lex->word_list = h;
+	return 0;
+}
 
-	return scf_lex_pop_word(lex, pword);
+static int __use_hash2(scf_lex_t* lex, scf_lex_word_t* prev)
+{
+	scf_lex_word_t* after = NULL;
+
+	int ret = __lex_pop_word(lex, &after);
+	if (ret < 0)
+		return ret;
+
+	switch (after->type) {
+
+		case SCF_LEX_WORD_ID:
+			ret = scf_string_cat(prev->text, after->text);
+			break;
+
+		default:
+			ret = -1;
+			scf_loge("needs identity after '##', file: %s, line: %d\n", after->file->data, after->line);
+			break;
+	};
+
+	scf_lex_word_free(after);
+	return ret;
+}
+
+int __lex_use_macro(scf_lex_t* lex, scf_lex_word_t** pp)
+{
+	scf_lex_word_t* w1 = NULL;
+	scf_lex_word_t* w  = *pp;
+	scf_macro_t*    m;
+
+	*pp = NULL;
+
+	while (SCF_LEX_WORD_ID == w->type) {
+
+		m = __find_macro(lex, w);
+		if (m) {
+			int ret = __use_macro(lex, m, w);
+
+			scf_lex_word_free(w);
+			w = NULL;
+			if (ret < 0)
+				return ret;
+
+			ret = __lex_pop_word(lex, &w);
+			if (ret < 0)
+				return ret;
+			continue;
+		}
+
+		int ret = __lex_pop_word(lex, &w1);
+		if (ret < 0) {
+			scf_lex_word_free(w);
+			return ret;
+		}
+
+		if (SCF_LEX_WORD_HASH2 != w1->type) {
+			scf_lex_push_word(lex, w1);
+			break;
+		}
+
+		scf_lex_word_free(w1);
+		w1 = NULL;
+
+		ret = __use_hash2(lex, w);
+		if (ret < 0) {
+			scf_lex_word_free(w);
+			return ret;
+		}
+	}
+
+	*pp = w;
+	return 0;
 }
 
 int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
@@ -1461,18 +1484,56 @@ int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 	if (!lex || !lex->fp || !pword)
 		return -EINVAL;
 
-	scf_lex_word_t* w = NULL;
+	scf_lex_word_t* w  = NULL;
+	scf_lex_word_t* w1 = NULL;
 
 	int ret = __lex_pop_word(lex, &w);
 	if (ret < 0)
 		return ret;
 
-	if (SCF_LEX_WORD_HASH == w->type)
-		return __parse_macro(lex, pword, w);
+	// parse macro
+	while (SCF_LEX_WORD_HASH == w->type) {
 
-	//use macro to identity
-	if (scf_lex_is_identity(w))
-		return __use_macro(lex, pword, w);
+		ret = __lex_pop_word(lex, &w1);
+		if (ret < 0) {
+			scf_lex_word_free(w);
+			return ret;
+		}
+
+		switch (w1->type) {
+			case SCF_LEX_WORD_KEY_INCLUDE:
+
+				scf_lex_push_word(lex, w1);
+				*pword = w;
+				return 0;
+				break;
+
+			case SCF_LEX_WORD_KEY_DEFINE:
+				ret = __parse_macro_define(lex);
+				break;
+			default:
+				scf_loge("unknown macro '%s', file: %s, line: %d\n", w1->text->data, w1->file->data, w1->line);
+				ret = -1;
+				break;
+		};
+
+		scf_lex_word_free(w);
+		scf_lex_word_free(w1);
+		w  = NULL;
+		w1 = NULL;
+
+		if (ret < 0)
+			return ret;
+
+		ret = __lex_pop_word(lex, &w);
+		if (ret < 0)
+			return ret;
+	}
+
+	// use macro to pre-process source code
+	ret = __lex_use_macro(lex, &w);
+	if (ret < 0)
+		return ret;
 
 	*pword = w;
 	return 0;
