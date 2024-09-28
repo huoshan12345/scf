@@ -265,156 +265,75 @@ static int _lex_minus(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 	return 0;
 }
 
+
 static int _lex_number(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 {
-	lex->pos++;
+	scf_lex_word_t* w  = NULL;
+	scf_string_t*   s  = NULL;
+	scf_char_t*     c1 = NULL;
+	scf_char_t*     c2 = NULL;
+
+	int ret = 0;
 
 	if ('0' == c0->c) {
-		scf_char_t* c1 = _lex_pop_char(lex);
-
-		if ('x' == c1->c || 'X' == c1->c) {
-			// base 16
-			scf_string_t* s = scf_string_cstr_len(c0->utf8, 1);
-
-			scf_string_cat_cstr_len(s, c1->utf8, 1);
-			lex->pos += 2;
-
-			free(c1);
-			free(c0);
-			c1 = NULL;
-			c0 = NULL;
-
-			return _lex_number_base_16(lex, pword, s);
-
-		} else if ('.' == c1->c) {
-			// double
-			scf_string_t* s = scf_string_cstr_len(c0->utf8, 1);
-
-			scf_string_cat_cstr_len(s, c1->utf8, 1);
-			lex->pos += 2;
-
-			free(c1);
-			free(c0);
-			c1 = NULL;
-			c0 = NULL;
-
-			while (1) {
-				scf_char_t* c2 = _lex_pop_char(lex);
-
-				if (c2->c >= '0' && c2->c <= '9') {
-					scf_string_cat_cstr_len(s, c2->utf8, 1);
-					lex->pos++;
-
-					free(c2);
-					c2 = NULL;
-
-				} else if ('.' == c2->c) {
-					scf_loge("too many '.' for number in file: %s, line: %d\n", lex->file->data, lex->nb_lines);
-
-					free(c2);
-					c2 = NULL;
-					return -1;
-
-				} else {
-					_lex_push_char(lex, c2);
-					c2 = NULL;
-
-					scf_lex_word_t* w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_DOUBLE);
-					w->data.d = atof(s->data);
-
-					w->text = s;
-					s = NULL;
-
-					*pword = w;
-					return 0;
-				}
-			}
-		} else {
-			scf_string_t* s = scf_string_cstr_len(c0->utf8, 1);
-
-			if (c1->c < '0' || c1->c > '9') {
-				// is 0
-				_lex_push_char(lex, c1);
-				c1 = NULL;
-
-				scf_lex_word_t* w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_INT);
-				w->data.u64 = atoi(s->data);
-
-				w->text = s;
-				s = NULL;
-				lex->pos++;
-
-				*pword = w;
-				return 0;
-			}
-
-			// base 8
-			_lex_push_char(lex, c1);
-			c1 = NULL;
-
-			lex->pos++;
-
-			return _lex_number_base_8(lex, pword, s);
-		}
-	} else {
-		// base 10
-		scf_string_t* s  = scf_string_cstr_len(c0->utf8, 1);
-
-		uint64_t value   = c0->c - '0';
-		int      nb_dots = 0;
+		s = scf_string_cstr_len(c0->utf8, 1);
+		lex->pos++;
 
 		free(c0);
 		c0 = NULL;
 
-		while (1) {
-			scf_char_t* c1 = _lex_pop_char(lex);
+		c1 = _lex_pop_char(lex);
 
-			if (c1->c >= '0' && c1->c <= '9') {
+		scf_string_cat_cstr_len(s, c1->utf8, 1);
+		lex->pos++;
 
-				value = value * 10 + c1->c - '0';
+		switch (c1->c) {
+			case 'x':
+			case 'X': // base 16
+				ret = _lex_number_base_16(lex, pword, s);
+				break;
 
-				scf_string_cat_cstr_len(s, c1->utf8, 1);
-				lex->pos++;
+			case 'b': // base 2
+				ret = _lex_number_base_2(lex, pword, s);
+				break;
 
-				free(c1);
-				c1 = NULL;
+			case '.': // double
+				ret = _lex_double(lex, pword, s);
+				break;
 
-			} else if ('.' == c1->c) {
-				scf_string_cat_cstr_len(s, c1->utf8, 1);
-				lex->pos++;
+			default:
+				lex->pos--;
+				s->data[--s->len] = '\0';
 
-				free(c1);
-				c1 = NULL;
-
-				if (++nb_dots > 1) {
-					scf_loge("too many '.' for number in file: %s, line: %d\n", lex->file->data, lex->nb_lines);
-					return -1;
-				}
-			} else {
 				_lex_push_char(lex, c1);
-				c1 = NULL;
 
-				scf_lex_word_t* w = NULL;
+				if (c1->c < '0' || c1->c > '9') { // is 0
+					w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_INT);
+					w->data.u64 = atoi(s->data);
 
-				if (nb_dots > 0) {
-					w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_DOUBLE);
-					w->data.d = atof(s->data);
-				} else {
-					if (value & ~0xffffffffULL)
-						w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_I64);
-					else
-						w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_INT);
-					w->data.i64 = value;
+					w->text = s;
+					*pword  = w;
+					return 0;
 				}
 
-				w->text = s;
-				s = NULL;
+				// base 8
+				c1 = NULL;
+				return _lex_number_base_8(lex, pword, s);
+				break;
+		};
 
-				*pword = w;
-				return 0;
-			}
-		}
+		free(c1);
+		c1 = NULL;
+		return ret;
 	}
+
+	// base 10
+	s = scf_string_alloc();
+
+	_lex_push_char(lex, c0);
+	c0 = NULL;
+
+	return _lex_number_base_10(lex, pword, s);
 }
 
 static int _lex_identity(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
@@ -486,60 +405,54 @@ static int _lex_identity(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 
 static int _lex_char(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 {
-	scf_lex_word_t* w = NULL;
-	scf_string_t*   s = scf_string_cstr_len(c0->utf8, 1);
-
-	scf_char_t* c1 = _lex_pop_char(lex);
+	scf_string_t*   s  = NULL;
+	scf_lex_word_t* w  = NULL;
+	scf_char_t*     c1 = _lex_pop_char(lex);
+	scf_char_t*     c2 = _lex_pop_char(lex);
+	scf_char_t*     c3;
 
 	if ('\\' == c1->c) {
-		scf_char_t* c2 = _lex_pop_char(lex);
-		scf_char_t* c3 = _lex_pop_char(lex);
+		c3 = _lex_pop_char(lex);
 
 		if ('\'' == c3->c) {
+			s = scf_string_cstr_len(c0->utf8, 1);
+
 			scf_string_cat_cstr_len(s, c1->utf8, 1);
 			scf_string_cat_cstr_len(s, c2->utf8, c2->len);
 			scf_string_cat_cstr_len(s, c3->utf8, 1);
 
 			w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_CHAR);
+
 			w->data.i64 = _find_escape_char(c2->c);
-			lex->pos += 3 + c2->len;
-
-			free(c3);
-			free(c2);
-			c3 = NULL;
-			c2 = NULL;
-		} else {
+			lex->pos   += c2->len + 3;
+		} else
 			scf_loge("const char lost 2nd ' in file: %s, line: %d\n", lex->file->data, lex->nb_lines);
-			return -1;
-		}
 
-	} else {
-		scf_char_t* c2 = _lex_pop_char(lex);
+		free(c3);
+		c3 = NULL;
 
-		if ('\'' == c2->c) {
-			scf_string_cat_cstr_len(s, c1->utf8, c1->len);
-			scf_string_cat_cstr_len(s, c2->utf8, 1);
+	} else if ('\'' == c2->c) {
+		s = scf_string_cstr_len(c0->utf8, 1);
 
-			w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_CHAR);
-			w->data.i64 = c1->c;
-			lex->pos += 2 + c1->len;
+		scf_string_cat_cstr_len(s, c1->utf8, c1->len);
+		scf_string_cat_cstr_len(s, c2->utf8, 1);
 
-			free(c2);
-			c2 = NULL;
-		} else {
-			scf_loge("const char lost 2nd ' in file: %s, line: %d\n", lex->file->data, lex->nb_lines);
-			return -1;
-		}
-	}
+		w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_CHAR);
+
+		w->data.i64 = c1->c;
+		lex->pos   += c1->len + 2;
+	} else
+		scf_loge("const char lost 2nd ' in file: %s, line: %d\n", lex->file->data, lex->nb_lines);
+
+	free(c0);
+	free(c1);
+	free(c2);
+
+	if (!w)
+		return -1;
 
 	w->text = s;
-	s = NULL;
-	*pword = w;
-
-	free(c1);
-	free(c0);
-	c1 = NULL;
-	c0 = NULL;
+	*pword  = w;
 	return 0;
 }
 
@@ -669,7 +582,44 @@ static int _lex_macro(scf_lex_t* lex)
 	return 0;
 }
 
-static int __lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
+static void _lex_drop_to(scf_lex_t* lex, int c0, int c1)
+{
+	scf_char_t* c = NULL;
+
+	while (1) {
+		if (!c)
+			c = _lex_pop_char(lex);
+
+		if (EOF == c->c) {
+			_lex_push_char(lex, c);
+			break;
+		}
+
+		int tmp = c->c;
+		free(c);
+		c = NULL;
+
+		if ('\n' == tmp) {
+			lex->nb_lines++;
+			lex->pos = 0;
+		}
+
+		if (c0 == tmp) {
+			if (c1 < 0)
+				break;
+
+			c = _lex_pop_char(lex);
+
+			if (c1 == c->c) {
+				free(c);
+				c = NULL;
+				break;
+			}
+		}
+	}
+}
+
+int __lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 {
 	scf_list_t*		l = NULL;
 	scf_char_t*     c = NULL;
@@ -688,21 +638,18 @@ static int __lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 	while ('\n' == c->c || '\r' == c->c || '\t' == c->c || ' ' == c->c) {
 
 		if ('\n' == c->c) {
+			lex->nb_lines++;
+			lex->pos = 0;
+
 			if (SCF_UTF8_LF == c->flag) {
 				w       = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_LF);
 				w->text = scf_string_cstr("LF");
 				*pword  = w;
 
-				lex->nb_lines++;
-				lex->pos = 0;
-
 				free(c);
 				c = NULL;
 				return 0;
 			}
-
-			lex->nb_lines++;
-			lex->pos = 0;
 		} else
 			lex->pos++;
 
@@ -734,85 +681,32 @@ static int __lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 	}
 
 	if ('/' == c->c) {
-
-		scf_char_t* c2 = _lex_pop_char(lex);
-
-		if ('/' == c2->c) {
-			free(c);
-			free(c2);
-			c  = NULL;
-			c2 = NULL;
-
-			while (1) {
-				c2 = _lex_pop_char(lex);
-
-				if (EOF == c2->c) {
-					_lex_push_char(lex, c2);
-					break;
-				}
-
-				int tmp = c2->c;
-				free(c2);
-				c2 = NULL;
-
-				if ('\n' == tmp) {
-					lex->nb_lines++;
-					lex->pos = 0;
-					break;
-				}
-			}
-
-			return __lex_pop_word(lex, pword);
-
-		} else if ('*' == c2->c) {
-			free(c);
-			free(c2);
-			c  = NULL;
-			c2 = NULL;
-
-			while (1) {
-				c2 = _lex_pop_char(lex);
-
-				if (EOF == c2->c) {
-					_lex_push_char(lex, c2);
-					break;
-				}
-
-				int tmp = c2->c;
-				free(c2);
-				c2 = NULL;
-
-				if ('\n' == tmp) {
-					lex->nb_lines++;
-					lex->pos = 0;
-					continue;
-				}
-
-				if ('*' == tmp) {
-					c2  = _lex_pop_char(lex);
-
-					if ('/' == c2->c) {
-						free(c2);
-						c2 = NULL;
-						break;
-					}
-
-					_lex_push_char(lex, c2);
-					c2 = NULL;
-				}
-			}
-
-			return __lex_pop_word(lex, pword);
-
-		} else {
-			_lex_push_char(lex, c2);
-			c2 = NULL;
-		}
-
 		char c1 = '=';
 		int  t1 = SCF_LEX_WORD_DIV_ASSIGN;
 
-		return _lex_op2_ll1(lex, pword, c, SCF_LEX_WORD_DIV, &c1, &t1, 1);
+		scf_char_t* c2 = _lex_pop_char(lex);
+
+		switch (c2->c) {
+			case '/':
+				_lex_drop_to(lex, '\n', -1);
+				break;
+
+			case '*':
+				_lex_drop_to(lex, '*', '/');
+				break;
+
+			default:
+				_lex_push_char(lex, c2);
+
+				return _lex_op2_ll1(lex, pword, c, SCF_LEX_WORD_DIV, &c1, &t1, 1);
+				break;
+		};
+
+		free(c);
+		free(c2);
+		c  = NULL;
+		c2 = NULL;
+		return __lex_pop_word(lex, pword);
 	}
 
 	if ('%' == c->c) {

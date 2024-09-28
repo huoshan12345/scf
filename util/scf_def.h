@@ -60,16 +60,15 @@ static inline uint64_t scf_zero_extend(uint64_t src, int src_bits)
 
 #define scf_logi(fmt, ...) printf("%s(), %d, info: "fmt, __func__, __LINE__, ##__VA_ARGS__)
 
-#define scf_loge(fmt, ...) printf("%s(), %d, \033[31m error:\033[0m "fmt, __func__, __LINE__, ##__VA_ARGS__)
-#define scf_logw(fmt, ...) printf("%s(), %d, \033[33m warning:\033[0m "fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define scf_loge(fmt, ...) printf("%s(), %d, \033[1;31m error:\033[0m "fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define scf_logw(fmt, ...) printf("%s(), %d, \033[1;33m warning:\033[0m "fmt, __func__, __LINE__, ##__VA_ARGS__)
 
 #define SCF_CHECK_ERROR(cond, ret, fmt, ...) \
 	do { \
 		if (cond) { \
-			printf("%s(), %d, \033[31m error:\033[0m "fmt, __func__, __LINE__, ##__VA_ARGS__); \
+			printf("%s(), %d, \033[1;31m error:\033[0m "fmt, __func__, __LINE__, ##__VA_ARGS__); \
 			return ret; \
 		} \
 	} while (0)
 
 #endif
-
