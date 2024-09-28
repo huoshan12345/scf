@@ -55,11 +55,13 @@ int  scf_lex_close(scf_lex_t*   lex);
 void scf_lex_push_word(scf_lex_t* lex, scf_lex_word_t*   word);
 int  scf_lex_pop_word (scf_lex_t* lex, scf_lex_word_t** pword);
 
+int    __lex_pop_word (scf_lex_t* lex, scf_lex_word_t** pword);
 
 int _lex_number_base_16(scf_lex_t* lex, scf_lex_word_t** pword, scf_string_t* s);
 int _lex_number_base_10(scf_lex_t* lex, scf_lex_word_t** pword, scf_string_t* s);
 int _lex_number_base_8 (scf_lex_t* lex, scf_lex_word_t** pword, scf_string_t* s);
 int _lex_number_base_2 (scf_lex_t* lex, scf_lex_word_t** pword, scf_string_t* s);
+int _lex_double        (scf_lex_t* lex, scf_lex_word_t** pword, scf_string_t* s);
 
 int _lex_dot    (scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0);
 

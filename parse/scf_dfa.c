@@ -299,7 +299,7 @@ static int _scf_dfa_node_parse_word(scf_dfa_t* dfa, scf_dfa_node_t* node, scf_ve
 	int             ret = SCF_DFA_NEXT_WORD;
 	scf_lex_word_t* w   = words->data[words->size - 1];
 
-	scf_logi("\033[32m%s->action(), w: %s, position: %d,%d\033[0m\n", node->name, w->text->data, w->line, w->pos);
+	scf_logi("\033[35m%s->action(), w: %s, position: %d,%d\033[0m\n", node->name, w->text->data, w->line, w->pos);
 
 	if (node->action) {
 
@@ -320,13 +320,13 @@ static int _scf_dfa_node_parse_word(scf_dfa_t* dfa, scf_dfa_node_t* node, scf_ve
 #if 1
 	scf_dfa_hook_t* h = dfa->hooks[SCF_DFA_HOOK_POST];
 	while (h) {
-		scf_logd("\033[34m post hook: %s\033[0m\n", h->node->name);
+		scf_logd("\033[32m post hook: %s\033[0m\n", h->node->name);
 		h = h->next;
 	}
 
 	h = dfa->hooks[SCF_DFA_HOOK_END];
 	while (h) {
-		scf_logd("\033[36m end hook: %s\033[0m\n", h->node->name);
+		scf_logd("\033[32m end hook: %s\033[0m\n", h->node->name);
 		h = h->next;
 	}
 	printf("\n");
@@ -339,14 +339,14 @@ static int _scf_dfa_node_parse_word(scf_dfa_t* dfa, scf_dfa_node_t* node, scf_ve
 		scf_dfa_clear_hooks(&(dfa->hooks[SCF_DFA_HOOK_POST]), hook->next);
 		hook = NULL;
 
-		scf_logi("\033[36m post hook: %s->action()\033[0m\n", hook_node->name);
+		scf_logi("\033[32m post hook: %s->action()\033[0m\n", hook_node->name);
 
 		if (hook_node != node && hook_node->action) {
 
 			ret = hook_node->action(dfa, words, data);
 
 			if (SCF_DFA_SWITCH_TO == ret) {
-				scf_logi("\033[36m post hook: switch to %s->%s\033[0m\n", node->name, hook_node->name);
+				scf_logi("\033[32m post hook: switch to %s->%s\033[0m\n", node->name, hook_node->name);
 
 				node = hook_node;
 				ret = SCF_DFA_NEXT_WORD;

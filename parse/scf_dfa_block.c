@@ -44,7 +44,7 @@ static int _block_action_entry(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 static int _block_action_end(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*      parse     = dfa->priv;
-	dfa_data_t* d         = data;
+	dfa_data_t*       d         = data;
 	scf_stack_t*      s         = d->module_datas[dfa_module_block.index];
 	dfa_block_data_t* bd        = scf_stack_top(s);
 

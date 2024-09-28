@@ -2,7 +2,7 @@
 
 #define SCF_STRING_NUMBER_INC	4
 
-scf_string_t*	scf_string_alloc()
+scf_string_t* scf_string_alloc()
 {
 	scf_string_t* s = malloc(sizeof(scf_string_t));
 	if (!s)
