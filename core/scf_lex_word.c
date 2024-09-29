@@ -32,9 +32,18 @@ scf_lex_word_t*	scf_lex_word_clone(scf_lex_word_t* w)
 
 	w1->type = w->type;
 
-	switch (w->type) {
-		case SCF_LEX_WORD_CONST_CHAR:
-			w1->data.u32 = w->data.u32;
+	switch (w->type)
+	{
+		case SCF_LEX_WORD_CONST_FLOAT:
+			w1->data.f = w->data.f;
+			break;
+
+		case SCF_LEX_WORD_CONST_DOUBLE:
+			w1->data.d = w->data.d;
+			break;
+
+		case SCF_LEX_WORD_CONST_COMPLEX:
+			w1->data.z = w->data.z;
 			break;
 
 		case SCF_LEX_WORD_CONST_STRING:
@@ -46,26 +55,8 @@ scf_lex_word_t*	scf_lex_word_clone(scf_lex_word_t* w)
 			}
 			break;
 
-		case SCF_LEX_WORD_CONST_INT:
-			w1->data.i = w->data.i;
-			break;
-		case SCF_LEX_WORD_CONST_FLOAT:
-			w1->data.f = w->data.f;
-			break;
-		case SCF_LEX_WORD_CONST_DOUBLE:
-			w1->data.d = w->data.d;
-			break;
-		case SCF_LEX_WORD_CONST_COMPLEX:
-			w1->data.z = w->data.z;
-			break;
-
-		case SCF_LEX_WORD_CONST_I64:
-			w1->data.i64 = w->data.i64;
-			break;
-		case SCF_LEX_WORD_CONST_U64:
-			w1->data.u64 = w->data.u64;
-			break;
 		default:
+			w1->data.u64 = w->data.u64;
 			break;
 	};
 
