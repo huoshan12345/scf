@@ -550,7 +550,7 @@ int _lex_dot(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 			return ret;
 		}
 
-		if (scf_lex_is_const(w1)) {
+		if (SCF_LEX_WORD_CONST_INT <= w1->type && w1->type <= SCF_LEX_WORD_CONST_U64) {
 
 			ret = __lex_pop_word(lex, &w2);
 			if (ret < 0) {
@@ -561,7 +561,7 @@ int _lex_dot(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 
 			scf_lex_push_word(lex, w2);
 
-			if (w2->type != SCF_LEX_WORD_ASSIGN) {
+			if (w2->type != SCF_LEX_WORD_ASSIGN && w2->type != SCF_LEX_WORD_DOT) {
 				w->type   = SCF_LEX_WORD_CONST_DOUBLE;
 
 				ret = scf_string_cat(w->text, w1->text);
@@ -574,9 +574,10 @@ int _lex_dot(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 				}
 
 				w->data.d = atof(w->text->data);
-			} else
-				scf_lex_push_word(lex, w1);
-		} else
+			}
+		}
+
+		if (w1)
 			scf_lex_push_word(lex, w1);
 	}
 
