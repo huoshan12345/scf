@@ -36,8 +36,15 @@ struct scf_parse_s
 };
 
 typedef struct {
-	scf_vector_t*    current_index;
-	scf_expr_t*      expr;
+	scf_lex_word_t*    w;
+	intptr_t           i;
+} dfa_index_t;
+
+typedef struct {
+	scf_expr_t*        expr;
+
+	int                n;        // number of index array
+	dfa_index_t        index[0]; // index array
 
 } dfa_init_expr_t;
 
@@ -74,10 +81,6 @@ struct dfa_data_s {
 	int                  argc;
 
 	scf_lex_word_t*      current_async_w;
-
-	scf_vector_t*        init_exprs;
-	int                  current_dim;
-	scf_vector_t*        current_index;
 
 	scf_type_t*	         root_struct;
 	scf_type_t*	         current_struct;

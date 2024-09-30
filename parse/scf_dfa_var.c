@@ -173,7 +173,7 @@ static int _var_init_expr(scf_dfa_t* dfa, dfa_data_t* d, int semi_flag)
 	if (d->current_var->global_flag
 			|| (d->current_var->const_flag && 0 == d->current_var->nb_pointers + d->current_var->nb_dimentions)) {
 
-		scf_logw("d->expr: %p, d->current_var: %p, global_flag: %d\n",
+		scf_logd("d->expr: %p, d->current_var: %p, global_flag: %d\n",
 				d->expr, d->current_var, d->current_var->global_flag);
 
 		if (scf_expr_calculate(parse->ast, d->expr, NULL) < 0) {
@@ -188,7 +188,7 @@ static int _var_init_expr(scf_dfa_t* dfa, dfa_data_t* d, int semi_flag)
 
 		scf_node_add_child((scf_node_t*)parse->ast->current_block, (scf_node_t*)d->expr);
 
-		scf_loge("d->expr->parent->type: %d\n", d->expr->parent->type);
+		scf_logd("d->expr->parent->type: %d\n", d->expr->parent->type);
 
 		if (_expr_multi_rets(d->expr) < 0) {
 			scf_loge("\n");
@@ -417,7 +417,7 @@ static int _dfa_init_syntax_var(scf_dfa_t* dfa)
 
 	SCF_DFA_GET_MODULE_NODE(dfa, expr,   entry,     expr);
 
-	SCF_DFA_GET_MODULE_NODE(dfa, init_data, lb,     init_data_lb);
+	SCF_DFA_GET_MODULE_NODE(dfa, init_data, entry,  init_data);
 	SCF_DFA_GET_MODULE_NODE(dfa, init_data, rb,     init_data_rb);
 
 
@@ -443,8 +443,8 @@ static int _dfa_init_syntax_var(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(expr,      comma);
 	scf_dfa_node_add_child(expr,      semicolon);
 
-	// struct or array var init
-	scf_dfa_node_add_child(assign,       init_data_lb);
+	// struct or array init
+	scf_dfa_node_add_child(assign,       init_data);
 	scf_dfa_node_add_child(init_data_rb, comma);
 	scf_dfa_node_add_child(init_data_rb, semicolon);
 

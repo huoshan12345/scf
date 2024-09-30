@@ -67,6 +67,13 @@ static inline int scf_dfa_is_range(scf_dfa_t* dfa, void* word)
 	return SCF_LEX_WORD_RANGE == w->type;
 }
 
+static inline int scf_dfa_is_dot(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_DOT == w->type;
+}
+
 static inline int scf_dfa_is_comma(scf_dfa_t* dfa, void* word)
 {
 	scf_lex_word_t* w = word;
@@ -121,6 +128,13 @@ static inline int scf_dfa_is_identity(scf_dfa_t* dfa, void* word)
 	scf_lex_word_t* w = word;
 
 	return scf_lex_is_identity(w);
+}
+
+static inline int scf_dfa_is_const_integer(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return scf_lex_is_const_integer(w);
 }
 
 static inline int scf_dfa_is_base_type(scf_dfa_t* dfa, void* word)

@@ -114,7 +114,7 @@ static inline int scf_variable_const(scf_variable_t* v)
 	return v->const_flag && 0 == v->nb_pointers && 0 == v->nb_dimentions;
 }
 
-static inline int scf_variable_const_interger(scf_variable_t* v)
+static inline int scf_variable_const_integer(scf_variable_t* v)
 {
 	return scf_type_is_integer(v->type) && v->const_flag && 0 == v->nb_pointers && 0 == v->nb_dimentions;
 }
@@ -133,7 +133,7 @@ static inline int scf_variable_float(scf_variable_t* v)
 	return scf_type_is_float(v->type) && 0 == v->nb_pointers && 0 == v->nb_dimentions;
 }
 
-static inline int scf_variable_interger(scf_variable_t* v)
+static inline int scf_variable_integer(scf_variable_t* v)
 {
 	return scf_type_is_integer(v->type) || v->nb_pointers > 0 || v->nb_dimentions > 0;
 }
@@ -183,4 +183,3 @@ static inline int scf_variable_may_malloced(scf_variable_t* v)
 }
 
 #endif
-

@@ -21,7 +21,7 @@ int sub(int i, int j)
 Aops aops =
 {
 	add,
-	sub,
+	.pt1 = sub,
 };
 
 int main()

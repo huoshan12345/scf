@@ -157,16 +157,17 @@ enum scf_lex_words
 
 	// const literal value
 	SCF_LEX_WORD_CONST_CHAR,
-	SCF_LEX_WORD_CONST_STRING,
-
-	SCF_LEX_WORD_CONST_FLOAT,
-	SCF_LEX_WORD_CONST_DOUBLE,
-	SCF_LEX_WORD_CONST_COMPLEX,
 
 	SCF_LEX_WORD_CONST_INT,
 	SCF_LEX_WORD_CONST_U32,
 	SCF_LEX_WORD_CONST_I64,
 	SCF_LEX_WORD_CONST_U64,
+
+	SCF_LEX_WORD_CONST_FLOAT,
+	SCF_LEX_WORD_CONST_DOUBLE,
+	SCF_LEX_WORD_CONST_COMPLEX,
+
+	SCF_LEX_WORD_CONST_STRING,
 
 	SCF_LEX_WORD_ID, // identity, start of _, a-z, A-Z, may include 0-9
 };
@@ -221,6 +222,11 @@ static inline int scf_lex_is_operator(scf_lex_word_t* w)
 }
 
 static inline int scf_lex_is_const(scf_lex_word_t* w)
+{
+	return w->type >= SCF_LEX_WORD_CONST_CHAR && w->type <= SCF_LEX_WORD_CONST_STRING;
+}
+
+static inline int scf_lex_is_const_integer(scf_lex_word_t* w)
 {
 	return w->type >= SCF_LEX_WORD_CONST_CHAR && w->type <= SCF_LEX_WORD_CONST_U64;
 }
