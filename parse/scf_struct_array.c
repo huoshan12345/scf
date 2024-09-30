@@ -1,13 +1,10 @@
 #include"scf_dfa.h"
 #include"scf_parse.h"
 
-static int _scf_array_member_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* array,
-		intptr_t* indexes, int nb_indexes, scf_node_t** pnode)
+static int __array_member_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* array, dfa_index_t* index, int n, scf_node_t** pnode)
 {
-	if (!pnode) {
-		scf_loge("\n");
+	if (!pnode)
 		return -1;
-	}
 
 	scf_type_t* t    = scf_block_find_type_type(ast->current_block, SCF_VAR_INT);
 	scf_node_t* root = *pnode;
@@ -15,64 +12,71 @@ static int _scf_array_member_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variabl
 	if (!root)
 		root = scf_node_alloc(NULL, array->type, array);
 
-	scf_logi("array->nb_dimentions: %d, nb_indexes: %d\n", array->nb_dimentions, nb_indexes);
-
-	if (nb_indexes < array->nb_dimentions) {
-		scf_loge("\n");
+	if (n < array->nb_dimentions) {
+		scf_loge("number of indexes less than needed, array '%s', file: %s, line: %d\n",
+				array->w->text->data, w->file->data, w->line);
 		return -1;
 	}
 
 	int i;
 	for (i = 0; i < array->nb_dimentions; i++) {
 
-		int k = indexes[i];
+		intptr_t k = index[i].i;
 
 		if (k >= array->dimentions[i]) {
-			scf_loge("\n");
+			scf_loge("index [%ld] out of size [%d], in dim: %d, file: %s, line: %d\n",
+					k, array->dimentions[i], i, w->file->data, w->line);
 			return -1;
 		}
 
 		scf_variable_t* v_index     = scf_variable_alloc(NULL, t);
 		v_index->const_flag         = 1;
 		v_index->const_literal_flag = 1;
-		v_index->data.i             = k;
+		v_index->data.i64           = k;
 
-		scf_node_t* node_index      = scf_node_alloc(NULL, v_index->type,  v_index);
-		scf_node_t* node_op_index   = scf_node_alloc(w,    SCF_OP_ARRAY_INDEX, NULL);
+		scf_node_t* node_index = scf_node_alloc(NULL, v_index->type,  v_index);
+		scf_node_t* node_op    = scf_node_alloc(w,    SCF_OP_ARRAY_INDEX, NULL);
 
-		scf_node_add_child(node_op_index, root);
-		scf_node_add_child(node_op_index, node_index);
-		root = node_op_index;
+		scf_node_add_child(node_op, root);
+		scf_node_add_child(node_op, node_index);
+		root = node_op;
 	}
 
 	*pnode = root;
 	return array->nb_dimentions;
 }
 
-int scf_struct_member_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* _struct,
-		intptr_t* indexes, int nb_indexes, scf_node_t** pnode)
+int scf_struct_member_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* _struct, dfa_index_t* index, int n, scf_node_t** pnode)
 {
-	if (!pnode) {
-		scf_loge("\n");
+	if (!pnode)
 		return -1;
-	}
 
-	scf_type_t*     t     = scf_block_find_type_type(ast->current_block, _struct->type);
-	scf_variable_t* v     = NULL;
-	scf_node_t*     root  = *pnode;
+	scf_variable_t* v    = NULL;
+	scf_type_t*     t    = scf_block_find_type_type(ast->current_block, _struct->type);
+	scf_node_t*     root = *pnode;
 
 	if (!root)
 		root = scf_node_alloc(NULL, _struct->type,  _struct);
 
 	int j = 0;
-	while (j < nb_indexes) {
-
-		int k = indexes[j];
+	while (j < n) {
 
 		if (!t->scope) {
 			scf_loge("\n");
 			return -1;
 		}
+
+		int k;
+
+		if (index[j].w) {
+			for (k = 0; k < t->scope->vars->size; k++) {
+				v  =        t->scope->vars->data[k];
+
+				if (v->w && !strcmp(index[j].w->text->data, v->w->text->data))
+					break;
+			}
+		} else
+			k = index[j].i;
 
 		if (k >= t->scope->vars->size) {
 			scf_loge("\n");
@@ -81,23 +85,21 @@ int scf_struct_member_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* _s
 
 		v = t->scope->vars->data[k];
 
-		scf_node_t* node_op_pointer = scf_node_alloc(w,    SCF_OP_POINTER, NULL);
-		scf_node_t* node_v          = scf_node_alloc(NULL, v->type,        v);
+		scf_node_t* node_op = scf_node_alloc(w,    SCF_OP_POINTER, NULL);
+		scf_node_t* node_v  = scf_node_alloc(NULL, v->type,        v);
 
-		scf_node_add_child(node_op_pointer, root);
-		scf_node_add_child(node_op_pointer, node_v);
-		root = node_op_pointer;
+		scf_node_add_child(node_op, root);
+		scf_node_add_child(node_op, node_v);
+		root = node_op;
 
 		scf_logi("j: %d, k: %d, v: '%s'\n", j, k, v->w->text->data);
 		j++;
 
 		if (v->nb_dimentions > 0) {
 
-			int ret = _scf_array_member_init(ast, w, v, indexes + j, nb_indexes - j, &root);
-			if (ret < 0) {
-				scf_loge("\n");
+			int ret = __array_member_init(ast, w, v, index + j, n - j, &root);
+			if (ret < 0)
 				return -1;
-			}
 
 			j += ret;
 			scf_logi("struct var member: %s->%s[]\n", _struct->w->text->data, v->w->text->data);
@@ -107,20 +109,22 @@ int scf_struct_member_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* _s
 			// if 'v' is a base type var or a pointer, and of course 'v' isn't an array,
 			// we can't get the member of v !!
 			// the index must be the last one, and its expr is to init v !
-			if (j < nb_indexes - 1) {
-				scf_loge("\n");
+			if (j < n - 1) {
+				scf_loge("number of indexes more than needed, struct member: %s->%s, file: %s, line: %d\n",
+						_struct->w->text->data, v->w->text->data, w->file->data, w->line);
 				return -1;
 			}
 
 			scf_logi("struct var member: %s->%s\n", _struct->w->text->data, v->w->text->data);
 
 			*pnode = root;
-			return nb_indexes;
+			return n;
 		}
 
 		// 'v' is not a base type var or a pointer, it's a struct
 		// first, find the type in this struct scope, then find in global
 		scf_type_t* type_v = NULL;
+
 		while (t) {
 			type_v = scf_scope_find_type_type(t->scope, v->type);
 			if (type_v)
@@ -143,47 +147,44 @@ int scf_struct_member_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* _s
 		t = type_v;
 	}
 
-	// if goto here, the index->size if less than needed, error
-	scf_loge("error: struct var member: %s->%s\n", _struct->w->text->data, v->w->text->data);
+	scf_loge("number of indexes less than needed, struct member: %s->%s, file: %s, line: %d\n",
+			_struct->w->text->data, v->w->text->data, w->file->data, w->line);
 	return -1;
 }
 
-int scf_array_member_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* array, intptr_t* indexes, int nb_indexes, scf_node_t** pnode)
+int scf_array_member_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* array, dfa_index_t* index, int n, scf_node_t** pnode)
 {
 	scf_node_t* root = NULL;
 
-	int ret = _scf_array_member_init(ast, w, array, indexes, nb_indexes, &root);
-	if (ret < 0) {
-		scf_loge("\n");
-		return -1;
-	}
+	int ret = __array_member_init(ast, w, array, index, n, &root);
+	if (ret < 0)
+		return ret;
 
 	if (array->type < SCF_STRUCT || array->nb_pointers > 0) {
-		if (ret < nb_indexes - 1) {
+
+		if (ret < n - 1) {
 			scf_loge("\n");
 			return -1;
 		}
 
 		*pnode = root;
-		return nb_indexes;
+		return n;
 	}
 
-	ret = scf_struct_member_init(ast, w, array, indexes + ret, nb_indexes - ret, &root);
-	if (ret < 0) {
-		scf_loge("\n");
-		return -1;
-	}
+	ret = scf_struct_member_init(ast, w, array, index + ret, n - ret, &root);
+	if (ret < 0)
+		return ret;
 
 	*pnode = root;
-	return nb_indexes;
+	return n;
 }
 
 int scf_array_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* var, scf_vector_t* init_exprs)
 {
-	dfa_init_expr_t* init_expr;
+	dfa_init_expr_t* ie;
 
-	int nb_unset_dims = 0;
-	int unset_dims[8];
+	int unset     = 0;
+	int unset_dim = -1;
 	int i;
 	int j;
 
@@ -192,72 +193,65 @@ int scf_array_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* var, scf_v
 
 		scf_logi("dim[%d]: %d\n", i, var->dimentions[i]);
 
-		if (var->dimentions[i] < 0)
-			unset_dims[nb_unset_dims++] = i;
+		if (var->dimentions[i] < 0) {
+
+			if (unset > 0) {
+				scf_loge("array '%s' should only unset 1-dimention size, file: %s, line: %d\n",
+						var->w->text->data, w->file->data, w->line);
+				return -1;
+			}
+
+			unset++;
+			unset_dim = i;
+		}
 	}
 
-	if (nb_unset_dims > 1) {
-		scf_loge("\n");
-		return -1;
-	}
-
-	if (1 == nb_unset_dims) {
-
-		int unset_dim       = unset_dims[0];
-		int unset_index_max = -1;
+	if (unset) {
+		int unset_max = -1;
 
 		for (i = 0; i < init_exprs->size; i++) {
-			init_expr = init_exprs->data[i];
+			ie =        init_exprs->data[i];
 
-			if ((intptr_t)init_expr->current_index->data[unset_dim] > unset_index_max)
-				unset_index_max = (intptr_t)init_expr->current_index->data[unset_dim];
+			if (unset_max < ie->index[unset_dim].i)
+				unset_max = ie->index[unset_dim].i;
 		}
 
-		var->dimentions[unset_dim] = unset_index_max + 1;
+		var->dimentions[unset_dim] = unset_max + 1;
 	}
 
 	for (i = 0; i < init_exprs->size; i++) {
-		init_expr = init_exprs->data[i];
+		ie =        init_exprs->data[i];
 
 		for (j = 0; j < var->nb_dimentions; j++) {
 
-			printf("\033[32m%s(), %d, i: %d, dim: %d, size: %d, index: %d\033[0m\n",
-					__func__, __LINE__, i, j, var->dimentions[j],
-					(int)(intptr_t)(init_expr->current_index->data[j]));
+			intptr_t index = ie->index[j].i;
 
-			if ((intptr_t)init_expr->current_index->data[j] >= var->dimentions[j]) {
-
-				scf_loge("index [%d] out of size [%d], in dim: %d\n",
-						(int)(intptr_t)init_expr->current_index->data[j], var->dimentions[j], j);
-				return -1;
-			}
+			scf_logi("\033[32mi: %d, dim: %d, size: %d, index: %ld\033[0m\n", i, j, var->dimentions[j], index);
 		}
 	}
 
 	for (i = 0; i < init_exprs->size; i++) {
-		init_expr = init_exprs->data[i];
+		ie =        init_exprs->data[i];
 
-		scf_logi("#### data init, i: %d, init_expr->expr: %p\n", i, init_expr->expr);
+		scf_logi("#### data init, i: %d, init expr: %p\n", i, ie->expr);
 
-		scf_expr_t* e           = scf_expr_alloc();
-		scf_node_t* assign      = scf_node_alloc(w, SCF_OP_ASSIGN, NULL);
-		scf_node_t* node        = NULL;
-		intptr_t*   indexes     = (intptr_t*)init_expr->current_index->data;
-		int         nb_indexes  =            init_expr->current_index->size;
+		scf_expr_t* e;
+		scf_node_t* assign;
+		scf_node_t* node = NULL;
 
-		if (scf_array_member_init(ast, w, var, indexes, nb_indexes, &node) < 0) {
+		if (scf_array_member_init(ast, w, var, ie->index, ie->n, &node) < 0) {
 			scf_loge("\n");
 			return -1;
 		}
 
+		e      = scf_expr_alloc();
+		assign = scf_node_alloc(w, SCF_OP_ASSIGN, NULL);
+
 		scf_node_add_child(assign, node);
-		scf_node_add_child(assign, init_expr->expr);
+		scf_node_add_child(assign, ie->expr);
 		scf_expr_add_node(e, assign);
 
-		scf_vector_free(init_expr->current_index);
-		init_expr->current_index = NULL;
-
-		init_expr->expr = e;
+		ie->expr = e;
 		printf("\n");
 	}
 
@@ -266,34 +260,29 @@ int scf_array_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* var, scf_v
 
 int scf_struct_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* var, scf_vector_t* init_exprs)
 {
-	dfa_init_expr_t* init_expr;
+	dfa_init_expr_t* ie;
 
 	int i;
 	for (i = 0; i < init_exprs->size; i++) {
-		init_expr = init_exprs->data[i];
+		ie =        init_exprs->data[i];
 
-		scf_logi("#### struct init, i: %d, init_expr->expr: %p\n", i, init_expr->expr);
+		scf_logi("#### struct init, i: %d, init_expr->expr: %p\n", i, ie->expr);
 
-		scf_node_t* node        = NULL;
-		intptr_t*   indexes     = (intptr_t*)init_expr->current_index->data;
-		int         nb_indexes  =            init_expr->current_index->size;
+		scf_expr_t* e;
+		scf_node_t* assign;
+		scf_node_t* node = NULL;
 
-		if (scf_struct_member_init(ast, w, var, indexes, nb_indexes, &node) < 0) {
-			scf_loge("\n");
+		if (scf_struct_member_init(ast, w, var, ie->index, ie->n, &node) < 0)
 			return -1;
-		}
 
-		scf_expr_t* e      = scf_expr_alloc();
-		scf_node_t* assign = scf_node_alloc(w, SCF_OP_ASSIGN, NULL);
+		e      = scf_expr_alloc();
+		assign = scf_node_alloc(w, SCF_OP_ASSIGN, NULL);
 
 		scf_node_add_child(assign, node);
-		scf_node_add_child(assign, init_expr->expr);
+		scf_node_add_child(assign, ie->expr);
 		scf_expr_add_node(e, assign);
 
-		scf_vector_free(init_expr->current_index);
-		init_expr->current_index = NULL;
-
-		init_expr->expr = e;
+		ie->expr = e;
 		printf("\n");
 	}
 

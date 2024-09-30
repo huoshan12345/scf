@@ -963,7 +963,7 @@ static int _scf_op_semantic_array_index(scf_ast_t* ast, scf_node_t** nodes, int 
 		}
 	}
 
-	if (!scf_variable_interger(v1)) {
+	if (!scf_variable_integer(v1)) {
 		scf_loge("array index should be an interger\n");
 		return -1;
 	}
@@ -1197,7 +1197,7 @@ static int _scf_op_semantic_if(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes,
 		return -1;
 	}
 
-	if (!r || !scf_variable_interger(r)) {
+	if (!r || !scf_variable_integer(r)) {
 		scf_loge("\n");
 		return -1;
 	}
@@ -1239,7 +1239,7 @@ static int _scf_op_semantic_do(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes,
 		return -1;
 	}
 
-	if (!r || !scf_variable_interger(r)) {
+	if (!r || !scf_variable_integer(r)) {
 		scf_loge("\n");
 		return -1;
 	}
@@ -1265,7 +1265,7 @@ static int _scf_op_semantic_while(scf_ast_t* ast, scf_node_t** nodes, int nb_nod
 		return -1;
 	}
 
-	if (!r || !scf_variable_interger(r)) {
+	if (!r || !scf_variable_integer(r)) {
 		scf_loge("\n");
 		return -1;
 	}
@@ -1300,7 +1300,7 @@ static int _scf_op_semantic_switch(scf_ast_t* ast, scf_node_t** nodes, int nb_no
 		return -1;
 	}
 
-	if (!r || !scf_variable_interger(r)) {
+	if (!r || !scf_variable_integer(r)) {
 		scf_loge("\n");
 		return -1;
 	}
@@ -1331,7 +1331,7 @@ static int _scf_op_semantic_case(scf_ast_t* ast, scf_node_t** nodes, int nb_node
 		return -1;
 	}
 
-	if (!r || !scf_variable_interger(r)) {
+	if (!r || !scf_variable_integer(r)) {
 		scf_loge("\n");
 		return -1;
 	}
@@ -1371,7 +1371,7 @@ static int _scf_op_semantic_for(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes
 			return -1;
 		}
 
-		if (!r || !scf_variable_interger(r)) {
+		if (!r || !scf_variable_integer(r)) {
 			scf_loge("\n");
 			return -1;
 		}
@@ -1539,7 +1539,7 @@ static int _scf_op_semantic_neg(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes
 		}
 	}
 
-	if (scf_variable_interger(v0) || scf_variable_float(v0)) {
+	if (scf_variable_integer(v0) || scf_variable_float(v0)) {
 
 		scf_type_t*	t = NULL;
 		int ret = scf_ast_find_type_type(&t, ast, v0->type);
@@ -1586,7 +1586,7 @@ static int _scf_op_semantic_inc(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes
 		}
 	}
 
-	if (scf_variable_interger(v0)) {
+	if (scf_variable_integer(v0)) {
 
 		scf_type_t*	t = NULL;
 		int ret = scf_ast_find_type_type(&t, ast, v0->type);
@@ -1838,7 +1838,7 @@ static int _scf_op_semantic_logic_not(scf_ast_t* ast, scf_node_t** nodes, int nb
 		}
 	}
 
-	if (scf_variable_interger(v0)) {
+	if (scf_variable_integer(v0)) {
 
 		int const_flag    = v0->const_flag && 0 == v0->nb_pointers && 0 == v0->nb_dimentions;
 
@@ -1927,9 +1927,9 @@ static int _scf_op_semantic_binary(scf_ast_t* ast, scf_node_t** nodes, int nb_no
 		}
 	}
 
-	if (scf_variable_interger(v0) || scf_variable_float(v0)) {
+	if (scf_variable_integer(v0) || scf_variable_float(v0)) {
 
-		if (scf_variable_interger(v1) || scf_variable_float(v1)) {
+		if (scf_variable_integer(v1) || scf_variable_float(v1)) {
 
 			scf_function_t* func_ptr     = NULL;
 			scf_variable_t* v2           = NULL;
@@ -1950,7 +1950,7 @@ static int _scf_op_semantic_binary(scf_ast_t* ast, scf_node_t** nodes, int nb_no
 						return -EINVAL;
 					}
 
-				} else if (!scf_variable_interger(v1)) {
+				} else if (!scf_variable_integer(v1)) {
 					scf_loge("var calculated with a pointer should be a interger\n");
 					return -EINVAL;
 				} else {
@@ -1979,7 +1979,7 @@ static int _scf_op_semantic_binary(scf_ast_t* ast, scf_node_t** nodes, int nb_no
 
 			} else if (nb_pointers1 > 0) {
 
-				if (!scf_variable_interger(v0)) {
+				if (!scf_variable_integer(v0)) {
 					scf_loge("var calculated with a pointer should be a interger\n");
 					return -EINVAL;
 				} else {
@@ -2106,7 +2106,7 @@ static int _scf_op_semantic_binary_interger(scf_ast_t* ast, scf_node_t** nodes, 
 		}
 	}
 
-	if (scf_variable_interger(v0) && scf_variable_interger(v1)) {
+	if (scf_variable_integer(v0) && scf_variable_integer(v1)) {
 
 		int const_flag = v0->const_flag && v1->const_flag;
 
@@ -2444,9 +2444,9 @@ static int _scf_op_semantic_binary_assign(scf_ast_t* ast, scf_node_t** nodes, in
 		}
 	}
 
-	if (scf_variable_interger(v0) || scf_variable_float(v0)) {
+	if (scf_variable_integer(v0) || scf_variable_float(v0)) {
 
-		if (scf_variable_interger(v1) || scf_variable_float(v1)) {
+		if (scf_variable_integer(v1) || scf_variable_float(v1)) {
 
 			if (!scf_variable_same_type(v0, v1)) {
 
@@ -2517,7 +2517,7 @@ static int _scf_op_semantic_binary_interger_assign(scf_ast_t* ast, scf_node_t** 
 		}
 	}
 
-	if (scf_variable_interger(v0) && scf_variable_interger(v1)) {
+	if (scf_variable_integer(v0) && scf_variable_integer(v1)) {
 
 		if (!scf_variable_same_type(v0, v1)) {
 
@@ -2622,9 +2622,9 @@ static int _scf_op_semantic_cmp(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes
 		}
 	}
 
-	if (scf_variable_interger(v0) || scf_variable_float(v0)) {
+	if (scf_variable_integer(v0) || scf_variable_float(v0)) {
 
-		if (scf_variable_interger(v1) || scf_variable_float(v1)) {
+		if (scf_variable_integer(v1) || scf_variable_float(v1)) {
 
 			int const_flag = v0->const_flag && v1->const_flag; 
 

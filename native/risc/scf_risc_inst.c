@@ -2158,7 +2158,7 @@ static int _risc_inst_div_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	if (0 == s1->color) {
 
-		if (!scf_variable_const_interger(s1->var)) {
+		if (!scf_variable_const_integer(s1->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -2175,7 +2175,7 @@ static int _risc_inst_div_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	} else if (0 == s0->color) {
 
-		if (!scf_variable_const_interger(s0->var)) {
+		if (!scf_variable_const_integer(s0->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -2238,7 +2238,7 @@ static int _risc_inst_mod_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	if (0 == s1->color) {
 
-		if (!scf_variable_const_interger(s1->var)) {
+		if (!scf_variable_const_integer(s1->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -2255,7 +2255,7 @@ static int _risc_inst_mod_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	} else if (0 == s0->color) {
 
-		if (!scf_variable_const_interger(s0->var)) {
+		if (!scf_variable_const_integer(s0->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -2337,7 +2337,7 @@ static int _risc_inst_mul_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	if (0 == s1->color) {
 
-		if (!scf_variable_const_interger(s1->var)) {
+		if (!scf_variable_const_integer(s1->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -2421,7 +2421,7 @@ static int _risc_inst_mul_assign_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	if (0 == s->color) {
 
-		if (!scf_variable_const_interger(s->var)) {
+		if (!scf_variable_const_integer(s->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -2496,7 +2496,7 @@ static int _risc_inst_add_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 			return -EINVAL;
 		}
 
-		if (!scf_variable_const_interger(s1->var)) {
+		if (!scf_variable_const_integer(s1->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -2586,7 +2586,7 @@ static int _risc_inst_add_assign_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 			return -EINVAL;
 		}
 
-		if (!scf_variable_const_interger(s->var)) {
+		if (!scf_variable_const_integer(s->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -2674,7 +2674,7 @@ static int _risc_inst_sub_assign_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 			return -EINVAL;
 		}
 
-		if (!scf_variable_const_interger(s->var)) {
+		if (!scf_variable_const_integer(s->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -2753,7 +2753,7 @@ static int _risc_inst_sub_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 			return -EINVAL;
 		}
 
-		if (!scf_variable_const_interger(s1->var)) {
+		if (!scf_variable_const_integer(s1->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -2824,7 +2824,7 @@ static int _risc_inst_bit_and_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	if (0 == s1->color) {
 
-		if (!scf_variable_const_interger(s1->var)) {
+		if (!scf_variable_const_integer(s1->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -2888,7 +2888,7 @@ static int _risc_inst_bit_or_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	if (0 == s1->color) {
 
-		if (!scf_variable_const_interger(s1->var)) {
+		if (!scf_variable_const_integer(s1->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -2963,7 +2963,7 @@ static int _risc_inst_and_assign_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	if (0 == s->color) {
 
-		if (!scf_variable_const_interger(s->var)) {
+		if (!scf_variable_const_integer(s->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -3038,7 +3038,7 @@ static int _risc_inst_or_assign_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	if (0 == s->color) {
 
-		if (!scf_variable_const_interger(s->var)) {
+		if (!scf_variable_const_integer(s->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -3359,7 +3359,7 @@ static int _risc_inst_cast_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 		if (0 == s->color) {
 
-			if (!scf_variable_const_interger(vs))
+			if (!scf_variable_const_integer(vs))
 				return -EINVAL;
 
 			if (src_size < dst_size)
@@ -3392,7 +3392,7 @@ static int _risc_inst_cast_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	if (0 == s->color) {
 
-		if (!scf_variable_const_interger(vs))
+		if (!scf_variable_const_integer(vs))
 			return -EINVAL;
 
 		if (src_size < dst_size)
@@ -3474,7 +3474,7 @@ static int _risc_inst_div_assign_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	if (0 == s->color) {
 
-		if (!scf_variable_const_interger(s->var)) {
+		if (!scf_variable_const_integer(s->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -3549,7 +3549,7 @@ static int _risc_inst_mod_assign_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	if (0 == s->color) {
 
-		if (!scf_variable_const_interger(s->var)) {
+		if (!scf_variable_const_integer(s->var)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
@@ -4036,7 +4036,7 @@ static int _risc_inst_assign_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 		if (scf_variable_const_string(v))
 			return ctx->iops->ISTR2G(c, f, rd, v);
 
-		if (!scf_variable_const_interger(v)) {
+		if (!scf_variable_const_integer(v)) {
 			scf_loge("\n");
 			return -EINVAL;
 		}

@@ -725,7 +725,7 @@ int _expr_multi_rets(scf_expr_t* e)
 	parent->nodes[i] = e;
 	parent->nb_nodes = i + 1;
 
-	scf_loge("parent->nb_nodes: %d\n", parent->nb_nodes);
+	scf_logd("parent->nb_nodes: %d\n", parent->nb_nodes);
 
 	return 0;
 }

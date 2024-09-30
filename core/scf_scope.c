@@ -95,13 +95,12 @@ void scf_scope_free(scf_scope_t* scope)
 
 scf_type_t*	scf_scope_find_type(scf_scope_t* scope, const char* name)
 {
+	scf_type_t* t;
 	scf_list_t* l;
 
-	for (l = scf_list_head(&scope->type_list_head);
-			l != scf_list_sentinel(&scope->type_list_head); l = scf_list_next(l)) {
+	for (l = scf_list_head(&scope->type_list_head); l != scf_list_sentinel(&scope->type_list_head); l = scf_list_next(l)) {
+		t  = scf_list_data(l, scf_type_t, list);
 
-		//printf("%s(),%d, scope: %p, name: %s\n", __func__, __LINE__, scope, name);
-		scf_type_t* t = scf_list_data(l, scf_type_t, list);
 		if (!strcmp(name, t->name->data)) {
 			return t;
 		}
@@ -111,12 +110,12 @@ scf_type_t*	scf_scope_find_type(scf_scope_t* scope, const char* name)
 
 scf_type_t*	scf_scope_find_type_type(scf_scope_t* scope, const int type)
 {
+	scf_type_t* t;
 	scf_list_t* l;
 
-	for (l = scf_list_head(&scope->type_list_head);
-			l != scf_list_sentinel(&scope->type_list_head); l = scf_list_next(l)) {
+	for (l = scf_list_head(&scope->type_list_head); l != scf_list_sentinel(&scope->type_list_head); l = scf_list_next(l)) {
+		t  = scf_list_data(l, scf_type_t, list);
 
-		scf_type_t* t = scf_list_data(l, scf_type_t, list);
 		if (type == t->type)
 			return t;
 	}
@@ -125,13 +124,12 @@ scf_type_t*	scf_scope_find_type_type(scf_scope_t* scope, const int type)
 
 scf_variable_t*	scf_scope_find_variable(scf_scope_t* scope, const char* name)
 {
+	scf_variable_t* v;
 	int i;
 
 	for (i = 0; i < scope->vars->size; i++) {
+		v  =        scope->vars->data[i];
 
-		scf_variable_t* v = scope->vars->data[i];
-
-		//printf("%s(),%d, scope: %p, name: %s, v: %s\n", __func__, __LINE__, scope, name, v->w->text->data);
 		if (v->w && !strcmp(name, v->w->text->data))
 			return v;
 	}
@@ -140,12 +138,11 @@ scf_variable_t*	scf_scope_find_variable(scf_scope_t* scope, const char* name)
 
 scf_label_t* scf_scope_find_label(scf_scope_t* scope, const char* name)
 {
-	scf_list_t* l;
+	scf_label_t* label;
+	scf_list_t*  l;
 
-	for (l = scf_list_head(&scope->label_list_head);
-			l != scf_list_sentinel(&scope->label_list_head); l = scf_list_next(l)) {
-
-		scf_label_t* label = scf_list_data(l, scf_label_t, list);
+	for (l    = scf_list_head(&scope->label_list_head); l != scf_list_sentinel(&scope->label_list_head); l = scf_list_next(l)) {
+		label = scf_list_data(l, scf_label_t, list);
 
 		if (!strcmp(name, label->w->text->data))
 			return label;
@@ -158,10 +155,8 @@ scf_function_t*	scf_scope_find_function(scf_scope_t* scope, const char* name)
 	scf_function_t* f;
 	scf_list_t*     l;
 
-	for (l = scf_list_head(&scope->function_list_head);
-			l != scf_list_sentinel(&scope->function_list_head); l = scf_list_next(l)) {
-
-		f = scf_list_data(l, scf_function_t, list);
+	for (l = scf_list_head(&scope->function_list_head); l != scf_list_sentinel(&scope->function_list_head); l = scf_list_next(l)) {
+		f  = scf_list_data(l, scf_function_t, list);
 
 		if (!strcmp(name, f->node.w->text->data))
 			return f;
@@ -171,12 +166,11 @@ scf_function_t*	scf_scope_find_function(scf_scope_t* scope, const char* name)
 
 scf_function_t*	scf_scope_find_same_function(scf_scope_t* scope, scf_function_t* f0)
 {
-	scf_list_t* l;
+	scf_function_t* f1;
+	scf_list_t*     l;
 
-	for (l = scf_list_head(&scope->function_list_head);
-			l != scf_list_sentinel(&scope->function_list_head); l = scf_list_next(l)) {
-
-		scf_function_t* f1 = scf_list_data(l, scf_function_t, list);
+	for (l = scf_list_head(&scope->function_list_head); l != scf_list_sentinel(&scope->function_list_head); l = scf_list_next(l)) {
+		f1 = scf_list_data(l, scf_function_t, list);
 
 		if (scf_function_same(f0, f1))
 			return f1;
@@ -186,12 +180,11 @@ scf_function_t*	scf_scope_find_same_function(scf_scope_t* scope, scf_function_t*
 
 scf_function_t*	scf_scope_find_proper_function(scf_scope_t* scope, const char* name, scf_vector_t* argv)
 {
-	scf_list_t* l;
+	scf_function_t* f;
+	scf_list_t*     l;
 
-	for (l = scf_list_head(&scope->function_list_head);
-			l != scf_list_sentinel(&scope->function_list_head); l = scf_list_next(l)) {
-
-		scf_function_t* f = scf_list_data(l, scf_function_t, list);
+	for (l = scf_list_head(&scope->function_list_head); l != scf_list_sentinel(&scope->function_list_head); l = scf_list_next(l)) {
+		f  = scf_list_data(l, scf_function_t, list);
 
 		if (strcmp(f->node.w->text->data, name))
 			continue;
@@ -204,6 +197,7 @@ scf_function_t*	scf_scope_find_proper_function(scf_scope_t* scope, const char* n
 
 int scf_scope_find_like_functions(scf_vector_t** pfunctions, scf_scope_t* scope, const char* name, scf_vector_t* argv)
 {
+	scf_function_t* f;
 	scf_vector_t*   vec;
 	scf_list_t*     l;
 
@@ -211,10 +205,8 @@ int scf_scope_find_like_functions(scf_vector_t** pfunctions, scf_scope_t* scope,
 	if (!vec)
 		return -ENOMEM;
 
-	for (l = scf_list_head(&scope->function_list_head);
-			l != scf_list_sentinel(&scope->function_list_head); l = scf_list_next(l)) {
-
-		scf_function_t* f = scf_list_data(l, scf_function_t, list);
+	for (l = scf_list_head(&scope->function_list_head); l != scf_list_sentinel(&scope->function_list_head); l = scf_list_next(l)) {
+		f  = scf_list_data(l, scf_function_t, list);
 
 		if (strcmp(f->node.w->text->data, name))
 			continue;
@@ -240,6 +232,7 @@ int scf_scope_find_like_functions(scf_vector_t** pfunctions, scf_scope_t* scope,
 
 int scf_scope_find_overloaded_functions(scf_vector_t** pfunctions, scf_scope_t* scope, const int op_type, scf_vector_t* argv)
 {
+	scf_function_t* f;
 	scf_vector_t*   vec;
 	scf_list_t*     l;
 
@@ -247,10 +240,8 @@ int scf_scope_find_overloaded_functions(scf_vector_t** pfunctions, scf_scope_t* 
 	if (!vec)
 		return -ENOMEM;
 
-	for (l = scf_list_head(&scope->operator_list_head);
-			l != scf_list_sentinel(&scope->operator_list_head); l = scf_list_next(l)) {
-
-		scf_function_t* f = scf_list_data(l, scf_function_t, list);
+	for (l = scf_list_head(&scope->operator_list_head); l != scf_list_sentinel(&scope->operator_list_head); l = scf_list_next(l)) {
+		f  = scf_list_data(l, scf_function_t, list);
 
 		if (op_type != f->op_type)
 			continue;

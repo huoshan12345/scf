@@ -177,7 +177,7 @@ static int _scf_op_expr_type_cast(scf_ast_t* ast, scf_node_t** nodes, int nb_nod
 			if (parent->w)
 				SCF_XCHG(r->w, parent->w);
 
-			scf_loge("parent: %p\n", parent);
+			scf_logd("parent: %p\n", parent);
 			scf_node_free_data(parent);
 			parent->type = r->type;
 			parent->var  = r;
@@ -193,7 +193,7 @@ static int _scf_op_expr_type_cast(scf_ast_t* ast, scf_node_t** nodes, int nb_nod
 
 		scf_node_free_data(parent);
 
-		scf_loge("parent->result: %p, parent: %p, v->type: %d\n", parent->result, parent, v->type);
+		scf_logd("parent->result: %p, parent: %p, v->type: %d\n", parent->result, parent, v->type);
 		parent->type = v->type;
 		parent->var  = v;
 
@@ -530,8 +530,7 @@ static int _scf_op_expr_assign(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes,
 	scf_member_t*   m0  = NULL;
 	scf_member_t*   m1  = NULL;
 
-	scf_logw("v0->type: %d, v1->type: %d, SCF_VAR_U8: %d\n",
-			v0->type, v1->type, SCF_VAR_U8);
+	scf_logd("v0->type: %d, v1->type: %d\n", v0->type, v1->type);
 
 	if (!scf_variable_const_string(v1))
 		assert(v0->type == v1->type);

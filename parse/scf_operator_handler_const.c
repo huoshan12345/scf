@@ -572,7 +572,7 @@ static int _scf_op_const_type_cast(scf_ast_t* ast, scf_node_t** nodes, int nb_no
 	} else
 		result->const_flag = 0;
 
-	if (scf_variable_interger(src) && scf_variable_interger(dst)) {
+	if (scf_variable_integer(src) && scf_variable_integer(dst)) {
 
 		int size;
 		if (src ->nb_dimentions > 0)

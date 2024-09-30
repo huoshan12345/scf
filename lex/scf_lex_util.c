@@ -550,7 +550,7 @@ int _lex_dot(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 			return ret;
 		}
 
-		if (SCF_LEX_WORD_CONST_INT <= w1->type && w1->type <= SCF_LEX_WORD_CONST_U64) {
+		if (SCF_LEX_WORD_CONST_CHAR <= w1->type && w1->type <= SCF_LEX_WORD_CONST_U64) {
 
 			ret = __lex_pop_word(lex, &w2);
 			if (ret < 0) {
