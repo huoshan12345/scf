@@ -10,15 +10,15 @@ int scf_struct_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* var, scf_
 int _expr_add_var(scf_parse_t* parse, dfa_data_t* d);
 
 typedef struct {
-	scf_vector_t*  init_exprs;
+	scf_lex_word_t*  assign;
+	scf_vector_t*    init_exprs;
 
-	dfa_index_t*   current_index;
-	int            current_n;
+	dfa_index_t*     current_index;
+	int              current_n;
+	int              current_dim;
 
-	int            current_dim;
-
-	int            nb_lbs;
-	int            nb_rbs;
+	int              nb_lbs;
+	int              nb_rbs;
 } init_module_data_t;
 
 static int _do_data_init(scf_dfa_t* dfa, scf_vector_t* words, dfa_data_t* d)
@@ -33,10 +33,10 @@ static int _do_data_init(scf_dfa_t* dfa, scf_vector_t* words, dfa_data_t* d)
 	int i   = 0;
 
 	if (d->current_var->nb_dimentions > 0)
-		ret = scf_array_init(parse->ast, w, d->current_var, md->init_exprs);
+		ret = scf_array_init(parse->ast, md->assign, d->current_var, md->init_exprs);
 
 	else if (d->current_var->type >=  SCF_STRUCT)
-		ret = scf_struct_init(parse->ast, w, d->current_var, md->init_exprs);
+		ret = scf_struct_init(parse->ast, md->assign, d->current_var, md->init_exprs);
 
 	if (ret < 0)
 		goto error;
@@ -72,6 +72,8 @@ error:
 		free(ie);
 		ie = NULL;
 	}
+
+	md->assign = NULL;
 
 	scf_vector_free(md->init_exprs);
 	md->init_exprs = NULL;
@@ -143,11 +145,16 @@ static int _data_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _data_action_entry(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
+	assert(words->size >= 2);
+
 	scf_parse_t*        parse = dfa->priv;
 	dfa_data_t*         d     = data;
-	scf_lex_word_t*     w     = words->data[words->size - 1];
+	scf_lex_word_t*     w     = words->data[words->size - 2];
 	init_module_data_t* md    = d->module_datas[dfa_module_init_data.index];
 
+	assert(SCF_LEX_WORD_ASSIGN == w->type);
+
+	md->assign = w;
 	md->nb_lbs = 0;
 	md->nb_rbs = 0;
 

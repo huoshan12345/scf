@@ -95,7 +95,7 @@ scf_type_cast_t* scf_find_base_type_cast(int src_type, int dst_type)
 
 int scf_type_cast_check(scf_ast_t* ast, scf_variable_t* dst, scf_variable_t* src)
 {
-	if (!dst->const_flag && src->const_flag) {
+	if (!dst->const_flag && src->const_flag && !src->const_literal_flag) {
 		scf_logw("type cast %s -> %s discard 'const'\n", src->w->text->data, dst->w->text->data);
 	}
 
@@ -186,4 +186,3 @@ failed:
 	scf_string_free(src_type);
 	return -1;
 }
-

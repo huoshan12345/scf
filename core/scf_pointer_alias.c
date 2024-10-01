@@ -149,7 +149,8 @@ static int _bb_pointer_initeds(scf_vector_t* initeds, scf_list_t* bb_list_head, 
 			return 0;
 
 		if (v->global_flag) {
-			scf_loge("bb: %p, index: %d, global pointer v_%d_%d/%s is not inited\n", bb, bb->index, v->w->line, v->w->pos, v->w->text->data);
+			if (v->nb_pointers > 0)
+				scf_logw("global pointer '%s' is not inited, file: %s, line: %d\n", v->w->text->data, v->w->file->data, v->w->line);
 			return 0;
 		}
 
@@ -157,18 +158,17 @@ static int _bb_pointer_initeds(scf_vector_t* initeds, scf_list_t* bb_list_head, 
 			return 0;
 
 		if (dn->node->split_flag) {
-			scf_loge("dn->node->split_parent: %d, %p\n", dn->node->split_parent->type, dn->node->split_parent);
-			assert(dn->node->split_parent->type == SCF_OP_CALL
-					|| dn->node->split_parent->type == SCF_OP_CREATE);
+			scf_logd("dn->node->split_parent: %d, %p\n", dn->node->split_parent->type, dn->node->split_parent);
 
+			assert(dn->node->split_parent->type == SCF_OP_CALL
+				|| dn->node->split_parent->type == SCF_OP_CREATE);
 			return 0;
 		}
 
 		if (ds->dn_indexes)
 			return 0;
 
-		scf_loge("bb: %p, index: %d, pointer v_%d_%d/%s is not inited\n", bb, bb->index, v->w->line, v->w->pos, v->w->text->data);
-
+		scf_loge("pointer '%s' is not inited, file: %s, line: %d\n", v->w->text->data, v->w->file->data, v->w->line);
 		return SCF_POINTER_NOT_INIT;
 	}
 
@@ -204,12 +204,12 @@ static int _bb_pointer_initeds(scf_vector_t* initeds, scf_list_t* bb_list_head, 
 		}
 	}
 
-	scf_loge("initeds->size: %d\n", initeds->size);
+	scf_logd("initeds->size: %d\n", initeds->size);
 	int i;
 	for (i = 0; i < initeds->size; i++) {
 		scf_basic_block_t* bb2 = initeds->data[i];
 
-		scf_loge("bb2: %p, %d\n", bb2, bb2->index);
+		scf_logd("bb2: %p, %d\n", bb2, bb2->index);
 	}
 
 	ret = _bb_dfs_check_initeds(bb_list_head, bb, initeds);
@@ -218,9 +218,7 @@ static int _bb_pointer_initeds(scf_vector_t* initeds, scf_list_t* bb_list_head, 
 		v  = dn->var;
 
 		if (!v->arg_flag && !v->global_flag) {
-			scf_loge("in bb: %p, index: %d, pointer v_%d_%d/%s may not be inited\n",
-					bb, bb->index, v->w->line, v->w->pos, v->w->text->data);
-
+			scf_loge("pointer '%s' is not inited, file: %s, line: %d\n", v->w->text->data, v->w->file->data, v->w->line);
 			return SCF_POINTER_NOT_INIT;
 		}
 		return 0;
@@ -248,7 +246,8 @@ static int _bb_pointer_initeds_leak(scf_vector_t* initeds, scf_list_t* bb_list_h
 			return 0;
 
 		if (v->global_flag) {
-			scf_loge("bb: %p, index: %d, global pointer v_%d_%d/%s is not inited\n", bb, bb->index, v->w->line, v->w->pos, v->w->text->data);
+			if (v->nb_pointers > 0)
+				scf_logw("global pointer '%s' is not inited, file: %s, line: %d\n", v->w->text->data, v->w->file->data, v->w->line);
 			return 0;
 		}
 
@@ -256,18 +255,15 @@ static int _bb_pointer_initeds_leak(scf_vector_t* initeds, scf_list_t* bb_list_h
 			return 0;
 
 		if (dn->node->split_flag) {
-			scf_loge("dn->node->split_parent: %d, %p\n", dn->node->split_parent->type, dn->node->split_parent);
 			assert(dn->node->split_parent->type == SCF_OP_CALL
-					|| dn->node->split_parent->type == SCF_OP_CREATE);
-
+				|| dn->node->split_parent->type == SCF_OP_CREATE);
 			return 0;
 		}
 
 		if (ds->dn_indexes)
 			return 0;
 
-		scf_loge("bb: %p, index: %d, pointer v_%d_%d/%s is not inited\n", bb, bb->index, v->w->line, v->w->pos, v->w->text->data);
-
+		scf_loge("pointer '%s' is not inited, file: %s, line: %d\n", v->w->text->data, v->w->file->data, v->w->line);
 		return SCF_POINTER_NOT_INIT;
 	}
 
@@ -1646,4 +1642,3 @@ int scf_pointer_alias(scf_vector_t* aliases, scf_dag_node_t* dn_alias, scf_3ac_c
 	}
 	return 0;
 }
-
