@@ -48,10 +48,8 @@ struct scf_basic_block_s
 	scf_vector_t*   prevs; // prev basic blocks
 	scf_vector_t*   nexts; // next basic blocks
 
-	scf_vector_t*   dominators_normal;
-	scf_vector_t*   dominators_reverse;
-	int             dfo_normal;
-	int             dfo_reverse;
+	scf_vector_t*   dominators;
+	int             dfo;
 
 	scf_vector_t*   entry_dn_delivery;
 	scf_vector_t*   entry_dn_inactives;
@@ -109,7 +107,7 @@ struct scf_basic_block_s
 typedef int       (*scf_basic_block_bfs_pt)(scf_basic_block_t* bb, void* data, scf_vector_t* queue);
 typedef int       (*scf_basic_block_dfs_pt)(scf_basic_block_t* bb, void* data);
 
-int                 scf_basic_block_search_bfs(scf_basic_block_t* root, scf_basic_block_bfs_pt find, void* data);
+int                 scf_basic_block_search_bfs     (scf_basic_block_t* root, scf_basic_block_bfs_pt find, void* data);
 int                 scf_basic_block_search_dfs_prev(scf_basic_block_t* root, scf_basic_block_dfs_pt find, void* data, scf_vector_t* results);
 
 
@@ -139,4 +137,3 @@ void                scf_basic_block_mov_code(scf_list_t* start, scf_basic_block_
 int                 scf_basic_block_inited_by3ac(scf_basic_block_t* bb);
 
 #endif
-
