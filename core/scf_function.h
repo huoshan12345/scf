@@ -35,7 +35,6 @@ struct scf_function_s {
 	scf_vector_t*     bb_loops;
 	scf_vector_t*     bb_groups;
 	int               max_dfo;
-	int               max_dfo_reverse;
 
 	scf_vector_t*     text_relas; // re-localtions in .text segment
 	scf_vector_t*     data_relas; // re-localtions in .data segment
@@ -73,4 +72,3 @@ int             scf_function_like_argv(scf_vector_t* argv0, scf_vector_t* argv1)
 int             scf_function_signature(scf_function_t* f);
 
 #endif
-

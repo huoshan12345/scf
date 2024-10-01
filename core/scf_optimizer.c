@@ -11,8 +11,7 @@ extern scf_optimizer_t   scf_optimizer_active_vars;
 extern scf_optimizer_t   scf_optimizer_pointer_aliases;
 extern scf_optimizer_t   scf_optimizer_loads_saves;
 
-extern scf_optimizer_t   scf_optimizer_dominators_normal;
-extern scf_optimizer_t   scf_optimizer_dominators_reverse;
+extern scf_optimizer_t   scf_optimizer_dominators;
 
 extern scf_optimizer_t   scf_optimizer_auto_gc_find;
 extern scf_optimizer_t   scf_optimizer_auto_gc;
@@ -23,12 +22,11 @@ extern scf_optimizer_t   scf_optimizer_const_teq;
 
 extern scf_optimizer_t   scf_optimizer_loop;
 extern scf_optimizer_t   scf_optimizer_group;
-
 extern scf_optimizer_t   scf_optimizer_generate_loads_saves;
 
 static scf_optimizer_t*  scf_optimizers[] =
 {
-	&scf_optimizer_inline,        // global optimizer
+	&scf_optimizer_inline, // global optimizer
 
 	&scf_optimizer_dag,
 
@@ -39,16 +37,16 @@ static scf_optimizer_t*  scf_optimizers[] =
 	&scf_optimizer_pointer_aliases,
 	&scf_optimizer_loads_saves,
 
-	&scf_optimizer_auto_gc_find,  // global optimizer
+	&scf_optimizer_auto_gc_find, // global optimizer
 
-	&scf_optimizer_dominators_normal,
+	&scf_optimizer_dominators,
 
 	&scf_optimizer_auto_gc,
 
 	&scf_optimizer_basic_block,
 	&scf_optimizer_const_teq,
 
-	&scf_optimizer_dominators_normal,
+	&scf_optimizer_dominators,
 	&scf_optimizer_loop,
 	&scf_optimizer_group,
 
@@ -93,12 +91,15 @@ static void __scf_loops_print(scf_bb_group_t* loop)
 
 	if (loop->loop_childs) {
 		printf("childs: %d\n", loop->loop_childs->size);
+
 		for (k = 0; k <   loop->loop_childs->size; k++)
 			printf("%p ", loop->loop_childs->data[k]);
 		printf("\n");
 	}
+
 	if (loop->loop_parent)
 		printf("parent: %p\n", loop->loop_parent);
+
 	printf("loop_layers: %d\n\n", loop->loop_layers);
 }
 
@@ -127,7 +128,6 @@ int scf_optimize(scf_ast_t* ast, scf_vector_t* functions)
 	int j;
 
 	for (i  = 0; i < n; i++) {
-
 		opt = scf_optimizers[i];
 
 		if (SCF_OPTIMIZER_GLOBAL == opt->flags) {
@@ -156,8 +156,7 @@ int scf_optimize(scf_ast_t* ast, scf_vector_t* functions)
 
 #if 1
 	for (i = 0; i < functions->size; i++) {
-
-		scf_function_t* f = functions->data[i];
+		f  =        functions->data[i];
 
 		if (!f->node.define_flag)
 			continue;
@@ -165,10 +164,10 @@ int scf_optimize(scf_ast_t* ast, scf_vector_t* functions)
 		scf_logi("------- %s() ------\n", f->node.w->text->data);
 
 		scf_basic_block_print_list(&f->basic_block_list_head);
-		scf_loops_print(f->bb_loops);
+
+		scf_loops_print (f->bb_loops);
 		scf_groups_print(f->bb_groups);
 	}
 #endif
 	return 0;
 }
-

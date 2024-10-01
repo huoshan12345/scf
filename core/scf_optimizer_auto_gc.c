@@ -1144,6 +1144,9 @@ static int _auto_gc_last_free(scf_ast_t* ast, scf_function_t* f)
 	scf_list_t*        bb_list_head = &f->basic_block_list_head;
 	scf_list_t*        l;
 	scf_basic_block_t* bb;
+	scf_dn_status_t*   ds;
+	scf_dag_node_t*    dn;
+	scf_variable_t*    v;
 	scf_vector_t*      local_arrays;
 
 	l  = scf_list_tail(bb_list_head);
@@ -1158,10 +1161,10 @@ static int _auto_gc_last_free(scf_ast_t* ast, scf_function_t* f)
 	int ret;
 	int i;
 	for (i = 0; i < bb->ds_malloced->size; ) {
+		ds =        bb->ds_malloced->data[i];
 
-		scf_dn_status_t* ds = bb->ds_malloced->data[i];
-		scf_dag_node_t*  dn = ds->dag_node;
-		scf_variable_t*  v  = dn->var;
+		dn = ds->dag_node;
+		v  = dn->var;
 
 		scf_loge("f: %s, last free: v_%d_%d/%s, ds->ret: %u\n",
 				f->node.w->text->data, v->w->line, v->w->pos, v->w->text->data, ds->ret);
@@ -1232,8 +1235,8 @@ static int _auto_gc_last_free(scf_ast_t* ast, scf_function_t* f)
 			for (j  = 0; j < vec->size; j++) { \
 				bb1 =        vec->data[j]; \
 				\
-				if (bb1->dfo_normal > dfo) \
-					dfo = bb1->dfo_normal; \
+				if (bb1->dfo > dfo) \
+					dfo = bb1->dfo; \
 			} \
 		} while (0)
 		AUTO_GC_FIND_MAX_DFO();
@@ -1247,10 +1250,10 @@ static int _auto_gc_last_free(scf_ast_t* ast, scf_function_t* f)
 		}
 		AUTO_GC_FIND_MAX_DFO();
 
-		for (j = 0; j    < bb->dominators_normal->size; j++) {
-			bb_dominator = bb->dominators_normal->data[j];
+		for (j = 0; j    < bb->dominators->size; j++) {
+			bb_dominator = bb->dominators->data[j];
 
-			if (bb_dominator->dfo_normal > dfo)
+			if (bb_dominator->dfo > dfo)
 				break;
 		}
 
@@ -1267,9 +1270,6 @@ static int _auto_gc_last_free(scf_ast_t* ast, scf_function_t* f)
 			return ret;
 		i++;
 	}
-
-	scf_dag_node_t*    dn;
-	scf_variable_t*    v;
 
 	for (i = 0; i < local_arrays->size; i++) {
 		dn =        local_arrays->data[i];
