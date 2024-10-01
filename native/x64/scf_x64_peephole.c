@@ -393,8 +393,8 @@ static void _x64_peephole_function(scf_vector_t* tmp_insts, scf_function_t* f, i
 		assert(0 == scf_vector_del(c->instructions,  inst));
 		assert(0 == scf_vector_del(tmp_insts,        inst));
 
-		scf_logw("del: \n");
-		scf_instruction_print(inst);
+//		scf_logd("del: \n");
+//		scf_instruction_print(inst);
 
 		free(inst);
 		inst = NULL;

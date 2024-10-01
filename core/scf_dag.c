@@ -108,7 +108,7 @@ scf_dn_status_t* scf_dn_status_alloc(scf_dag_node_t* dn)
 
 int scf_dn_status_copy_dn(scf_dn_status_t* dst, scf_dn_status_t* src)
 {
-	scf_dn_index_t*   di;
+	scf_dn_index_t* di;
 	int i;
 
 	if (!dst || !src)
@@ -138,7 +138,7 @@ int scf_dn_status_copy_dn(scf_dn_status_t* dst, scf_dn_status_t* src)
 
 int scf_dn_status_copy_alias(scf_dn_status_t* dst, scf_dn_status_t* src)
 {
-	scf_dn_index_t*   di;
+	scf_dn_index_t* di;
 	int i;
 
 	if (!dst || !src)
@@ -210,16 +210,16 @@ scf_dn_status_t* scf_dn_status_clone(scf_dn_status_t* ds)
 		}
 	}
 
-	ds2->dag_node     = ds->dag_node;
-	ds2->dereference  = ds->dereference;
+	ds2->dag_node    = ds->dag_node;
+	ds2->dereference = ds->dereference;
 
-	ds2->alias        = ds->alias;
-	ds2->alias_type   = ds->alias_type;
+	ds2->alias       = ds->alias;
+	ds2->alias_type  = ds->alias_type;
 
-	ds2->active       = ds->active;
-	ds2->inited       = ds->inited;
-	ds2->updated      = ds->updated;
-	ds2->ret          = ds->ret;
+	ds2->active      = ds->active;
+	ds2->inited      = ds->inited;
+	ds2->updated     = ds->updated;
+	ds2->ret         = ds->ret;
 	return ds2;
 }
 
@@ -235,7 +235,6 @@ void scf_dn_status_free(scf_dn_status_t* ds)
 	int i;
 
 	if (ds) {
-
 		assert(ds->refs > 0);
 
 		if (--ds->refs > 0)
@@ -266,7 +265,6 @@ void scf_dn_status_print(scf_dn_status_t* ds)
 	int i;
 
 	if (ds->dag_node) {
-
 		v = ds->dag_node->var;
 		printf("dn: v_%d_%d/%s ", v->w->line, v->w->pos, v->w->text->data);
 
@@ -315,7 +313,7 @@ scf_dag_node_t* scf_dag_node_alloc(int type, scf_variable_t* var, const scf_node
 
 	dn->node = (scf_node_t*)node;
 
-#if 1
+#if 0
 	if (SCF_OP_CALL == type) {
 		scf_logw("dn: %#lx, dn->type: %d", 0xffff & (uintptr_t)dn, dn->type);
 		if (var) {
@@ -392,11 +390,13 @@ static int _dn_status_cmp_dn_indexes(const void* p0, const void* p1,
 		if (ds0->dn_indexes->size != ds1->dn_indexes->size)
 			return -1;
 
+		scf_dn_index_t* di0;
+		scf_dn_index_t* di1;
 		int i;
-		for (i = 0; i < ds0->dn_indexes->size; i++) {
 
-			scf_dn_index_t* di0 = ds0->dn_indexes->data[i];
-			scf_dn_index_t* di1 = ds1->dn_indexes->data[i];
+		for (i = 0; i < ds0->dn_indexes->size; i++) {
+			di0       = ds0->dn_indexes->data[i];
+			di1       = ds1->dn_indexes->data[i];
 
 			if (!cmp(di0, di1))
 				return -1;
@@ -449,11 +449,13 @@ int scf_dn_status_cmp_alias(const void* p0, const void* p1)
 				if (v0->alias_indexes->size != v1->alias_indexes->size)
 					return -1;
 
+				scf_dn_index_t* di0;
+				scf_dn_index_t* di1;
 				int i;
-				for (i = 0; i < v0->alias_indexes->size; i++) {
 
-					scf_dn_index_t* di0 = v0->alias_indexes->data[i];
-					scf_dn_index_t* di1 = v1->alias_indexes->data[i];
+				for (i = 0; i < v0->alias_indexes->size; i++) {
+					di0       = v0->alias_indexes->data[i];
+					di1       = v1->alias_indexes->data[i];
 
 					if (!scf_dn_index_like(di0, di1))
 						return -1;
@@ -473,11 +475,11 @@ int scf_dn_status_cmp_alias(const void* p0, const void* p1)
 
 void scf_dag_node_free_list(scf_list_t* dag_list_head)
 {
-	scf_list_t* l;
+	scf_dag_node_t* dn;
+	scf_list_t*     l;
 
 	for (l = scf_list_head(dag_list_head); l != scf_list_sentinel(dag_list_head); ) {
-
-		scf_dag_node_t* dn = scf_list_data(l, scf_dag_node_t, list);
+		dn = scf_list_data(l, scf_dag_node_t, list);
 
 		l = scf_list_next(l);
 
@@ -510,9 +512,8 @@ int scf_dag_node_same(scf_dag_node_t* dn, const scf_node_t* node)
 	if (dn->type != node->type)
 		return 0;
 
-	if (SCF_OP_ADDRESS_OF == node->type) {
+	if (SCF_OP_ADDRESS_OF == node->type)
 		scf_logd("type: %d, %d, node: %#lx, %#lx, ", dn->type, node->type, 0xffff & (uintptr_t)dn, 0xffff & (uintptr_t)node);
-	}
 
 	if (scf_type_is_var(node->type)) {
 		if (dn->var == node->var)
@@ -642,8 +643,8 @@ cmp_childs:
 
 		if (v0 && v0->w && v1 && v1->w) {
 			if (v0->type != v1->type) {
-				scf_loge("v0: %d/%s_%#lx, split_flag: %d\n", v0->w->line, v0->w->text->data, 0xffff & (uintptr_t)v0, node->split_flag);
-				scf_loge("v1: %d/%s_%#lx\n", v1->w->line, v1->w->text->data, 0xffff & (uintptr_t)v1);
+				scf_logd("v0: %d/%s_%#lx, split_flag: %d\n", v0->w->line, v0->w->text->data, 0xffff & (uintptr_t)v0, node->split_flag);
+				scf_logd("v1: %d/%s_%#lx\n", v1->w->line, v1->w->text->data, 0xffff & (uintptr_t)v1);
 			}
 		}
 
@@ -655,15 +656,15 @@ cmp_childs:
 
 scf_dag_node_t* scf_dag_find_node(scf_list_t* h, const scf_node_t* node)
 {
-	scf_list_t* l;
-	scf_node_t* origin = (scf_node_t*)node;
+	scf_dag_node_t* dn;
+	scf_list_t*     l;
+	scf_node_t*     origin = (scf_node_t*)node;
 
 	while (SCF_OP_EXPR == origin->type)
 		origin = origin->nodes[0];
 
 	for (l = scf_list_tail(h); l != scf_list_sentinel(h); l = scf_list_prev(l)) {
-
-		scf_dag_node_t* dn = scf_list_data(l, scf_dag_node_t, list);
+		dn = scf_list_data(l, scf_dag_node_t, list);
 
 		if (scf_dag_node_same(dn, origin))
 			return dn;
@@ -752,13 +753,14 @@ int scf_dag_dn_same(scf_dag_node_t* dn0, scf_dag_node_t* dn1)
 
 int scf_dag_find_roots(scf_list_t* h, scf_vector_t* roots)
 {
-	scf_list_t* l;
+	scf_dag_node_t* dn;
+	scf_list_t*     l;
+
 	for (l = scf_list_head(h); l != scf_list_sentinel(h); l = scf_list_next(l)) {
+		dn = scf_list_data(l, scf_dag_node_t, list);
 
-		scf_dag_node_t* dag_node = scf_list_data(l, scf_dag_node_t, list);
-
-		if (!dag_node->parents) {
-			int ret = scf_vector_add(roots, dag_node);
+		if (!dn->parents) {
+			int ret = scf_vector_add(roots, dn);
 			if (ret < 0)
 				return ret;
 		}
@@ -768,10 +770,11 @@ int scf_dag_find_roots(scf_list_t* h, scf_vector_t* roots)
 
 int scf_dag_find_leafs(scf_list_t* h, scf_vector_t* leafs)
 {
-	scf_list_t* l;
-	for (l = scf_list_head(h); l != scf_list_sentinel(h); l = scf_list_next(l)) {
+	scf_dag_node_t* dn;
+	scf_list_t*     l;
 
-		scf_dag_node_t* dn = scf_list_data(l, scf_dag_node_t, list);
+	for (l = scf_list_head(h); l != scf_list_sentinel(h); l = scf_list_next(l)) {
+		dn = scf_list_data(l, scf_dag_node_t, list);
 
 		if (!dn->childs) {
 			int ret = scf_vector_add_unique(leafs, dn);
@@ -787,12 +790,13 @@ int scf_dag_root_find_leafs(scf_dag_node_t* root, scf_vector_t* leafs)
 	if (!root->childs)
 		return scf_vector_add_unique(leafs, root);
 
+	scf_dag_node_t* dn;
 	int i;
+
 	for (i = 0; i < root->childs->size; i++) {
+		dn =        root->childs->data[i];
 
-		scf_dag_node_t* child = root->childs->data[i];
-
-		int ret = scf_dag_root_find_leafs(child, leafs);
+		int ret = scf_dag_root_find_leafs(dn, leafs);
 		if (ret < 0)
 			return ret;
 	}
@@ -801,10 +805,11 @@ int scf_dag_root_find_leafs(scf_dag_node_t* root, scf_vector_t* leafs)
 
 int scf_dag_vector_find_leafs(scf_vector_t* roots, scf_vector_t* leafs)
 {
+	scf_dag_node_t* root;
 	int i;
-	for (i = 0; i < roots->size; i++) {
 
-		scf_dag_node_t* root = roots->data[i];
+	for (i = 0; i < roots->size; i++) {
+		root      = roots->data[i];
 
 		int ret = scf_dag_root_find_leafs(root, leafs);
 		if (ret < 0)
@@ -824,7 +829,6 @@ static int _dn_status_index(scf_vector_t* indexes, scf_dag_node_t* dn_index, int
 	if (SCF_OP_ARRAY_INDEX == type) {
 
 		if (scf_variable_const(dn_index->var))
-
 			di->index = dn_index->var->data.i;
 		else
 			di->index = -1;
@@ -882,9 +886,9 @@ void scf_dn_status_vector_clear_by_dn(scf_vector_t* vec, scf_dag_node_t* dn)
 
 static int __ds_for_dn(scf_dn_status_t* ds, scf_dag_node_t* dn_base)
 {
-	scf_dag_node_t*   dn_index;
-	scf_dag_node_t*   dn_scale;
-	scf_dn_index_t*   di;
+	scf_dag_node_t*  dn_index;
+	scf_dag_node_t*  dn_scale;
+	scf_dn_index_t*  di;
 
 	int ret;
 

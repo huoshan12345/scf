@@ -473,4 +473,3 @@ scf_optimizer_t  scf_optimizer_inline =
 
 	.flags    = SCF_OPTIMIZER_GLOBAL,
 };
-

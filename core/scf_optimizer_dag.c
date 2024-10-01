@@ -27,7 +27,7 @@ static int _optimize_dag(scf_ast_t* ast, scf_function_t* f, scf_vector_t* functi
 		}
 	}
 
-	scf_basic_block_print_list(bb_list_head);
+//	scf_basic_block_print_list(bb_list_head);
 	return 0;
 }
 
@@ -39,4 +39,3 @@ scf_optimizer_t  scf_optimizer_dag =
 
 	.flags    = SCF_OPTIMIZER_LOCAL,
 };
-
