@@ -30,16 +30,12 @@ static int _switch_action_switch(scf_dfa_t* dfa, scf_vector_t* words, void* data
 	scf_stack_t*     s      = d->module_datas[dfa_module_switch.index];
 	scf_node_t*     _switch = scf_node_alloc(w, SCF_OP_SWITCH, NULL);
 
-	if (!_switch) {
-		scf_loge("node alloc failed\n");
-		return SCF_DFA_ERROR;
-	}
+	if (!_switch)
+		return -ENOMEM;
 
 	dfa_switch_data_t* sd = calloc(1, sizeof(dfa_switch_data_t));
-	if (!sd) {
-		scf_loge("module data alloc failed\n");
-		return SCF_DFA_ERROR;
-	}
+	if (!sd)
+		return -ENOMEM;
 
 	if (d->current_node)
 		scf_node_add_child(d->current_node, _switch);
@@ -192,7 +188,7 @@ static int _switch_action_end(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 	d->current_node = sd->parent_node;
 
-	scf_logi("\033[31m switch: %d, sd: %p, s->size: %d\033[0m\n", sd->_switch->w->line, sd, s->size);
+	scf_logi("switch: %d, sd: %p, s->size: %d\n", sd->_switch->w->line, sd, s->size);
 
 	free(sd);
 	sd = NULL;

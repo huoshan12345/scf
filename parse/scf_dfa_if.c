@@ -195,7 +195,7 @@ static int _if_action_end(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 	d->current_node = ifd->parent_node;
 
-	scf_logi("\033[31m if: %d, ifd: %p, s->size: %d\033[0m\n", ifd->_if->w->line, ifd, s->size);
+	scf_logi("if: %d, ifd: %p, s->size: %d\n", ifd->_if->w->line, ifd, s->size);
 
 	free(ifd);
 	ifd = NULL;

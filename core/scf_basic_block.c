@@ -194,10 +194,10 @@ void scf_basic_block_print(scf_basic_block_t* bb, scf_list_t* sentinel)
 	if (bb) {
 #define SCF_BB_PRINT(h) \
 		do { \
-			scf_list_t* l; \
-			for (l = scf_list_head(&bb->h); l != scf_list_sentinel(&bb->h); \
-					l = scf_list_next(l)) { \
-				scf_3ac_code_t* c = scf_list_data(l, scf_3ac_code_t, list); \
+			scf_3ac_code_t* c; \
+			scf_list_t*     l; \
+			for (l = scf_list_head(&bb->h); l != scf_list_sentinel(&bb->h); l = scf_list_next(l)) { \
+				c  = scf_list_data(l, scf_3ac_code_t, list); \
 				scf_3ac_code_print(c, sentinel); \
 			} \
 		} while (0)
@@ -259,7 +259,7 @@ void scf_basic_block_print_list(scf_list_t* h)
 	for (l = scf_list_head(h); l != scf_list_sentinel(h); l = scf_list_next(l)) {
 		bb = scf_list_data(l, scf_basic_block_t, list);
 
-		printf("\033[33mbasic_block: %p, index: %d, dfo: %d, cmp_flag: %d, call_flag: %d, group: %d, loop: %d, dereference_flag: %d, ret_flag: %d\033[0m\n",
+		printf("\033[34mbasic_block: %p, index: %d, dfo: %d, cmp_flag: %d, call_flag: %d, group: %d, loop: %d, dereference_flag: %d, ret_flag: %d\033[0m\n",
 				bb, bb->index, bb->dfo, bb->cmp_flag, bb->call_flag, bb->group_flag, bb->loop_flag, bb->dereference_flag, bb->ret_flag);
 
 		scf_basic_block_print(bb, sentinel);
@@ -280,12 +280,7 @@ void scf_basic_block_print_list(scf_list_t* h)
 				printf("next     : %p, index: %d\n", bb2, bb2->index);
 			}
 		}
-#if 0
-		if (bb->dominators_normal) {
-			for (i = 0; i < bb->dominators_normal->size; i++)
-				printf("dominator: %p\n", bb->dominators_normal->data[i]);
-		}
-#endif
+
 		if (bb->dn_status_initeds) {
 			printf("inited: \n");
 			for (i = 0; i < bb->dn_status_initeds->size; i++) {
@@ -295,7 +290,7 @@ void scf_basic_block_print_list(scf_list_t* h)
 			}
 			printf("\n");
 		}
-#if 1
+
 		if (bb->ds_malloced) {
 			printf("auto gc: \n");
 			for (i = 0; i < bb->ds_malloced->size; i++) {
@@ -307,7 +302,7 @@ void scf_basic_block_print_list(scf_list_t* h)
 			}
 			printf("\n");
 		}
-#endif
+
 		if (bb->entry_dn_actives) {
 			for (i = 0; i < bb->entry_dn_actives->size; i++) {
 				dn =        bb->entry_dn_actives->data[i];

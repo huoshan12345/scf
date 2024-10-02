@@ -128,6 +128,11 @@ static inline int scf_variable_const_string(scf_variable_t* v)
 		&& 0 == v->nb_dimentions;
 }
 
+static inline int scf_variable_string(scf_variable_t* v)
+{
+	return SCF_VAR_CHAR == v->type && 1 == v->nb_pointers + v->nb_dimentions;
+}
+
 static inline int scf_variable_float(scf_variable_t* v)
 {
 	return scf_type_is_float(v->type) && 0 == v->nb_pointers && 0 == v->nb_dimentions;

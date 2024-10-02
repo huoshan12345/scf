@@ -161,6 +161,7 @@ int scf_optimize(scf_ast_t* ast, scf_vector_t* functions)
 		if (!f->node.define_flag)
 			continue;
 
+		printf("\n");
 		scf_logi("------- %s() ------\n", f->node.w->text->data);
 
 		scf_basic_block_print_list(&f->basic_block_list_head);

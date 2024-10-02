@@ -156,11 +156,9 @@ int scf_type_cast_check(scf_ast_t* ast, scf_variable_t* dst, scf_variable_t* src
 
 		if (scf_type_is_integer(dst->type)) {
 
-			if (dst->size < src->size) {
-				scf_logw("type cast %s -> %s discard bits\n",
-						src->w->text->data, dst->w->text->data);
-			}
-
+			if (dst->size < src->size)
+				scf_logw("type cast %s -> %s discard bits, file: %s, line: %d\n",
+						src->w->text->data, dst->w->text->data, src->w->file->data, src->w->line);
 			return 0;
 		}
 	}
@@ -178,9 +176,9 @@ failed:
 	dst_type = scf_variable_type_name(ast, dst);
 	src_type = scf_variable_type_name(ast, src);
 
-	scf_loge("type cast '%s -> %s' with different type: from '%s' to '%s'\n",
+	scf_loge("type cast '%s -> %s' with different type: from '%s' to '%s', file: %s, line: %d\n",
 			src->w->text->data, dst->w->text->data,
-			src_type->data, dst_type->data);
+			src_type->data, dst_type->data, src->w->file->data, src->w->line);
 
 	scf_string_free(dst_type);
 	scf_string_free(src_type);

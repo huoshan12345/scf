@@ -134,10 +134,8 @@ int scf_node_add_child(scf_node_t* parent, scf_node_t* child)
 		return -EINVAL;
 
 	void* p = realloc(parent->nodes, sizeof(scf_node_t*) * (parent->nb_nodes + 1));
-	if (!p) {
-		scf_loge("realloc failed\n");
+	if (!p)
 		return -ENOMEM;
-	}
 
 	parent->nodes = p;
 	parent->nodes[parent->nb_nodes++] = child;
