@@ -437,7 +437,6 @@ scf_3ac_code_t* scf_3ac_jmp_code(int type, scf_label_t* l, scf_node_t* err)
 	}
 
 	if (scf_vector_add(c->dsts, dst) < 0) {
-
 		scf_3ac_operand_free(dst);
 		scf_3ac_code_free(c);
 		return NULL;
