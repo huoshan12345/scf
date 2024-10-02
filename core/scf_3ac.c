@@ -450,16 +450,16 @@ static void _3ac_print_node(scf_node_t* node)
 {
 	if (scf_type_is_var(node->type)) {
 		if (node->var->w) {
-			printf("v_%d_%d/%s",
-					node->var->w->line, node->var->w->pos, node->var->w->text->data);
+			printf("v_%d_%d/%s/%#lx",
+					node->var->w->line, node->var->w->pos, node->var->w->text->data, 0xffff & (uintptr_t)node->var);
 		} else {
 			printf("v_%#lx", 0xffff & (uintptr_t)node->var);
 		}
 	} else if (scf_type_is_operator(node->type)) {
 		if (node->result) {
 			if (node->result->w) {
-				printf("v_%d_%d/%s",
-						node->result->w->line, node->result->w->pos, node->result->w->text->data);
+				printf("v_%d_%d/%s/%#lx",
+						node->result->w->line, node->result->w->pos, node->result->w->text->data, 0xffff & (uintptr_t)node->result);
 			} else
 				printf("v/%#lx", 0xffff & (uintptr_t)node->result);
 		}

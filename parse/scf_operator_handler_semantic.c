@@ -1045,7 +1045,6 @@ static int _scf_op_semantic_block(scf_ast_t* ast, scf_node_t** nodes, int nb_nod
 			ret = _scf_op_semantic_node(ast, node, d);
 
 		if (ret < 0) {
-			scf_loge("\n");
 			ast->current_block = up;
 			return -1;
 		}
@@ -1285,59 +1284,173 @@ static int _scf_op_semantic_while(scf_ast_t* ast, scf_node_t** nodes, int nb_nod
 	return 0;
 }
 
+static int __switch_for_string(scf_ast_t* ast, scf_node_t* parent, scf_node_t* child, scf_expr_t* e, scf_expr_t* e1, scf_handler_data_t* d)
+{
+	scf_function_t* f = NULL;
+	scf_expr_t*     e2;
+	scf_expr_t*     e3;
+	scf_expr_t*     e4;
+
+	int ret = scf_ast_find_function(&f, ast, "strcmp");
+	if (ret < 0)
+		return ret;
+
+	if (!f) {
+		scf_loge("can't find function 'strcmp()' for compare const string, file: %s, line: %d\n",
+				parent->w->file->data, parent->w->line);
+		return -1;
+	}
+
+	e2 = scf_expr_clone(e);
+	if (!e1)
+		return -ENOMEM;
+
+	e3 = scf_expr_alloc();
+	if (!e3) {
+		scf_expr_free(e2);
+		return -ENOMEM;
+	}
+
+	ret = scf_node_add_child(e3, e2);
+	if (ret < 0) {
+		scf_expr_free(e2);
+		scf_expr_free(e3);
+		return ret;
+	}
+	e2 = NULL;
+
+	ret = scf_node_add_child(e3, e1);
+	if (ret < 0) {
+		scf_expr_free(e3);
+		return ret;
+	}
+	child->nodes[0] = NULL;
+
+	e4 = scf_expr_alloc();
+	if (!e4) {
+		scf_expr_free(e3);
+		return -ENOMEM;
+	}
+
+	ret = scf_node_add_child(e4, e3);
+	if (ret < 0) {
+		scf_expr_free(e3);
+		scf_expr_free(e4);
+		return ret;
+	}
+
+	child->nodes[0] = e4;
+	e4->parent      = child;
+
+	d->pret = &e3->result;
+
+	return _semantic_add_call(ast, e3->nodes, e3->nb_nodes, d, f);
+}
+
 static int _scf_op_semantic_switch(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
 {
 	assert(2 == nb_nodes);
 
-	scf_handler_data_t* d = data;
-	scf_variable_t*     r = NULL;
-	scf_expr_t*         e = nodes[0];
+	scf_handler_data_t* d      = data;
+	scf_variable_t**    pret   = d->pret;
+	scf_variable_t*     v0     = NULL;
+	scf_variable_t*     v1     = NULL;
+	scf_block_t*        tmp    = ast->current_block;
+	scf_expr_t*         e      = nodes[0];
+	scf_node_t*         b      = nodes[1];
+	scf_node_t*         parent = nodes[0]->parent;
+	scf_node_t*         child;
+	scf_expr_t*         e1;
 
-	assert(SCF_OP_EXPR == e->type);
+	assert(SCF_OP_EXPR  == e->type);
+	assert(SCF_OP_BLOCK == b->type);
 
-	if (_scf_expr_calculate(ast, e, &r) < 0) {
-		scf_loge("\n");
+	if (_scf_expr_calculate(ast, e, &v0) < 0)
+		return -1;
+
+	if (!scf_variable_integer(v0) && !scf_variable_string(v0)) {
+		scf_loge("result of switch expr should be an integer or string, file: %s, line: %d\n", parent->w->file->data, parent->w->line);
+		scf_variable_free(v0);
 		return -1;
 	}
 
-	if (!r || !scf_variable_integer(r)) {
-		scf_loge("\n");
-		return -1;
-	}
-	scf_variable_free(r);
-	r = NULL;
+	ast->current_block = (scf_block_t*)b;
 
-	int ret = _scf_op_semantic_node(ast, nodes[1], d);
-	if (ret < 0) {
-		scf_loge("\n");
-		return -1;
+	int ret = -1;
+	int i;
+
+	for (i = 0; i < b->nb_nodes; i++) {
+		child     = b->nodes[i];
+
+		if (SCF_OP_CASE == child->type) {
+			assert(1    == child->nb_nodes);
+
+			e1 = child->nodes[0];
+
+			assert(SCF_OP_EXPR == e1->type);
+
+			ret = _scf_expr_calculate(ast, e1, &v1);
+			if (ret < 0) {
+				scf_variable_free(v0);
+				return ret;
+			}
+
+			if (!scf_variable_const_integer(v1) && !scf_variable_const_string(v1)) {
+				ret = -1;
+				scf_loge("result of case expr should be const integer or const string, file: %s, line: %d\n", child->w->file->data, child->w->line);
+				goto error;
+			}
+
+			if (!scf_variable_type_like(v0, v1)) {
+
+				if (scf_type_cast_check(ast, v0, v1) < 0) {
+					ret = -1;
+					scf_loge("type of switch's expr is NOT same to the case's, file: %s, line: %d\n", child->w->file->data, child->w->line);
+					goto error;
+				}
+
+				ret = _semantic_add_type_cast(ast, &(e1->nodes[0]), v0, e1->nodes[0]);
+				if (ret < 0)
+					goto error;
+			}
+
+			if (scf_variable_const_string(v1)) {
+
+				ret = __switch_for_string(ast, parent, child, e, e1, d);
+				if (ret < 0)
+					goto error;
+			}
+
+			scf_variable_free(v1);
+			v1 = NULL;
+
+		} else {
+			ret = _scf_op_semantic_node(ast, child, d);
+			if (ret < 0) {
+				scf_variable_free(v0);
+				return -1;
+			}
+		}
 	}
 
+	ast->current_block = tmp;
+
+	scf_variable_free(v0);
+
+	d->pret = pret;
 	return 0;
+
+error:
+	scf_variable_free(v0);
+	scf_variable_free(v1);
+	d->pret = pret;
+	return ret;
 }
 
 static int _scf_op_semantic_case(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
 {
-	assert(1 == nb_nodes);
-
-	scf_handler_data_t* d = data;
-	scf_variable_t*     r = NULL;
-	scf_expr_t*         e = nodes[0];
-
-	assert(SCF_OP_EXPR == e->type);
-
-	if (_scf_expr_calculate(ast, e, &r) < 0) {
-		scf_loge("\n");
-		return -1;
-	}
-
-	if (!r || !scf_variable_integer(r)) {
-		scf_loge("\n");
-		return -1;
-	}
-	scf_variable_free(r);
-
-	return 0;
+	scf_loge("\n");
+	return -1;
 }
 
 static int _scf_op_semantic_default(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
@@ -1404,10 +1517,8 @@ static int __scf_op_semantic_call(scf_ast_t* ast, scf_function_t* f, void* data)
 	// change the current block
 	ast->current_block = (scf_block_t*)f;
 
-	if (_scf_op_semantic_block(ast, f->node.nodes, f->node.nb_nodes, d) < 0) {
-		scf_loge("\n");
+	if (_scf_op_semantic_block(ast, f->node.nodes, f->node.nb_nodes, d) < 0)
 		return -1;
-	}
 
 	ast->current_block = tmp;
 	return 0;

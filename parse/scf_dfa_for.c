@@ -280,7 +280,7 @@ static int _for_action_end(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 	d->current_node = fd->parent_node;
 
-	scf_logi("\033[31m for: %d, fd: %p, s->size: %d\033[0m\n", fd->_for->w->line, fd, s->size);
+	scf_logi("for: %d, fd: %p, s->size: %d\n", fd->_for->w->line, fd, s->size);
 
 	free(fd);
 	fd = NULL;

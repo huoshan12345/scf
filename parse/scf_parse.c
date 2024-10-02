@@ -1860,12 +1860,12 @@ static int _add_debug_sections(scf_parse_t* parse, scf_elf_context_t* elf)
 int scf_parse_compile_functions(scf_parse_t* parse, scf_vector_t* functions)
 {
 	scf_function_t* f;
-
 	int i;
+
 	for (i = 0; i < functions->size; i++) {
 		f  =        functions->data[i];
 
-		scf_logi("i: %d, fname: %s, f->argv->size: %d, f->node.define_flag: %d, inline_flag: %d\n",
+		printf("%d, %s(), argv->size: %d, define_flag: %d, inline_flag: %d\n",
 				i, f->node.w->text->data, f->argv->size, f->node.define_flag, f->inline_flag);
 
 		if (!f->node.define_flag)

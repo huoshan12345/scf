@@ -250,7 +250,7 @@ static int _x64_function_finish(scf_function_t* f)
 				local += 8;
 		}
 
-		scf_logw("### local: %#x, local_vars_size: %#x, callee_saved_size: %#x\n",
+		scf_logd("### local: %#x, local_vars_size: %#x, callee_saved_size: %#x\n",
 				local, f->local_vars_size, f->callee_saved_size);
 
 		inst = x64_make_inst_I2E(sub, rsp, (uint8_t*)&local, 4);
@@ -1165,6 +1165,7 @@ int scf_x64_select_inst(scf_native_t* ctx, scf_function_t* f)
 	for (i = 0; i < local_vars->size; i++) {
 		scf_variable_t* v = local_vars->data[i];
 		assert(v->w);
+
 		scf_logd("v: %p, name: %s_%d_%d, size: %d, bp_offset: %d, arg_flag: %d\n",
 				v, v->w->text->data, v->w->line, v->w->pos,
 				scf_variable_size(v), v->bp_offset, v->arg_flag);
@@ -1194,4 +1195,3 @@ scf_native_ops_t	native_ops_x64 = {
 
 	.select_inst     = scf_x64_select_inst,
 };
-

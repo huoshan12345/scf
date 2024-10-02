@@ -1140,12 +1140,17 @@ static int _scf_op_switch(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void
 					return -1;
 				}
 
-				scf_node_t* srcs[2] = {e, e2};
+				if (SCF_OP_CALL == e2->type)
+					cmp = scf_3ac_code_NN(SCF_OP_3AC_TEQ, NULL, 0, &e2, 1);
+				else {
+					scf_node_t* srcs[2] = {e, e2};
 
-				cmp  = scf_3ac_code_NN(SCF_OP_3AC_CMP, NULL, 0, srcs, 2);
+					cmp = scf_3ac_code_NN(SCF_OP_3AC_CMP, NULL, 0, srcs, 2);
+				}
+				scf_list_add_tail(d->_3ac_list_head, &cmp->list);
+
 				jnot = scf_3ac_jmp_code(SCF_OP_3AC_JNZ, NULL, NULL);
 
-				scf_list_add_tail(d->_3ac_list_head, &cmp->list);
 				scf_list_add_tail(d->_3ac_list_head, &jnot->list);
 
 				scf_vector_add(up_branch_ops->_breaks, jnot);

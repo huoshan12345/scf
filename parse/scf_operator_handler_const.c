@@ -40,13 +40,13 @@ static int _scf_expr_calculate_internal(scf_ast_t* ast, scf_node_t* node, void* 
 		return __scf_op_const_call(ast, (scf_function_t*)node, data);
 
 	if (0 == node->nb_nodes) {
+
+		if (scf_type_is_var(node->type) && node->var->w)
+			scf_logd("w: %s\n", node->var->w->text->data);
+
 		assert(scf_type_is_var(node->type)
 				|| SCF_LABEL == node->type
 				|| node->split_flag);
-
-		if (scf_type_is_var(node->type) && node->var->w) {
-			scf_logd("w: %s\n", node->var->w->text->data);
-		}
 		return 0;
 	}
 
@@ -327,30 +327,40 @@ static int _scf_op_const_switch(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes
 	scf_handler_data_t* d = data;
 	scf_variable_t*     r = NULL;
 	scf_expr_t*         e = nodes[0];
+	scf_expr_t*         e2;
+	scf_node_t*         b = nodes[1];
+	scf_node_t*         child;
 
 	assert(SCF_OP_EXPR == e->type);
 
 	if (_scf_expr_calculate_internal(ast, e, &r) < 0)
 		return -1;
 
-	if (_scf_op_const_node(ast, nodes[1], d) < 0)
-		return -1;
+	int i;
+	for (i = 0; i < b->nb_nodes; i++) {
+		child     = b->nodes[i];
+
+		if (SCF_OP_CASE == child->type) {
+			assert(1    == child->nb_nodes);
+
+			e = child->nodes[0];
+
+			assert(SCF_OP_EXPR == e->type);
+
+			if (_scf_expr_calculate_internal(ast, e, &r) < 0)
+				return -1;
+
+		} else {
+			if (_scf_op_const_node(ast, child, d) < 0)
+				return -1;
+		}
+	}
 
 	return 0;
 }
 
 static int _scf_op_const_case(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
 {
-	assert(1 == nb_nodes);
-
-	scf_handler_data_t* d = data;
-	scf_variable_t*     r = NULL;
-	scf_expr_t*         e = nodes[0];
-
-	assert(SCF_OP_EXPR == e->type);
-
-	if (_scf_expr_calculate_internal(ast, e, &r) < 0)
-		return -1;
 	return 0;
 }
 
@@ -453,20 +463,14 @@ static int _scf_op_const_expr(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, 
 {
 	assert(1 == nb_nodes);
 
-	scf_handler_data_t* d = data;
-
-	scf_node_t* n      = nodes[0];
 	scf_node_t* parent = nodes[0]->parent;
+	scf_node_t* node;
 
-	while (SCF_OP_EXPR == n->type)
-		n = n->nodes[0];
+	scf_expr_simplify(&nodes[0]);
 
-	n->parent->nodes[0] = NULL;
-	scf_node_free(nodes[0]);
-	nodes[0]  = n;
-	n->parent = parent;
+	node = nodes[0];
 
-	int ret = _scf_expr_calculate_internal(ast, n, d);
+	int ret = _scf_expr_calculate_internal(ast, node, data);
 	if (ret < 0) {
 		scf_loge("\n");
 		return -1;
@@ -475,8 +479,7 @@ static int _scf_op_const_expr(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, 
 	if (parent->result)
 		scf_variable_free(parent->result);
 
-	scf_variable_t* v = _scf_operand_get(n);
-
+	scf_variable_t* v = _scf_operand_get(node);
 	if (v)
 		parent->result = scf_variable_ref(v);
 	else

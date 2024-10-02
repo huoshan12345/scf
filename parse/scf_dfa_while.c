@@ -132,7 +132,7 @@ static int _while_action_end(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 	d->current_node = wd->parent_node;
 
-	scf_logi("\033[31m while: %d, wd: %p, s->size: %d\033[0m\n", wd->_while->w->line, wd, s->size);
+	scf_logi("while: %d, wd: %p, s->size: %d\n", wd->_while->w->line, wd, s->size);
 
 	free(wd);
 	wd = NULL;
