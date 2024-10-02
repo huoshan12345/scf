@@ -19,8 +19,8 @@ scf_expr_t* scf_expr_alloc()
 int scf_expr_copy(scf_node_t* e2, scf_node_t* e)
 {
 	scf_node_t* node;
-
 	int i;
+
 	for (i = 0; i < e->nb_nodes; i++) {
 
 		node = scf_node_clone(e->nodes[i]);

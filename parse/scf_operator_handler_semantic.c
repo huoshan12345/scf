@@ -1287,6 +1287,7 @@ static int _scf_op_semantic_while(scf_ast_t* ast, scf_node_t** nodes, int nb_nod
 static int __switch_for_string(scf_ast_t* ast, scf_node_t* parent, scf_node_t* child, scf_expr_t* e, scf_expr_t* e1, scf_handler_data_t* d)
 {
 	scf_function_t* f = NULL;
+	scf_variable_t* v = NULL;
 	scf_expr_t*     e2;
 	scf_expr_t*     e3;
 	scf_expr_t*     e4;
@@ -1304,6 +1305,13 @@ static int __switch_for_string(scf_ast_t* ast, scf_node_t* parent, scf_node_t* c
 	e2 = scf_expr_clone(e);
 	if (!e1)
 		return -ENOMEM;
+
+	if (_scf_expr_calculate(ast, e2, &v) < 0) {
+		scf_expr_free(e2);
+		return -1;
+	}
+	scf_variable_free(v);
+	v = NULL;
 
 	e3 = scf_expr_alloc();
 	if (!e3) {

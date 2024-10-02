@@ -66,52 +66,47 @@ _failed:
 
 scf_node_t* scf_node_clone(scf_node_t* node)
 {
-	scf_node_t* node2 = calloc(1, sizeof(scf_node_t));
-	if (!node2)
+	scf_node_t* dst = calloc(1, sizeof(scf_node_t));
+	if (!dst)
 		return NULL;
 
 	if (scf_type_is_var(node->type)) {
 
-		node2->var = scf_variable_ref(node->var);
-		if (!node2->var)
-			goto _failed;
+		dst->var = scf_variable_ref(node->var);
+		if (!dst->var)
+			goto failed;
 
-	} else if (SCF_LABEL == node->type) {
-		node2->label = node->label;
-
-	} else {
+	} else if (SCF_LABEL == node->type)
+		dst->label = node->label;
+	else {
 		if (node->w) {
-			node2->w = scf_lex_word_clone(node->w);
-			if (!node2->w)
-				goto _failed;
-
-		} else
-			node2->w = NULL;
+			dst->w = scf_lex_word_clone(node->w);
+			if (!dst->w)
+				goto failed;
+		}
 	}
 
 	if (node->debug_w) {
-		node2->debug_w = scf_lex_word_clone(node->debug_w);
+		dst ->debug_w = scf_lex_word_clone(node->debug_w);
 
-		if (!node2->debug_w)
-			goto _failed;
+		if (!dst->debug_w)
+			goto failed;
 	}
 
-	node2->type        = node->type;
+	dst->type        = node->type;
 
-	node2->root_flag   = node->root_flag;
-	node2->file_flag   = node->file_flag;
-	node2->class_flag  = node->class_flag;
-	node2->union_flag  = node->union_flag;
-	node2->define_flag = node->define_flag;
-	node2->const_flag  = node->const_flag;
-	node2->split_flag  = node->split_flag;
-	node2->semi_flag   = node->semi_flag;
+	dst->root_flag   = node->root_flag;
+	dst->file_flag   = node->file_flag;
+	dst->class_flag  = node->class_flag;
+	dst->union_flag  = node->union_flag;
+	dst->define_flag = node->define_flag;
+	dst->const_flag  = node->const_flag;
+	dst->split_flag  = node->split_flag;
+	dst->semi_flag   = node->semi_flag;
+	return dst;
 
-	scf_logd("node: %p, node->type: %d\n", node, node->type);
-	return node;
-
-_failed:
-	scf_node_free(node);
+failed:
+	scf_node_free(dst);
 	return NULL;
 }
 

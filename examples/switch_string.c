@@ -3,9 +3,10 @@ int strcmp(const char* s1, const char* s2);
 
 int main()
 {
-	const char* s = "123";
+	char* argv[2] = {"hello", "123"};
 
-	switch (s) {
+	switch (argv[1]) {
+
 		case "456":
 			printf("0\n");
 		case "123":
