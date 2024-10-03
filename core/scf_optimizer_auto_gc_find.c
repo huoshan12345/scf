@@ -897,7 +897,7 @@ static int _bfs_sort_function(scf_vector_t* fqueue, scf_function_t* fmalloc)
 		if (f->visited_flag)
 			continue;
 
-		scf_loge("f: %p, %s\n", f, f->node.w->text->data);
+		scf_logd("f: %p, %s\n", f, f->node.w->text->data);
 
 		f->visited_flag = 1;
 
@@ -1090,7 +1090,7 @@ static int _auto_gc_global_find(scf_ast_t* ast, scf_vector_t* functions)
 			total1 += ret;
 		}
 
-		scf_loge("total0: %d, total1: %d\n", total0, total1);
+		scf_logi("total0: %d, total1: %d\n", total0, total1);
 
 	} while (total0 != total1);
 
