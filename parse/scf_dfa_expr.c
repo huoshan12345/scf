@@ -115,6 +115,8 @@ int _expr_add_var(scf_parse_t* parse, dfa_data_t* d)
 		var->const_literal_flag = 1;
 	}
 
+	scf_loge("var: %s, member_flag: %d, line: %d\n", var->w->text->data, var->member_flag, var->w->line);
+
 	node = scf_node_alloc(w, var->type, var);
 	if (!node) {
 		scf_loge("var node '%s' alloc failed\n", w->text->data);

@@ -117,9 +117,10 @@ int	scf_lex_open(scf_lex_t** plex, const char* path)
 
 	lex->fp = fopen(path, "r");
 	if (!lex->fp) {
+
 		char cwd[4096];
 		getcwd(cwd, 4095);
-		scf_loge("path: %s, errno: %d, pwd: %s\n", path, errno, cwd);
+		scf_loge("open file '%s' failed, errno: %d, default path dir: %s\n", path, errno, cwd);
 
 		free(lex);
 		return -1;

@@ -174,10 +174,9 @@ int scf_parse_file(scf_parse_t* parse, const char* path)
 		return 0;
 	}
 
-	if (scf_lex_open(&parse->lex, path) < 0) {
-		scf_loge("\n");
+	if (scf_lex_open(&parse->lex, path) < 0)
 		return -1;
-	}
+
 	scf_ast_add_file_block(parse->ast, path);
 
 	parse->lex->next = parse->lex_list;

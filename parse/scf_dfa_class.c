@@ -91,52 +91,53 @@ static int _class_action_lb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _class_calculate_size(scf_dfa_t* dfa, scf_type_t* s)
 {
-	scf_parse_t* parse = dfa->priv;
+	scf_variable_t* v;
 
 	int size = 0;
 	int i;
+	int j;
+
 	for (i = 0; i < s->scope->vars->size; i++) {
+		v  =        s->scope->vars->data[i];
 
-		scf_variable_t* v = s->scope->vars->data[i];
+		assert(v->size >= 0);
 
-		if (v->size < 0) {
-			scf_loge("error: sizeof var: '%s'\n", v->w->text->data);
-			return SCF_DFA_ERROR;
-		}
-
-		int align;
-		if (1 == v->size)
-			align = 1;
-		else if (2 == v->size)
-			align = 2;
-		else if (v->size <= 4)
-			align = 4;
-		else
-			align = 8;
-
-		v->offset = (size + align - 1) / align * align;
+		switch (v->size) {
+			case 1:
+				v->offset = size;
+				break;
+			case 2:
+				v->offset = (size + 1) & ~0x1;
+				break;
+			case 3:
+			case 4:
+				v->offset = (size + 3) & ~0x3;
+				break;
+			default:
+				v->offset = (size + 7) & ~0x7;
+				break;
+		};
 
 		if (v->nb_dimentions > 0) {
-			int j;
-			int capacity = 1;
+			v->capacity = 1;
 
 			for (j = 0; j < v->nb_dimentions; j++) {
+
 				if (v->dimentions[j] < 0) {
-					scf_loge("v: '%s'\n", v->w->text->data);
+					scf_loge("number of %d-dimention for array '%s' is less than 0, size: %d, file: %s, line: %d\n",
+							j, v->w->text->data, v->dimentions[j], v->w->file->data, v->w->line);
 					return SCF_DFA_ERROR;
 				}
 
-				capacity *= v->dimentions[j];
+				v->capacity *= v->dimentions[j];
 			}
 
-			v->capacity = capacity;
 			size = v->offset + v->size * v->capacity;
-		} else {
+		} else
 			size = v->offset + v->size;
-		}
 
-		scf_logi("class '%s', member: '%s', offset: %d, size: %d, v->dim: %d, v->capacity: %d\n",
-				s->name->data, v->w->text->data, v->offset, v->size, v->nb_dimentions, v->capacity);
+		scf_logi("class '%s', member: '%s', member_flag: %d, offset: %d, size: %d, v->dim: %d, v->capacity: %d\n",
+				s->name->data, v->w->text->data, v->member_flag, v->offset, v->size, v->nb_dimentions, v->capacity);
 	}
 	s->size = size;
 	s->node.define_flag = 1;

@@ -94,40 +94,43 @@ static int _union_action_lb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _union_calculate_size(scf_dfa_t* dfa, scf_type_t* s)
 {
-	scf_parse_t* parse = dfa->priv;
+	scf_variable_t* v;
 
 	int max_size = 0;
 	int i;
 	int j;
-	for (i = 0; i < s->scope->vars->size; i++) {
 
-		scf_variable_t* v = s->scope->vars->data[i];
+	for (i = 0; i < s->scope->vars->size; i++) {
+		v  =        s->scope->vars->data[i];
+
 		assert(v->size >= 0);
 
 		int size = 0;
 
 		if (v->nb_dimentions > 0) {
-			int capacity = 1;
-			for (j = 0; j < v->nb_dimentions; j++) {
-				if (v->dimentions[j] < 0) {
-					scf_loge("v: '%s'\n", v->w->text->data);
-					return SCF_DFA_ERROR;
+			v->capacity = 1;
 
-				} else if (0 == v->dimentions[j]) {
-					if (j < v->nb_dimentions - 1) {
-						scf_loge("v: '%s'\n", v->w->text->data);
-						return SCF_DFA_ERROR;
-					}
+			for (j = 0; j < v->nb_dimentions; j++) {
+
+				if (v->dimentions[j] < 0) {
+					scf_loge("number of %d-dimention for array '%s' is less than 0, number: %d, file: %s, line: %d\n",
+							j, v->w->text->data, v->dimentions[j], v->w->file->data, v->w->line);
+					return SCF_DFA_ERROR;
 				}
 
-				capacity *= v->dimentions[j];
+				if (0 == v->dimentions[j] && j < v->nb_dimentions - 1) {
+
+					scf_loge("only the number of array's last dimention can be 0, array '%s', dimention: %d, file: %s, line: %d\n",
+							v->w->text->data, j, v->w->file->data, v->w->line);
+					return SCF_DFA_ERROR;
+				}
+
+				v->capacity *= v->dimentions[j];
 			}
 
-			v->capacity = capacity;
 			size = v->size * v->capacity;
-		} else {
+		} else
 			size = v->size;
-		}
 
 		if (max_size < size)
 			max_size = size;

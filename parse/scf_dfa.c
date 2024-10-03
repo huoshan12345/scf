@@ -444,6 +444,7 @@ int scf_dfa_parse_word(scf_dfa_t* dfa, void* word, void* data)
 		assert(words->size >= 1);
 
 		scf_lex_word_t* w = words->data[words->size - 1];
+
 		scf_loge("ret: %d, w->type: %d, '%s', line: %d\n\n", ret, w->type, w->text->data, w->line);
 
 		ret = SCF_DFA_ERROR;

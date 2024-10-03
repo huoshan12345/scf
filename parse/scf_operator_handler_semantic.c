@@ -922,6 +922,8 @@ static int _scf_op_semantic_pointer(scf_ast_t* ast, scf_node_t** nodes, int nb_n
 	if (!r)
 		return -ENOMEM;
 
+	r->member_flag = v1->member_flag;
+
 	int i;
 	for (i = 0; i < v1->nb_dimentions; i++)
 		scf_variable_add_array_dimention(r, v1->dimentions[i]);
@@ -980,13 +982,21 @@ static int _scf_op_semantic_array_index(scf_ast_t* ast, scf_node_t** nodes, int 
 
 		if (scf_variable_const(v1)) {
 			if (v1->data.i < 0) {
-				scf_loge("error: index %d < 0\n", v1->data.i);
+				scf_loge("array index '%s' < 0, real: %d, file: %s, line: %d\n",
+						v1->w->text->data, v1->data.i, v1->w->file->data, v1->w->line);
 				return -1;
 			}
 
 			if (v1->data.i >= v0->dimentions[0]) {
-				scf_loge("index %d >= size %d\n", v1->data.i, v0->dimentions[0]);
-				return -1;
+
+				if (!v0->member_flag) {
+					scf_loge("array index '%s' >= size %d, real: %d, file: %s, line: %d\n",
+							v1->w->text->data, v0->dimentions[0], v1->data.i, v1->w->file->data, v1->w->line);
+					return -1;
+				}
+
+				scf_logw("array index '%s' >= size %d, real: %d, confirm it for a zero-array end of a struct? file: %s, line: %d\n",
+						v1->w->text->data, v0->dimentions[0], v1->data.i, v1->w->file->data, v1->w->line);
 			}
 		}
 	} else if (0 == v0->nb_dimentions && v0->nb_pointers > 0) {
@@ -1006,6 +1016,8 @@ static int _scf_op_semantic_array_index(scf_ast_t* ast, scf_node_t** nodes, int 
 	scf_variable_t* r = SCF_VAR_ALLOC_BY_TYPE(w, t, 0, nb_pointers, v0->func_ptr);
 	if (!r)
 		return -ENOMEM;
+
+	r->member_flag = v0->member_flag;
 
 	int i;
 	for (i = 1; i < v0->nb_dimentions; i++)
@@ -1563,11 +1575,13 @@ static int _scf_op_semantic_call(scf_ast_t* ast, scf_node_t** nodes, int nb_node
 
 	if (f->vargs_flag) {
 		if (f->argv->size > nb_nodes - 1) {
-			scf_loge("\n");
+			scf_loge("number of args pass to '%s()' at least needs %d, real: %d, file: %s, line: %d\n",
+					f->node.w->text->data, f->argv->size, nb_nodes - 1, parent->w->file->data, parent->w->line);
 			return -1;
 		}
 	} else if (f->argv->size != nb_nodes - 1) {
-		scf_loge("\n");
+		scf_loge("number of args pass to '%s()' needs %d, real: %d, file: %s, line: %d\n",
+				f->node.w->text->data, f->argv->size, nb_nodes - 1, parent->w->file->data, parent->w->line);
 		return -1;
 	}
 

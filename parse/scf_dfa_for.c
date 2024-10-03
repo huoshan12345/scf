@@ -32,26 +32,21 @@ static int _for_action_for(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	scf_parse_t*     parse = dfa->priv;
 	dfa_data_t*      d     = data;
 	scf_lex_word_t*  w     = words->data[words->size - 1];
+	dfa_for_data_t*  fd    = NULL;
 	scf_stack_t*     s     = d->module_datas[dfa_module_for.index];
-	scf_node_t*      _for  = scf_node_alloc(w, SCF_OP_FOR, NULL);
+	scf_node_t*     _for   = scf_node_alloc(w, SCF_OP_FOR, NULL);
 
-	if (!_for) {
-		scf_loge("node alloc failed\n");
-		return SCF_DFA_ERROR;
-	}
+	if (!_for)
+		return -ENOMEM;
 
-	dfa_for_data_t* fd = calloc(1, sizeof(dfa_for_data_t));
-	if (!fd) {
-		scf_loge("module data alloc failed\n");
-		return SCF_DFA_ERROR;
-	}
+	fd = calloc(1, sizeof(dfa_for_data_t));
+	if (!fd)
+		return -ENOMEM;
 
 	if (d->current_node)
 		scf_node_add_child(d->current_node, _for);
-	else {
+	else
 		scf_node_add_child((scf_node_t*)parse->ast->current_block, _for);
-		scf_loge("current_block: %p\n", parse->ast->current_block);
-	}
 
 	fd->parent_block = parse->ast->current_block;
 	fd->parent_node  = d->current_node;
@@ -104,7 +99,7 @@ static int _for_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	dfa_for_data_t*  fd    = scf_stack_top(s);
 
 	if (!d->expr) {
-		scf_loge("need expr before ','\n");
+		scf_loge("need expr before ',' in file: %s, line: %d\n", w->file->data, w->line);
 		return SCF_DFA_ERROR;
 	}
 
@@ -126,7 +121,7 @@ static int _for_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 		scf_vector_add(fd->update_exprs, d->expr);
 		d->expr = NULL;
 	} else {
-		scf_loge("too many ';' in for\n");
+		scf_loge("too many ';' in for, file: %s, line: %d\n", w->file->data, w->line);
 		return SCF_DFA_ERROR;
 	}
 
@@ -138,10 +133,8 @@ static int _for_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _for_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
-	if (!data) {
-		scf_loge("\n");
+	if (!data)
 		return SCF_DFA_ERROR;
-	}
 
 	scf_parse_t*     parse = dfa->priv;
 	dfa_data_t*      d     = data;
@@ -163,7 +156,7 @@ static int _for_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* data
 			d->expr = NULL;
 		}
 	} else {
-		scf_loge("too many ';' in for\n");
+		scf_loge("too many ';' in for, file: %s, line: %d\n", w->file->data, w->line);
 		return SCF_DFA_ERROR;
 	}
 
@@ -254,7 +247,7 @@ static int _for_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 		scf_vector_add(fd->update_exprs, d->expr);
 		d->expr = NULL;
 	} else {
-		scf_loge("too many ';' in for\n");
+		scf_loge("too many ';' in for, file: %s, line: %d\n", w->file->data, w->line);
 		return SCF_DFA_ERROR;
 	}
 

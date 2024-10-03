@@ -10,7 +10,6 @@ static int _include_action_include(scf_dfa_t* dfa, scf_vector_t* words, void* da
 	dfa_data_t*      d      = data;
 	scf_lex_word_t*  w      = words->data[words->size - 1];
 
-	scf_loge("include '%s', line %d\n", w->text->data, w->line);
 	return SCF_DFA_NEXT_WORD;
 }
 
@@ -23,27 +22,30 @@ static int _include_action_path(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	scf_block_t*     cur    = parse->ast->current_block;
 
 	assert(w->data.s);
-	scf_loge("include '%s', line %d\n", w->data.s->data, w->line);
+	scf_logd("include '%s', line %d\n", w->data.s->data, w->line);
 
 	parse->lex = NULL;
 	parse->ast->current_block = parse->ast->root_block;
 
 	int ret = scf_parse_file(parse, w->data.s->data);
 	if (ret < 0) {
-		scf_loge("\n");
-		return SCF_DFA_ERROR;
+		scf_loge("parse file '%s' failed, 'include' line: %d\n", w->data.s->data, w->line);
+		goto error;
 	}
 
 	if (parse->lex != lex && parse->lex->macros) { // copy macros
 
 		if (!lex->macros) {
 			lex->macros = scf_vector_clone(parse->lex->macros);
-			if (!lex->macros)
-				return -ENOMEM;
+
+			if (!lex->macros) {
+				ret = -ENOMEM;
+				goto error;
+			}
 		} else {
 			ret = scf_vector_cat(lex->macros, parse->lex->macros);
 			if (ret < 0)
-				return ret;
+				goto error;
 		}
 
 		scf_macro_t* m;
@@ -54,10 +56,11 @@ static int _include_action_path(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 		}
 	}
 
+	ret = SCF_DFA_NEXT_WORD;
+error:
 	parse->lex = lex;
 	parse->ast->current_block = cur;
-
-	return SCF_DFA_NEXT_WORD;
+	return ret;
 }
 
 static int _include_action_LF(scf_dfa_t* dfa, scf_vector_t* words, void* data)

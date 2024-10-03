@@ -118,8 +118,6 @@ static int _sizeof_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 		id = scf_stack_pop(d->current_identities);
 		assert(id && id->type);
 
-		scf_loge("\n");
-
 		if (id->nb_pointers > 0) {
 
 			t = scf_block_find_type_type(parse->ast->current_block, SCF_VAR_INTPTR);
