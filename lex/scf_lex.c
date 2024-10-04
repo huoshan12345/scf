@@ -377,10 +377,15 @@ static int _lex_identity(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 				if (w)
 					w->data.u64 = lex->nb_lines;
 
+			} else if (!strcmp(s->data, "__FILE__")) {
+
+				w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_STRING);
+				if (w)
+					w->data.s = scf_string_clone(lex->file);
+
 			} else if (!strcmp(s->data, "__func__")) {
 
 				w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_CONST_STRING);
-
 			} else {
 				int type = _find_key_word(s->data);
 
@@ -574,7 +579,7 @@ static int _lex_macro(scf_lex_t* lex)
 				break;
 
 			if ('\n' == c2->c)
-				c->c = ' ';
+				c2->flag = 0;
 		}
 	}
 
@@ -636,7 +641,9 @@ int __lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 
 	c = _lex_pop_char(lex);
 
-	while ('\n' == c->c || '\r' == c->c || '\t' == c->c || ' ' == c->c) {
+	while ('\n' == c->c
+			|| '\r' == c->c || '\t' == c->c
+			|| ' '  == c->c || '\\' == c->c) {
 
 		if ('\n' == c->c) {
 			lex->nb_lines++;
@@ -1152,7 +1159,8 @@ static int __convert_str(scf_lex_word_t* h)
 			return -ENOMEM;
 	}
 
-	for (w = h->next; w; w = w->next) {
+	while ( h->next) {
+		w = h->next;
 
 		if (SCF_LEX_WORD_CONST_STRING != w->type)
 			s = w->text;
@@ -1162,9 +1170,18 @@ static int __convert_str(scf_lex_word_t* h)
 		int ret = scf_string_cat(h->data.s, s);
 		if (ret < 0)
 			return ret;
+
+		ret = scf_string_cat(h->text, w->text);
+		if (ret < 0)
+			return ret;
+
+		h->next = w->next;
+
+		scf_lex_word_free(w);
+		w = NULL;
 	}
 
-	scf_logw("h: %s, file: %s, line: %d\n", h->data.s->data, h->file->data, h->line);
+	scf_logw("h: '%s', file: %s, line: %d\n", h->data.s->data, h->file->data, h->line);
 	return 0;
 }
 
@@ -1221,7 +1238,7 @@ static int __use_macro(scf_lex_t* lex, scf_macro_t* m, scf_lex_word_t* use)
 			continue;
 		}
 
-		scf_logd("p: %s, line: %d, hash: %d\n", p->text->data, p->line, hash);
+		scf_logd("p: '%s', line: %d, hash: %d\n", p->text->data, p->line, hash);
 
 		if (m->argv) {
 			assert(argv);
@@ -1235,24 +1252,29 @@ static int __use_macro(scf_lex_t* lex, scf_macro_t* m, scf_lex_word_t* use)
 			}
 
 			if (i < m->argv->size) {
-				w    = argv->data[i];
+				scf_lex_word_t** tmp = pp;
+
+				for (w = argv->data[i]; w; w = w->next) {
+
+					*pp = scf_lex_word_clone(w);
+					if (!*pp) {
+						ret = -ENOMEM;
+						goto error;
+					}
+
+					if (!strcmp((*pp)->text->data, "__LINE__"))
+						(*pp)->data.u64 = use->line;
+
+					pp = &(*pp)->next;
+				}
 
 				if (1 == hash) {
-					ret = __convert_str(w);
+					ret = __convert_str(*tmp);
 					if (ret < 0)
 						goto error;
 
-					scf_slist_clear(w->next, scf_lex_word_t, next, scf_lex_word_free);
-					w->next = NULL;
+					pp = &(*tmp)->next;
 				}
-
-				*pp = w;
-				while (w) {
-					pp = &w->next;
-					w  =  w->next;
-				}
-
-				argv->data[i] = NULL;
 
 				hash = 0;
 				continue;
@@ -1264,6 +1286,9 @@ static int __use_macro(scf_lex_t* lex, scf_macro_t* m, scf_lex_word_t* use)
 			ret = -ENOMEM;
 			goto error;
 		}
+
+		if (!strcmp((*pp)->text->data, "__LINE__"))
+			(*pp)->data.u64 = use->line;
 
 		pp = &(*pp)->next;
 

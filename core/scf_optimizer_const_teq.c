@@ -1,6 +1,6 @@
 #include"scf_optimizer.h"
 
-static int _bb_dfs_del(scf_basic_block_t* bb, scf_function_t* f)
+static void __bb_dfs_del(scf_basic_block_t* bb, scf_function_t* f)
 {
 	scf_3ac_operand_t* dst;
 	scf_basic_block_t* bb2;
@@ -32,16 +32,24 @@ static int _bb_dfs_del(scf_basic_block_t* bb, scf_function_t* f)
 	for (i = 0; i < bb->nexts->size; ) {
 		bb2       = bb->nexts->data[i];
 
-		assert(0 == scf_vector_del(bb ->nexts, bb2));
-		assert(0 == scf_vector_del(bb2->prevs, bb));
+		assert(0 == scf_vector_del(bb->nexts, bb2));
 
-		if (bb2->prevs->size > 0)
+		if (bb2->prevs->size > 1) {
+			assert(0 == scf_vector_del(bb2->prevs, bb));
 			continue;
+		}
 
 		assert(&bb2->list != scf_list_head(&f->basic_block_list_head));
 
-		if (_bb_dfs_del(bb2, f) < 0)
-			return -1;
+		__bb_dfs_del(bb2, f);
+
+		assert(0 == scf_vector_del(bb2->prevs, bb));
+
+		scf_logd("bb2: %#lx, bb2->index: %d, prevs->size: %d\n", 0xffff & (uintptr_t)bb2, bb2->index, bb2->prevs->size);
+
+		scf_list_del(&bb2->list);
+		scf_basic_block_free(bb2);
+		bb2 = NULL;
 	}
 
 	if (scf_list_prev(&bb->list) != sentinel &&
@@ -67,11 +75,6 @@ static int _bb_dfs_del(scf_basic_block_t* bb, scf_function_t* f)
 			}
 		}
 	}
-
-	scf_list_del(&bb->list);
-	scf_basic_block_free(bb);
-	bb = NULL;
-	return 0;
 }
 
 static int __optimize_const_teq(scf_basic_block_t* bb, scf_function_t* f)
@@ -213,9 +216,18 @@ static int __optimize_const_teq(scf_basic_block_t* bb, scf_function_t* f)
 
 		assert(0 == scf_vector_del(bb->nexts, bb2));
 
-		if (0 == bb2->prevs->size) {
-			if (_bb_dfs_del(bb2, f) < 0)
-				return -1;
+		if (0 == bb2->prevs->size &&
+				&bb2->list != scf_list_head(&f->basic_block_list_head)) {
+
+			assert(0 == scf_vector_add(bb2->prevs, bb));
+
+			__bb_dfs_del(bb2, f);
+
+			assert(0 == scf_vector_del(bb2->prevs, bb));
+
+			scf_list_del(&bb2->list);
+			scf_basic_block_free(bb2);
+			bb2 = NULL;
 		}
 	}
 
@@ -230,22 +242,43 @@ static int _optimize_const_teq(scf_ast_t* ast, scf_function_t* f, scf_vector_t* 
 	scf_list_t*        bb_list_head = &f->basic_block_list_head;
 	scf_list_t*        l;
 	scf_basic_block_t* bb;
+	scf_basic_block_t* bb2;
 
 	if (scf_list_empty(bb_list_head))
 		return 0;
 
-	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head);
-			l = scf_list_next(l)) {
-
-		bb  = scf_list_data(l, scf_basic_block_t, list);
+	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head); l = scf_list_next(l)) {
+		bb = scf_list_data(l, scf_basic_block_t, list);
 
 		if (!bb->cmp_flag)
 			continue;
 
 		int ret = __optimize_const_teq(bb, f);
-		if (ret < 0) {
-			scf_loge("\n");
+		if (ret < 0)
 			return ret;
+	}
+
+	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head); ) {
+		bb = scf_list_data(l, scf_basic_block_t, list);
+
+		l  = scf_list_next(l);
+
+		if (!bb->cmp_flag)
+			continue;
+
+		if (0 == bb->prevs->size && scf_list_empty(&bb->code_list_head)) {
+
+			int i;
+			for (i = 0; i < bb->nexts->size; ) {
+				bb2       = bb->nexts->data[i];
+
+				assert(0 == scf_vector_del(bb ->nexts, bb2));
+				assert(0 == scf_vector_del(bb2->prevs, bb));
+			}
+
+			scf_list_del(&bb->list);
+			scf_basic_block_free(bb);
+			bb = NULL;
 		}
 	}
 
@@ -260,4 +293,3 @@ scf_optimizer_t  scf_optimizer_const_teq =
 
 	.flags    = SCF_OPTIMIZER_LOCAL,
 };
-

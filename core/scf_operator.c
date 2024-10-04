@@ -108,4 +108,3 @@ scf_operator_t* scf_find_base_operator_by_type(const int type)
 
 	return NULL;
 }
-

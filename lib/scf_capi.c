@@ -1,6 +1,10 @@
 
 int   printf(const char* fmt, ...);
 
+int   rand();
+void  srand(uint32_t seed);
+int   atoi(const char* s);
+
 void* malloc (uintptr_t size);
 void* calloc (uintptr_t n, uintptr_t size);
 void* realloc(void* p,     uintptr_t size);
@@ -14,6 +18,8 @@ void  scf__auto_ref(void* data);
 void  scf__auto_freep (void** pp, scf__release_pt* release);
 void  scf__auto_freep_array(void** pp, int nb_pointers, scf__release_pt* release);
 void  scf__auto_free_array (void** pp, int size, int nb_pointers, scf__release_pt* release);
+
+uintptr_t time(uintptr_t* t);
 
 uintptr_t strlen (const char *s);
 int       strcmp (const char *s1, const char *s2);

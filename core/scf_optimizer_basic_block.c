@@ -272,4 +272,3 @@ scf_optimizer_t  scf_optimizer_basic_block =
 
 	.flags    = SCF_OPTIMIZER_LOCAL,
 };
-

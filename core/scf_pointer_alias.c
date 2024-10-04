@@ -967,7 +967,6 @@ static int _pointer_alias_var(scf_vector_t* aliases, scf_dag_node_t* dn_alias, s
 	scf_list_t*       l2;
 
 	int ret;
-	int i;
 
 	scf_logd("alias: v_%d_%d/%s\n", v->w->line, v->w->pos, v->w->text->data);
 
@@ -1020,7 +1019,7 @@ static int _pointer_alias_var(scf_vector_t* aliases, scf_dag_node_t* dn_alias, s
 		}
 
 		return ret;
-	} else if (sizeof(void*) == dn_alias->var->size) {
+	} else if (sizeof(void*) == dn_alias->var->size || scf_variable_const_integer(dn_alias->var)) {
 
 		ds = scf_dn_status_null();
 		if (!ds)
