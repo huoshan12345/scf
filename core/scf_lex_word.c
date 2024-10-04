@@ -47,11 +47,13 @@ scf_lex_word_t*	scf_lex_word_clone(scf_lex_word_t* w)
 			break;
 
 		case SCF_LEX_WORD_CONST_STRING:
+			if (w->data.s) {
+				w1->data.s = scf_string_clone(w->data.s);
 
-			w1->data.s = scf_string_clone(w->data.s);
-			if (!w1->data.s) {
-				free(w1);
-				return NULL;
+				if (!w1->data.s) {
+					free(w1);
+					return NULL;
+				}
 			}
 			break;
 
@@ -86,8 +88,10 @@ scf_lex_word_t*	scf_lex_word_clone(scf_lex_word_t* w)
 void scf_lex_word_free(scf_lex_word_t* w)
 {
 	if (w) {
-		if (SCF_LEX_WORD_CONST_STRING == w->type)
-			scf_string_free(w->data.s);
+		if (SCF_LEX_WORD_CONST_STRING == w->type) {
+			if (w->data.s)
+				scf_string_free(w->data.s);
+		}
 
 		if (w->text)
 			scf_string_free(w->text);

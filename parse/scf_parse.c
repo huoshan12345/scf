@@ -1896,7 +1896,7 @@ int scf_parse_compile_functions(scf_parse_t* parse, scf_vector_t* functions)
 		}
 
 		assert(scf_list_empty(&h));
-//		scf_basic_block_print_list(&f->basic_block_list_head);
+		scf_basic_block_print_list(&f->basic_block_list_head);
 	}
 
 	int ret = scf_optimize(parse->ast, functions);

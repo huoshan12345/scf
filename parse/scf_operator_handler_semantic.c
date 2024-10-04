@@ -1090,11 +1090,11 @@ static int _scf_op_semantic_return(scf_ast_t* ast, scf_node_t** nodes, int nb_no
 		assert(nodes);
 
 		scf_variable_t* fret = f->rets->data[i];
-		scf_expr_t*     e    = nodes[i];
 		scf_variable_t* r    = NULL;
+		scf_expr_t*     e    = nodes[i];
 
 		if (SCF_VAR_VOID == fret->type && 0 == fret->nb_pointers) {
-			scf_loge("void function needs no return value\n");
+			scf_loge("void function needs no return value, file: %s, line: %d\n", e->parent->w->file->data, e->parent->w->line);
 			return -1;
 		}
 

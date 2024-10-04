@@ -103,7 +103,7 @@ static int _3ac_pointer_alias(scf_dag_node_t* alias, scf_3ac_code_t* c, scf_basi
 
 	pointer = c->srcs->data[0];
 
-	ret     = scf_vector_del(c->srcs, pointer);
+	ret = scf_vector_del(c->srcs, pointer);
 	if (ret < 0) {
 		scf_loge("\n");
 		return ret;
@@ -289,7 +289,7 @@ static int _alias_assign_dereference(scf_vector_t** paliases, scf_dag_node_t* dn
 	if (1 == aliases->size) {
 		status = aliases->data[0];
 
-		if (SCF_DN_ALIAS_VAR == status->alias_type) {
+		if (SCF_DN_ALIAS_VAR == status->alias_type && !scf_variable_const_integer(status->alias->var)) {
 
 			ret = _3ac_pointer_alias(status->alias, c, bb, bb_list_head);
 

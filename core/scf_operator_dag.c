@@ -455,9 +455,8 @@ scf_dag_operator_t* scf_dag_operator_find(int type)
 
 int	scf_dag_expr_calculate(scf_list_t* h, scf_dag_node_t* node)
 {
-	if (!node) {
+	if (!node)
 		return 0;
-	}
 
 	if (!node->childs || 0 == node->childs->size) {
 

@@ -108,27 +108,22 @@ int _expr_add_var(scf_parse_t* parse, dfa_data_t* d)
 		}
 
 		var = SCF_VAR_ALLOC_BY_TYPE(id->identity, pt, 1, 1, f);
-		if (!var) {
-			scf_loge("var '%s' alloc failed\n", w->text->data);
-			return SCF_DFA_ERROR;
-		}
+		if (!var)
+			return -ENOMEM;
+
 		var->const_literal_flag = 1;
 	}
 
-	scf_loge("var: %s, member_flag: %d, line: %d\n", var->w->text->data, var->member_flag, var->w->line);
+	scf_logd("var: %s, member_flag: %d, line: %d\n", var->w->text->data, var->member_flag, var->w->line);
 
 	node = scf_node_alloc(w, var->type, var);
-	if (!node) {
-		scf_loge("var node '%s' alloc failed\n", w->text->data);
-		return SCF_DFA_ERROR;
-	}
+	if (!node)
+		return -ENOMEM;
 
 	if (!d->expr) {
 		d->expr = scf_expr_alloc();
-		if (!d->expr) {
-			scf_loge("expr alloc failed\n");
-			return SCF_DFA_ERROR;
-		}
+		if (!d->expr)
+			return -ENOMEM;
 	}
 
 	scf_logd("d->expr: %p, node: %p\n", d->expr, node);

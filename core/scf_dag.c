@@ -327,6 +327,14 @@ scf_dag_node_t* scf_dag_node_alloc(int type, scf_variable_t* var, const scf_node
 	return dn;
 }
 
+int scf_dag_node_find_child(scf_dag_node_t* parent, scf_dag_node_t* child)
+{
+	if (parent->childs
+			&& scf_vector_find(parent->childs, child))
+		return 1;
+	return 0;
+}
+
 int scf_dag_node_add_child(scf_dag_node_t* parent, scf_dag_node_t* child)
 {
 	if (!parent || !child)
