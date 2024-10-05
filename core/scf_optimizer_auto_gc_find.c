@@ -1015,7 +1015,7 @@ static int _auto_gc_function_find(scf_ast_t* ast, scf_function_t* f, scf_list_t*
 	for (i = 0; i < bb->ds_malloced->size; i++) {
 		ds =        bb->ds_malloced->data[i];
 #if 1
-		scf_loge("ds->ret: %u, ds->dag_node->var->arg_flag: %u\n", ds->ret, ds->dag_node->var->arg_flag);
+		scf_logi("ds->ret: %u, ds->dag_node->var->arg_flag: %u\n", ds->ret, ds->dag_node->var->arg_flag);
 		scf_dn_status_print(ds);
 		printf("\n");
 #endif
@@ -1031,7 +1031,7 @@ static int _auto_gc_function_find(scf_ast_t* ast, scf_function_t* f, scf_list_t*
 			_bb_find_ds_alias_leak(ds, c, bb, bb_list_head);
 		}
 	}
-	scf_loge("f: %s *****\n\n", f->node.w->text->data);
+	scf_logi("f: %s *****\n\n", f->node.w->text->data);
 
 	return total;
 }
@@ -1119,4 +1119,3 @@ scf_optimizer_t  scf_optimizer_auto_gc_find =
 
 	.flags    = SCF_OPTIMIZER_GLOBAL,
 };
-

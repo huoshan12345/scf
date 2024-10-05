@@ -709,7 +709,11 @@ scf_instruction_t* _x64_make_inst_SIB(scf_instruction_t* inst, scf_x64_OpCode_t*
 	scf_ModRM_setReg(&ModRM, reg);
 	scf_ModRM_setRM(&ModRM,  SCF_X64_RM_SIB);
 
-	if (SCF_X64_RM_EBP !=  r_base->id && SCF_X64_RM_ESP != r_base->id && 0 == disp)
+	if (SCF_X64_RM_EBP !=  r_base->id
+			&& SCF_X64_RM_ESP != r_base->id
+			&& SCF_X64_RM_R12 != r_base->id
+			&& SCF_X64_RM_R13 != r_base->id
+			&& 0 == disp)
 		scf_ModRM_setMod(&ModRM, SCF_X64_MOD_BASE);
 	else {
 		if (disp <= 127 && disp >= -128)
@@ -742,7 +746,11 @@ scf_instruction_t* _x64_make_inst_SIB(scf_instruction_t* inst, scf_x64_OpCode_t*
 	};
 	inst->code[inst->len++] = SIB;
 
-	if (SCF_X64_RM_EBP ==  r_base->id || SCF_X64_RM_ESP == r_base->id || 0 != disp) {
+	if (SCF_X64_RM_EBP ==  r_base->id
+			|| SCF_X64_RM_ESP == r_base->id
+			|| SCF_X64_RM_R12 == r_base->id
+			|| SCF_X64_RM_R13 == r_base->id
+			|| 0 != disp) {
 
 		if (disp <= 127 && disp >= -128)
 			inst->code[inst->len++] = (int8_t)disp;

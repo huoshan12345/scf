@@ -163,28 +163,30 @@ static int __optimize_const_teq(scf_basic_block_t* bb, scf_function_t* f)
 		l2 = scf_list_head(&bb2->code_list_head);
 		c  = scf_list_data(l2, scf_3ac_code_t, list);
 
-		if (SCF_OP_3AC_JZ == c->op->type) {
+		if (!jmp_flag) {
+			if (SCF_OP_3AC_JZ == c->op->type) {
 
-			if (0 == flag) {
-				c->op    = scf_3ac_find_operator(SCF_OP_GOTO);
+				if (0 == flag) {
+					c->op    = scf_3ac_find_operator(SCF_OP_GOTO);
+					jmp_flag = 1;
+					continue;
+				}
+
+			} else if (SCF_OP_3AC_JNZ == c->op->type) {
+
+				if (1 == flag) {
+					c->op    = scf_3ac_find_operator(SCF_OP_GOTO);
+					jmp_flag = 1;
+					continue;
+				}
+
+			} else if (SCF_OP_GOTO == c->op->type) {
 				jmp_flag = 1;
 				continue;
+			} else {
+				scf_loge("\n");
+				return -EINVAL;
 			}
-
-		} else if (SCF_OP_3AC_JNZ == c->op->type) {
-
-			if (1 == flag) {
-				c->op    = scf_3ac_find_operator(SCF_OP_GOTO);
-				jmp_flag = 1;
-				continue;
-			}
-
-		} else if (SCF_OP_GOTO == c->op->type) {
-			jmp_flag = 1;
-			continue;
-		} else {
-			scf_loge("\n");
-			return -EINVAL;
 		}
 
 		assert(c->dsts && 1 == c->dsts->size);
@@ -200,7 +202,7 @@ static int __optimize_const_teq(scf_basic_block_t* bb, scf_function_t* f)
 
 	if (jmp_flag && bb2 && !bb2->jmp_flag) {
 
-		assert(0 == scf_vector_del(bb2->prevs, bb));
+		scf_vector_del(bb2->prevs, bb);
 	}
 
 	int ret;
@@ -246,6 +248,8 @@ static int _optimize_const_teq(scf_ast_t* ast, scf_function_t* f, scf_vector_t* 
 
 	if (scf_list_empty(bb_list_head))
 		return 0;
+
+	scf_logd("------- %s() ------\n", f->node.w->text->data);
 
 	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head); l = scf_list_next(l)) {
 		bb = scf_list_data(l, scf_basic_block_t, list);

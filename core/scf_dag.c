@@ -498,6 +498,24 @@ void scf_dag_node_free_list(scf_list_t* dag_list_head)
 	}
 }
 
+static int __dn_same_call(scf_dag_node_t* dn, const scf_node_t* node, const scf_node_t* split)
+{
+	scf_variable_t* v0 = _scf_operand_get(node);
+	scf_variable_t* v1 = dn->var;
+
+	if (split)
+		v0 = _scf_operand_get(split);
+
+	if (v0 && v0->w && v1 && v1->w) {
+		if (v0->type != v1->type) {
+			scf_logd("v0: %d/%s_%#lx, split_flag: %d\n", v0->w->line, v0->w->text->data, 0xffff & (uintptr_t)v0, node->split_flag);
+			scf_logd("v1: %d/%s_%#lx\n", v1->w->line, v1->w->text->data, 0xffff & (uintptr_t)v1);
+		}
+	}
+
+	return v0 == v1;
+}
+
 int scf_dag_node_same(scf_dag_node_t* dn, const scf_node_t* node)
 {
 	int i;
@@ -505,7 +523,6 @@ int scf_dag_node_same(scf_dag_node_t* dn, const scf_node_t* node)
 	const scf_node_t* split = NULL;
 
 	if (node->split_flag) {
-
 		if (dn->var != _scf_operand_get(node))
 			return 0;
 
@@ -542,8 +559,11 @@ int scf_dag_node_same(scf_dag_node_t* dn, const scf_node_t* node)
 		return 0;
 	}
 
-	if (!dn->childs)
+	if (!dn->childs) {
+		if (SCF_OP_CALL == node->type && 1 == node->nb_nodes)
+			return __dn_same_call(dn, node, split);
 		return 0;
+	}
 
 	if (SCF_OP_TYPE_CAST == node->type) {
 		scf_dag_node_t* dn0 = dn->childs->data[0];
@@ -641,24 +661,9 @@ cmp_childs:
 		}
 	}
 
-	if (SCF_OP_CALL == dn->type) {
+	if (SCF_OP_CALL == dn->type)
+		return __dn_same_call(dn, node, split);
 
-		scf_variable_t* v0 = _scf_operand_get(node);
-		scf_variable_t* v1 = dn->var;
-
-		if (split)
-			v0 = _scf_operand_get(split);
-
-		if (v0 && v0->w && v1 && v1->w) {
-			if (v0->type != v1->type) {
-				scf_logd("v0: %d/%s_%#lx, split_flag: %d\n", v0->w->line, v0->w->text->data, 0xffff & (uintptr_t)v0, node->split_flag);
-				scf_logd("v1: %d/%s_%#lx\n", v1->w->line, v1->w->text->data, 0xffff & (uintptr_t)v1);
-			}
-		}
-
-		if (v0 != v1)
-			return 0;
-	}
 	return 1;
 }
 
