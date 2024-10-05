@@ -625,7 +625,6 @@ static int _3ac_code_to_dag(scf_3ac_code_t* c, scf_list_t* dag, int nb_operands0
 		}
 	}
 
-	printf("\n");
 	return 0;
 }
 

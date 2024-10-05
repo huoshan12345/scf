@@ -237,7 +237,7 @@ static int _optimize_basic_block(scf_ast_t* ast, scf_function_t* f, scf_vector_t
 	if (scf_list_empty(bb_list_head))
 		return 0;
 
-//	scf_logi("------- %s() ------\n", f->node.w->text->data);
+	scf_logd("------- %s() ------\n", f->node.w->text->data);
 
 	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head); l = scf_list_next(l)) {
 

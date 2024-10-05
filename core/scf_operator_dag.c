@@ -433,6 +433,8 @@ scf_dag_operator_t	dag_operators[] =
 	{SCF_OP_3AC_SUB_ASSIGN_POINTER,        SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_sub_assign_pointer},
 	{SCF_OP_3AC_AND_ASSIGN_POINTER,        SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_and_assign_pointer},
 	{SCF_OP_3AC_OR_ASSIGN_POINTER,         SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_or_assign_pointer},
+	{SCF_OP_3AC_INC_POINTER,               SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_inc_pointer},
+	{SCF_OP_3AC_DEC_POINTER,               SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_dec_pointer},
 
 	{SCF_OP_3AC_ASSIGN_DEREFERENCE,        SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_assign_dereference},
 	{SCF_OP_3AC_ADD_ASSIGN_DEREFERENCE,    SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_add_assign_dereference},
@@ -483,7 +485,7 @@ int	scf_dag_expr_calculate(scf_list_t* h, scf_dag_node_t* node)
 #endif
 	scf_dag_operator_t* op = scf_dag_operator_find(node->type);
 	if (!op) {
-		scf_loge("node->type: %d, %d\n", node->type, SCF_OP_3AC_ADD_ASSIGN_DEREFERENCE);
+		scf_loge("node->type: %d, %d\n", node->type, SCF_OP_3AC_DEC_POINTER);
 		if (node->var && node->var->w)
 			scf_loge("node->var: %s\n", node->var->w->text->data);
 		return -1;
