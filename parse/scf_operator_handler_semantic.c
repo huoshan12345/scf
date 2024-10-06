@@ -2050,7 +2050,9 @@ static int _semantic_pointer_add(scf_ast_t* ast, scf_node_t* parent, scf_node_t*
 	if (!add)
 		return -ENOMEM;
 
-	r = SCF_VAR_ALLOC_BY_TYPE(parent->w, t, v->const_flag, scf_variable_nb_pointers(v), v->func_ptr);
+	int nb_pointers = scf_variable_nb_pointers(v);
+
+	r = SCF_VAR_ALLOC_BY_TYPE(parent->w, t, v->const_flag, nb_pointers - 1, v->func_ptr);
 	if (!r) {
 		scf_node_free(add);
 		return -ENOMEM;

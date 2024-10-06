@@ -207,12 +207,10 @@ void scf_basic_block_print(scf_basic_block_t* bb, scf_list_t* sentinel)
 	}
 }
 
-void scf_bb_group_print(scf_bb_group_t* bbg)
+static void __bb_group_print(scf_bb_group_t* bbg)
 {
 	scf_basic_block_t* bb;
 	int i;
-
-	printf("\033[33mbbg: %p\033[0m\n", bbg);
 
 	printf("\033[34mentries:\033[0m\n");
 	if (bbg->entries) {
@@ -238,6 +236,47 @@ void scf_bb_group_print(scf_bb_group_t* bbg)
 			printf("%p, %d\n", bb, bb->index);
 		}
 	}
+}
+
+void scf_bb_group_print(scf_bb_group_t* bbg)
+{
+	printf("\033[33mbbg: %p, loop_layers: %d\033[0m\n", bbg, bbg->loop_layers);
+
+	__bb_group_print(bbg);
+
+	printf("\n");
+}
+
+void scf_bb_loop_print(scf_bb_group_t* loop)
+{
+	scf_basic_block_t* bb;
+	scf_bb_group_t*    bbg;
+
+	int k;
+
+	if (loop->loop_childs) {
+		for (k = 0; k < loop->loop_childs->size; k++) {
+			bbg       = loop->loop_childs->data[k];
+
+			scf_bb_loop_print(bbg);
+		}
+	}
+
+	printf("\033[33mloop:  %p, loop_layers: %d\033[0m\n", loop, loop->loop_layers);
+
+	__bb_group_print(loop);
+
+	if (loop->loop_childs) {
+		printf("childs: %d\n", loop->loop_childs->size);
+
+		for (k = 0; k <   loop->loop_childs->size; k++)
+			printf("%p ", loop->loop_childs->data[k]);
+		printf("\n");
+	}
+
+	if (loop->loop_parent)
+		printf("parent: %p\n", loop->loop_parent);
+
 	printf("\n");
 }
 

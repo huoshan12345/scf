@@ -1001,12 +1001,6 @@ int	_scf_x64_select_inst(scf_native_t* ctx)
 
 		x64_init_bb_colors(bb);
 
-		if (0 == bb->index) {
-			ret = _x64_argv_save(bb, f);
-			if (ret < 0)
-				return ret;
-		}
-
 		ret = _x64_make_insts_for_list(ctx, &bb->code_list_head, 0);
 		if (ret < 0)
 			return ret;
@@ -1020,12 +1014,6 @@ int	_scf_x64_select_inst(scf_native_t* ctx)
 			return ret;
 
 		x64_init_bb_colors(bbg->pre);
-
-		if (0 == bbg->pre->index) {
-			ret = _x64_argv_save(bbg->pre, f);
-			if (ret < 0)
-				return ret;
-		}
 
 		int j;
 		for (j = 0; j < bbg->body->size; j++) {
@@ -1060,12 +1048,6 @@ int	_scf_x64_select_inst(scf_native_t* ctx)
 			return ret;
 
 		x64_init_bb_colors(bbg->pre);
-
-		if (0 == bbg->pre->index) {
-			ret = _x64_argv_save(bbg->pre, f);
-			if (ret < 0)
-				return ret;
-		}
 
 		ret = _x64_make_insts_for_list(ctx, &bbg->pre->code_list_head, 0);
 		if (ret < 0)

@@ -10,6 +10,8 @@ int printf(const char* fmt, ...);
 
 int main()
 {
-	assert(0);
+	assert(1);
+
+	printf("main ok\n");
 	return 0;
 }

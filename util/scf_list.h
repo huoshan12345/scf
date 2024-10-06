@@ -56,9 +56,10 @@ static inline void scf_list_add_front(scf_list_t* h, scf_list_t* n)
 #define scf_list_clear(h, type, member, type_free) \
 	do {\
 		scf_list_t* l;\
+		type*       t;\
 		for (l = scf_list_head(h); l != scf_list_sentinel(h);) {\
-			type* t = scf_list_data(l, type, member);\
-			l = scf_list_next(l);\
+			t  = scf_list_data(l, type, member);\
+			l  = scf_list_next(l);\
 			scf_list_del(&t->member);\
 			type_free(t);\
 			t = NULL;\

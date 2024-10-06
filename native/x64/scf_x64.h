@@ -91,10 +91,10 @@ int x64_bb_save_dn (intptr_t color, scf_dag_node_t* dn, scf_3ac_code_t* c, scf_b
 int x64_bb_load_dn2(intptr_t color, scf_dag_node_t* dn, scf_basic_block_t* bb, scf_function_t* f);
 int x64_bb_save_dn2(intptr_t color, scf_dag_node_t* dn, scf_basic_block_t* bb, scf_function_t* f);
 
-int  x64_fix_bb_colors  (scf_basic_block_t* bb, scf_bb_group_t* bbg, scf_function_t* f);
-int  x64_load_bb_colors (scf_basic_block_t* bb, scf_bb_group_t* bbg, scf_function_t* f);
-int  x64_load_bb_colors2(scf_basic_block_t* bb, scf_bb_group_t* bbg, scf_function_t* f);
-void x64_init_bb_colors (scf_basic_block_t* bb);
+int x64_fix_bb_colors  (scf_basic_block_t* bb, scf_bb_group_t* bbg, scf_function_t* f);
+int x64_load_bb_colors (scf_basic_block_t* bb, scf_bb_group_t* bbg, scf_function_t* f);
+int x64_load_bb_colors2(scf_basic_block_t* bb, scf_bb_group_t* bbg, scf_function_t* f);
+int x64_init_bb_colors (scf_basic_block_t* bb);
 
 
 scf_instruction_t* x64_make_inst  (scf_x64_OpCode_t* OpCode, int size);
@@ -165,4 +165,3 @@ int x64_inst_set(scf_native_t* ctx, scf_3ac_code_t* c, int setcc_type);
 int x64_inst_cmp_set(scf_native_t* ctx, scf_3ac_code_t* c, int setcc_type);
 
 #endif
-
