@@ -114,7 +114,8 @@ enum scf_core_types {
 	SCF_OP_BREAK,		// break statement
 	SCF_OP_CONTINUE,	// continue statement
 	SCF_OP_ASYNC,       // async statement
-	SCF_OP_INCLUDE,     // include statement
+
+	SCF_N_OPS, // total operators
 
 	// 58
 	SCF_OP_3AC_TEQ,		// test if = 0
@@ -202,6 +203,7 @@ enum scf_core_types {
 	SCF_OP_3AC_END,
 
 	SCF_OP_GOTO,		// goto statement
+	SCF_N_3AC_OPS,      // totaol 3ac operators
 
 	SCF_VAR_CHAR,       // char variable
 

@@ -3,10 +3,11 @@
 #include"scf_basic_block.h"
 #include"scf_3ac.h"
 
-void x64_init_bb_colors(scf_basic_block_t* bb)
+int x64_init_bb_colors(scf_basic_block_t* bb)
 {
 	scf_dag_node_t*   dn;
 	scf_dn_status_t*  ds;
+	scf_register_t*   r;
 
 	int i;
 
@@ -19,8 +20,17 @@ void x64_init_bb_colors(scf_basic_block_t* bb)
 		dn->color  = ds->color;
 		dn->loaded = 0;
 
-		if (0 == bb->index && dn->rabi)
+		if (0 == bb->index && dn->rabi) {
 			dn->loaded = 1;
+
+			r = dn->rabi;
+
+			int ret = scf_vector_add_unique(r->dag_nodes, dn);
+			if (ret < 0)
+				return ret;
+
+			dn->color = r->color;
+		}
 
 		if (scf_vector_find(bb->dn_loads, dn)) {
 			scf_variable_t* v = dn->var;
@@ -38,6 +48,8 @@ void x64_init_bb_colors(scf_basic_block_t* bb)
 //			printf("\n");
 		}
 	}
+
+	return 0;
 }
 
 int x64_save_bb_colors(scf_vector_t* dn_colors, scf_bb_group_t* bbg, scf_basic_block_t* bb)
@@ -501,4 +513,3 @@ int x64_load_bb_colors2(scf_basic_block_t* bb, scf_bb_group_t* bbg, scf_function
 	}
 	return 0;
 }
-

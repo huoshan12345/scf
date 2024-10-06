@@ -175,6 +175,38 @@ void x64_registers_clear()
 	}
 }
 
+void x64_registers_print()
+{
+	scf_register_t* r;
+	scf_dag_node_t* dn;
+	scf_variable_t* v;
+	int i;
+	int j;
+
+	for (i = 0; i < sizeof(x64_registers) / sizeof(x64_registers[0]); i++) {
+
+		r  = &(x64_registers[i]);
+
+		if (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id)
+			continue;
+
+		if (!r->dag_nodes)
+			continue;
+
+		for (j = 0; j < r->dag_nodes->size; j++) {
+			dn =        r->dag_nodes->data[j];
+
+			v = dn->var;
+			printf("%s, dn: %#lx, v_%#lx", r->name, 0xffff & (uintptr_t)dn, 0xffff & (uintptr_t)v);
+
+			if (v->w)
+				printf(", %s_%d_%d\n", v->w->text->data, v->w->line, v->w->pos);
+			else
+				printf("\n");
+		}
+	}
+}
+
 int x64_caller_save_regs(scf_vector_t* instructions, uint32_t* regs, int nb_regs, int stack_size, scf_register_t** saved_regs)
 {
 	int i;
@@ -356,8 +388,8 @@ int x64_registers_reset()
 				return ret;
 			}
 
-			dn->loaded     = 0;
-			dn->color      = 0;
+			dn->loaded = 0;
+			dn->color  = 0;
 		}
 	}
 
@@ -620,13 +652,12 @@ int x64_overflow_reg2(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c, 
 
 static int _x64_overflow_reg3(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c, scf_function_t* f)
 {
-	scf_register_t*	r2;
-	scf_dn_status_t*    ds2;
-	scf_dag_node_t*     dn2;
+	scf_register_t*	  r2;
+	scf_dn_status_t*  ds2;
+	scf_dag_node_t*   dn2;
 
 	int i;
 	int j;
-	int ret;
 
 	for (i = 0; i < sizeof(x64_registers) / sizeof(x64_registers[0]); i++) {
 
@@ -639,7 +670,7 @@ static int _x64_overflow_reg3(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_cod
 			continue;
 
 		for (j  = 0; j < r2->dag_nodes->size; ) {
-			dn2 = r2->dag_nodes->data[j];
+			dn2 =        r2->dag_nodes->data[j];
 
 			if (dn2 == dn) {
 				j++;

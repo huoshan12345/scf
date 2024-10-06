@@ -117,6 +117,7 @@ void                scf_basic_block_free(scf_basic_block_t* bb);
 scf_bb_group_t*     scf_bb_group_alloc();
 void                scf_bb_group_free (scf_bb_group_t* bbg);
 void                scf_bb_group_print(scf_bb_group_t* bbg);
+void                scf_bb_loop_print (scf_bb_group_t* loop);
 
 void                scf_basic_block_print(scf_basic_block_t* bb, scf_list_t* sentinel);
 void                scf_basic_block_print_list(scf_list_t* h);

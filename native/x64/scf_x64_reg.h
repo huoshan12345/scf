@@ -109,6 +109,7 @@ typedef int         (*x64_sib_fill_pt)(x64_sib_t* sib, scf_dag_node_t* base, scf
 int                 x64_registers_init();
 int                 x64_registers_reset();
 void                x64_registers_clear();
+void                x64_registers_print();
 scf_vector_t*       x64_register_colors();
 
 scf_register_t*     x64_find_register(const char* name);
@@ -191,4 +192,3 @@ static inline int   x64_inst_data_is_const(scf_inst_data_t* id)
 }
 
 #endif
-
