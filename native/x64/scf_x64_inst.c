@@ -686,42 +686,6 @@ static int _x64_inst_unary_assign(scf_native_t* ctx, scf_3ac_code_t* c, int OpCo
 	return 0;
 }
 
-static int _x64_inst_unary_post_assign(scf_native_t* ctx, scf_3ac_code_t* c, int OpCode_type)
-{
-	if (!c->srcs || c->srcs->size != 1)
-		return -EINVAL;
-
-	if (!c->dsts || c->dsts->size != 1)
-		return -EINVAL;
-
-	scf_x64_context_t* x64 = ctx->priv;
-	scf_function_t*    f   = x64->f;
-	scf_3ac_operand_t* src = c->srcs->data[0];
-	scf_3ac_operand_t* dst = c->dsts->data[0];
-
-	if (!src || !src->dag_node)
-		return -EINVAL;
-
-	if (!dst || !dst->dag_node)
-		return -EINVAL;
-
-	if (!c->instructions) {
-		c->instructions = scf_vector_alloc();
-		if (!c->instructions)
-			return -ENOMEM;
-	}
-
-	scf_instruction_t*  inst = NULL;
-	scf_register_t*     rs   = NULL;
-	scf_variable_t*     var  = src->dag_node->var;
-
-	int ret = x64_inst_op2(SCF_X64_MOV, dst->dag_node, src->dag_node, c, f);
-	if (ret < 0)
-		return ret;
-
-	return _x64_inst_unary_assign(ctx, c, OpCode_type);
-}
-
 static int _x64_inst_bit_not_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
 	return _x64_inst_unary(ctx, c, SCF_X64_NOT);
@@ -801,24 +765,84 @@ static int _x64_inst_neg_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	return 0;
 }
 
-static int _x64_inst_inc_handler(scf_native_t* ctx, scf_3ac_code_t* c)
+static int _x64_inst_inc(scf_native_t* ctx, scf_3ac_code_t* c, int INC, int ADD)
 {
-	return _x64_inst_unary_assign(ctx, c, SCF_X64_INC);
+	if (!c->srcs || c->srcs->size != 1)
+		return -EINVAL;
+
+	scf_x64_context_t* x64 = ctx->priv;
+	scf_function_t*    f   = x64->f;
+	scf_3ac_operand_t* src = c->srcs->data[0];
+
+	if (!src || !src->dag_node)
+		return -EINVAL;
+
+	if (0 == src->dag_node->color)
+		return -EINVAL;
+
+	scf_variable_t*     v    = src->dag_node->var;
+	scf_register_t*     rs   = NULL;
+	scf_x64_OpCode_t*   OpCode;
+	scf_instruction_t*  inst = NULL;
+
+	int imm_size = 1;
+	if (v->data_size > 0xff)
+		imm_size = 4;
+
+	if (v->nb_pointers > 0)
+		OpCode = x64_find_OpCode(ADD, imm_size, v->size, SCF_X64_I2E);
+	else
+		OpCode = x64_find_OpCode(INC, v->size, v->size, SCF_X64_E);
+
+	if (!OpCode) {
+		scf_loge("v->size: %d, imm_size: %d\n", v->size, imm_size);
+		return -EINVAL;
+	}
+
+	if (!c->instructions) {
+		c->instructions = scf_vector_alloc();
+		if (!c->instructions)
+			return -ENOMEM;
+	}
+
+	if (v->nb_pointers > 0) {
+		if (src->dag_node->color > 0) {
+			X64_SELECT_REG_CHECK(&rs, src->dag_node, c, f, 1);
+			inst = x64_make_inst_I2E(OpCode, rs, (uint8_t*)&v->data_size, imm_size);
+			X64_INST_ADD_CHECK(c->instructions, inst);
+		} else {
+			scf_rela_t* rela = NULL;
+
+			inst = x64_make_inst_I2M(&rela, OpCode, v, NULL, (uint8_t*)&v->data_size, imm_size);
+			X64_INST_ADD_CHECK(c->instructions, inst);
+			X64_RELA_ADD_CHECK(f->data_relas, rela, c, v, NULL);
+		}
+
+	} else {
+		if (src->dag_node->color > 0) {
+			X64_SELECT_REG_CHECK(&rs, src->dag_node, c, f, 1);
+			inst = x64_make_inst_E(OpCode, rs);
+			X64_INST_ADD_CHECK(c->instructions, inst);
+		} else {
+			scf_rela_t* rela = NULL;
+
+			inst = x64_make_inst_M(&rela, OpCode, v, NULL);
+			X64_INST_ADD_CHECK(c->instructions, inst);
+			X64_RELA_ADD_CHECK(f->data_relas, rela, c, v, NULL);
+		}
+	}
+
+	return 0;
 }
 
-static int _x64_inst_inc_post_handler(scf_native_t* ctx, scf_3ac_code_t* c)
+static int _x64_inst_inc_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
-	return _x64_inst_unary_post_assign(ctx, c, SCF_X64_INC);
+	return _x64_inst_inc(ctx, c, SCF_X64_INC, SCF_X64_ADD);
 }
 
 static int _x64_inst_dec_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
-	return _x64_inst_unary_assign(ctx, c, SCF_X64_DEC);
-}
-
-static int _x64_inst_dec_post_handler(scf_native_t* ctx, scf_3ac_code_t* c)
-{
-	return _x64_inst_unary_post_assign(ctx, c, SCF_X64_DEC);
+	return _x64_inst_inc(ctx, c, SCF_X64_DEC, SCF_X64_SUB);
 }
 
 static int _x64_inst_pointer_handler(scf_native_t* ctx, scf_3ac_code_t* c)
@@ -2129,9 +2153,6 @@ static x64_inst_handler_t x64_inst_handlers[] = {
 
 	{SCF_OP_INC,            _x64_inst_inc_handler},
 	{SCF_OP_DEC,            _x64_inst_dec_handler},
-
-	{SCF_OP_INC_POST,       _x64_inst_inc_post_handler},
-	{SCF_OP_DEC_POST,       _x64_inst_dec_post_handler},
 
 	{SCF_OP_DEREFERENCE, 	_x64_inst_dereference_handler},
 	{SCF_OP_ADDRESS_OF, 	_x64_inst_address_of_handler},
