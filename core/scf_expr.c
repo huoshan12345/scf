@@ -39,8 +39,7 @@ int scf_expr_copy(scf_node_t* e2, scf_node_t* e)
 
 scf_expr_t* scf_expr_clone(scf_node_t* e)
 {
-	scf_expr_t* e2 = scf_expr_alloc();
-
+	scf_expr_t* e2 = scf_node_clone(e);
 	if (!e2)
 		return NULL;
 
