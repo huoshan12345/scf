@@ -262,7 +262,4 @@ int scf_native_close(scf_native_t* ctx);
 
 int scf_native_select_inst(scf_native_t* ctx, scf_function_t* f);
 
-int scf_native_write_elf(scf_native_t* ctx, const char* path, scf_function_t* f);
-
 #endif
-

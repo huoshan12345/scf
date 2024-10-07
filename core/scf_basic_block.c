@@ -852,9 +852,13 @@ static int _bb_init_array_index(scf_3ac_code_t* c, scf_basic_block_t* bb, scf_li
 
 int scf_basic_block_inited_vars(scf_basic_block_t* bb, scf_list_t* bb_list_head)
 {
+	scf_3ac_operand_t* src;
 	scf_3ac_operand_t* dst;
-	scf_3ac_code_t*    c;
+	scf_dn_status_t*   ds;
 	scf_dag_node_t*    dn;
+	scf_dn_index_t*    di;
+	scf_dn_index_t*    di2;
+	scf_3ac_code_t*    c;
 	scf_list_t*        l;
 
 	int ret = 0;
@@ -893,6 +897,56 @@ int scf_basic_block_inited_vars(scf_basic_block_t* bb, scf_list_t* bb_list_head)
 				scf_loge("\n");
 				scf_3ac_code_print(c, NULL);
 				return ret;
+			}
+
+		} else if (SCF_OP_3AC_INC == c->op->type
+				|| SCF_OP_3AC_DEC == c->op->type) {
+
+			src = c->srcs->data[0];
+			dn  = src->dag_node;
+
+			if (scf_type_is_var(dn->type)
+					&& (dn->var->global_flag || dn->var->local_flag || dn->var->tmp_flag)
+					&&  dn->var->nb_pointers > 0) {
+
+				scf_variable_t* v = dn->var;
+				scf_logd("++/-- v_%d_%d/%s\n", v->w->line, v->w->pos, v->w->text->data);
+
+				ret = _bb_init_var(dn, c, bb, bb_list_head);
+				if (ret < 0) {
+					scf_loge("\n");
+					return ret;
+				}
+
+				SCF_DN_STATUS_GET(ds, c->dn_status_initeds, dn);
+//				scf_dn_status_print(ds);
+
+				if (!ds->alias_indexes) {
+					if (!v->arg_flag && !v->global_flag)
+						scf_logw("++/-- update pointers NOT to an array, v->arg_flag: %d, file: %s, line: %d\n", v->arg_flag, v->w->file->data, v->w->line);
+					continue;
+				}
+
+				assert(ds->alias_indexes->size > 0);
+				di =   ds->alias_indexes->data[ds->alias_indexes->size - 1];
+
+				if (di->refs > 1) {
+					di2 = scf_dn_index_clone(di);
+					if (!di2)
+						return -ENOMEM;
+
+					ds->alias_indexes->data[ds->alias_indexes->size - 1] = di2;
+					scf_dn_index_free(di);
+					di = di2;
+				}
+
+				if (di->index >= 0) {
+					if (SCF_OP_3AC_INC == c->op->type)
+						di->index++;
+
+					else if (SCF_OP_3AC_DEC == c->op->type)
+						di->index--;
+				}
 			}
 		}
 	}
