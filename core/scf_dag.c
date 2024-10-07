@@ -11,12 +11,28 @@ scf_dn_index_t* scf_dn_index_alloc()
 	return di;
 }
 
-scf_dn_index_t* scf_dn_index_clone(scf_dn_index_t* di)
+scf_dn_index_t* scf_dn_index_ref(scf_dn_index_t* di)
 {
 	if (di)
 		di->refs++;
-
 	return di;
+}
+
+scf_dn_index_t* scf_dn_index_clone(scf_dn_index_t* di)
+{
+	if (!di)
+		return NULL;
+
+	scf_dn_index_t* di2 = scf_dn_index_alloc();
+	if (!di2)
+		return NULL;
+
+	di2->member   = di->member;
+	di2->index    = di->index;
+	di2->dn       = di->dn;
+	di2->dn_scale = di->dn_scale;
+
+	return di2;
 }
 
 void scf_dn_index_free(scf_dn_index_t* di)

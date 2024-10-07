@@ -58,18 +58,12 @@ typedef struct {
 
 } x64_rcg_node_t;
 
-typedef struct {
-	int 	type;
-	int		(*func)(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g);
-} x64_rcg_handler_t;
 
-typedef struct {
-	int 	type;
-	int		(*func)(scf_native_t* ctx, scf_3ac_code_t* c);
-} x64_inst_handler_t;
+typedef int	(*x64_rcg_handler_pt )(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g);
+typedef int (*x64_inst_handler_pt)(scf_native_t* ctx, scf_3ac_code_t* c);
 
-x64_rcg_handler_t*  scf_x64_find_rcg_handler(const int op_type);
-x64_inst_handler_t* scf_x64_find_inst_handler(const int op_type);
+x64_rcg_handler_pt   scf_x64_find_rcg_handler (const int op_type);
+x64_inst_handler_pt  scf_x64_find_inst_handler(const int op_type);
 
 int x64_rcg_find_node(scf_graph_node_t** pp, scf_graph_t* g, scf_dag_node_t* dn, scf_register_t* reg);
 int _x64_rcg_make_node(scf_graph_node_t** pp, scf_graph_t* g, scf_dag_node_t* dn, scf_register_t* reg, scf_x64_OpCode_t* OpCode);

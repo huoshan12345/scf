@@ -590,4 +590,3 @@ scf_optimizer_t  scf_optimizer_pointer_alias =
 
 	.flags    = SCF_OPTIMIZER_LOCAL,
 };
-

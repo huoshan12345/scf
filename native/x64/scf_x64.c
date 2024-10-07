@@ -475,9 +475,9 @@ static int _x64_argv_save(scf_basic_block_t* bb, scf_function_t* f)
 
 static int _x64_make_bb_rcg(scf_graph_t* g, scf_basic_block_t* bb, scf_native_t* ctx)
 {
-	scf_list_t*        l;
-	scf_3ac_code_t*    c;
-	x64_rcg_handler_t* h;
+	scf_list_t*         l;
+	scf_3ac_code_t*     c;
+	x64_rcg_handler_pt  h;
 
 	for (l = scf_list_head(&bb->code_list_head); l != scf_list_sentinel(&bb->code_list_head); l = scf_list_next(l)) {
 
@@ -489,7 +489,7 @@ static int _x64_make_bb_rcg(scf_graph_t* g, scf_basic_block_t* bb, scf_native_t*
 			return -EINVAL;
 		}
 
-		int ret = h->func(ctx, c, g);
+		int ret = h(ctx, c, g);
 		if (ret < 0)
 			return ret;
 	}
@@ -638,13 +638,13 @@ static int _x64_make_insts_for_list(scf_native_t* ctx, scf_list_t* h, int bb_off
 
 		scf_3ac_code_t* c = scf_list_data(l, scf_3ac_code_t, list);
 
-		x64_inst_handler_t* h = scf_x64_find_inst_handler(c->op->type);
+		x64_inst_handler_pt h = scf_x64_find_inst_handler(c->op->type);
 		if (!h) {
 			scf_loge("3ac operator '%s' not supported\n", c->op->name);
 			return -EINVAL;
 		}
 
-		ret = h->func(ctx, c);
+		ret = h(ctx, c);
 		if (ret < 0) {
 			scf_3ac_code_print(c, NULL);
 			scf_loge("3ac op '%s' make inst failed\n", c->op->name);

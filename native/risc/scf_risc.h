@@ -60,18 +60,11 @@ typedef struct {
 
 } risc_rcg_node_t;
 
-typedef struct {
-	int 	type;
-	int		(*func)(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g);
-} risc_rcg_handler_t;
+typedef int (*risc_rcg_handler_pt )(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g);
+typedef int (*risc_inst_handler_pt)(scf_native_t* ctx, scf_3ac_code_t* c);
 
-typedef struct {
-	int 	type;
-	int		(*func)(scf_native_t* ctx, scf_3ac_code_t* c);
-} risc_inst_handler_t;
-
-risc_rcg_handler_t*  scf_risc_find_rcg_handler(const int op_type);
-risc_inst_handler_t* scf_risc_find_inst_handler(const int op_type);
+risc_rcg_handler_pt   scf_risc_find_rcg_handler(const int op_type);
+risc_inst_handler_pt  scf_risc_find_inst_handler(const int op_type);
 
 int  risc_rcg_find_node(scf_graph_node_t** pp, scf_graph_t* g, scf_dag_node_t* dn, scf_register_t* reg);
 int _risc_rcg_make_node(scf_graph_node_t** pp, scf_graph_t* g, scf_dag_node_t* dn, scf_register_t* reg);

@@ -1098,14 +1098,14 @@ int x64_dereference_reg(x64_sib_t* sib, scf_dag_node_t* base, scf_dag_node_t* me
 	scf_register_t* rb = NULL;
 	scf_variable_t*     vb = base->var;
 
-	scf_logw("base->color: %ld\n", base->color);
+	scf_logd("base->color: %ld\n", base->color);
 
 	int ret  = x64_select_reg(&rb, base, c, f, 1);
 	if (ret < 0) {
 		scf_loge("\n");
 		return ret;
 	}
-	scf_logw("base->color: %ld\n", base->color);
+	scf_logd("base->color: %ld\n", base->color);
 
 	if (vb->nb_pointers + vb->nb_dimentions > 1 || vb->type >= SCF_STRUCT)
 		sib->size = 8;

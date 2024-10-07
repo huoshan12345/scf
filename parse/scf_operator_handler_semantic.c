@@ -23,7 +23,7 @@ static int _scf_op_semantic_node(scf_ast_t* ast, scf_node_t* node, scf_handler_d
 		}
 	}
 
-	scf_operator_handler_t*	h = scf_find_semantic_operator_handler(op->type);
+	scf_operator_handler_pt	h = scf_find_semantic_operator_handler(op->type);
 	if (!h) {
 		scf_loge("\n");
 		return -1;
@@ -32,7 +32,7 @@ static int _scf_op_semantic_node(scf_ast_t* ast, scf_node_t* node, scf_handler_d
 	scf_variable_t** pret = d->pret;
 
 	d->pret = &node->result;
-	int ret = h->func(ast, node->nodes, node->nb_nodes, d);
+	int ret = h(ast, node->nodes, node->nb_nodes, d);
 	d->pret = pret;
 
 	return ret;
@@ -585,7 +585,7 @@ static int _scf_expr_calculate_internal(scf_ast_t* ast, scf_node_t* node, void* 
 		node->result_nodes = NULL;
 	}
 
-	scf_operator_handler_t* h;
+	scf_operator_handler_pt h;
 	scf_handler_data_t*     d    = data;
 	scf_variable_t**	    pret = d->pret; // save d->pret, and reload it before return
 
@@ -612,7 +612,7 @@ static int _scf_expr_calculate_internal(scf_ast_t* ast, scf_node_t* node, void* 
 
 		d->pret = &node->result;
 
-		if (h->func(ast, node->nodes, node->nb_nodes, d) < 0)
+		if (h(ast, node->nodes, node->nb_nodes, d) < 0)
 			goto _error;
 
 	} else {
@@ -636,7 +636,7 @@ static int _scf_expr_calculate_internal(scf_ast_t* ast, scf_node_t* node, void* 
 
 		d->pret = &node->result;
 
-		if (h->func(ast, node->nodes, node->nb_nodes, d) < 0)
+		if (h(ast, node->nodes, node->nb_nodes, d) < 0)
 			goto _error;
 	}
 
@@ -3082,99 +3082,94 @@ static int _scf_op_semantic_va_end(scf_ast_t* ast, scf_node_t** nodes, int nb_no
 	return 0;
 }
 
-scf_operator_handler_t semantic_operator_handlers[] = {
-	{SCF_OP_EXPR,           _scf_op_semantic_expr},
-	{SCF_OP_CALL,           _scf_op_semantic_call},
+scf_operator_handler_pt  semantic_operator_handlers[SCF_N_OPS] =
+{
+	[SCF_OP_EXPR       ]  =  _scf_op_semantic_expr,
+	[SCF_OP_CALL       ]  =  _scf_op_semantic_call,
 
-	{SCF_OP_ARRAY_INDEX,    _scf_op_semantic_array_index},
-	{SCF_OP_POINTER,        _scf_op_semantic_pointer},
-	{SCF_OP_CREATE,         _scf_op_semantic_create},
+	[SCF_OP_ARRAY_INDEX]  =  _scf_op_semantic_array_index,
+	[SCF_OP_POINTER    ]  =  _scf_op_semantic_pointer,
+	[SCF_OP_CREATE     ]  =  _scf_op_semantic_create,
 
-	{SCF_OP_VA_START,       _scf_op_semantic_va_start},
-	{SCF_OP_VA_ARG,         _scf_op_semantic_va_arg},
-	{SCF_OP_VA_END,         _scf_op_semantic_va_end},
+	[SCF_OP_VA_START   ]  =  _scf_op_semantic_va_start,
+	[SCF_OP_VA_ARG     ]  =  _scf_op_semantic_va_arg,
+	[SCF_OP_VA_END     ]  =  _scf_op_semantic_va_end,
 
-	{SCF_OP_CONTAINER,      _scf_op_semantic_container},
+	[SCF_OP_CONTAINER  ]  =  _scf_op_semantic_container,
 
-	{SCF_OP_SIZEOF,         _scf_op_semantic_sizeof},
-	{SCF_OP_TYPE_CAST,      _scf_op_semantic_type_cast},
-	{SCF_OP_LOGIC_NOT,      _scf_op_semantic_logic_not},
-	{SCF_OP_BIT_NOT,        _scf_op_semantic_bit_not},
-	{SCF_OP_NEG,            _scf_op_semantic_neg},
-	{SCF_OP_POSITIVE,       _scf_op_semantic_positive},
+	[SCF_OP_SIZEOF     ]  =  _scf_op_semantic_sizeof,
+	[SCF_OP_TYPE_CAST  ]  =  _scf_op_semantic_type_cast,
+	[SCF_OP_LOGIC_NOT  ]  =  _scf_op_semantic_logic_not,
+	[SCF_OP_BIT_NOT    ]  =  _scf_op_semantic_bit_not,
+	[SCF_OP_NEG        ]  =  _scf_op_semantic_neg,
+	[SCF_OP_POSITIVE   ]  =  _scf_op_semantic_positive,
 
-	{SCF_OP_INC,            _scf_op_semantic_inc},
-	{SCF_OP_DEC,            _scf_op_semantic_dec},
+	[SCF_OP_INC        ]  =  _scf_op_semantic_inc,
+	[SCF_OP_DEC        ]  =  _scf_op_semantic_dec,
 
-	{SCF_OP_INC_POST,       _scf_op_semantic_inc_post},
-	{SCF_OP_DEC_POST,       _scf_op_semantic_dec_post},
+	[SCF_OP_INC_POST   ]  =  _scf_op_semantic_inc_post,
+	[SCF_OP_DEC_POST   ]  =  _scf_op_semantic_dec_post,
 
-	{SCF_OP_DEREFERENCE,    _scf_op_semantic_dereference},
-	{SCF_OP_ADDRESS_OF,     _scf_op_semantic_address_of},
+	[SCF_OP_DEREFERENCE]  =  _scf_op_semantic_dereference,
+	[SCF_OP_ADDRESS_OF ]  =  _scf_op_semantic_address_of,
 
-	{SCF_OP_MUL,            _scf_op_semantic_mul},
-	{SCF_OP_DIV,            _scf_op_semantic_div},
-	{SCF_OP_MOD,            _scf_op_semantic_mod},
+	[SCF_OP_MUL        ]  =  _scf_op_semantic_mul,
+	[SCF_OP_DIV        ]  =  _scf_op_semantic_div,
+	[SCF_OP_MOD        ]  =  _scf_op_semantic_mod,
 
-	{SCF_OP_ADD,            _scf_op_semantic_add},
-	{SCF_OP_SUB,            _scf_op_semantic_sub},
+	[SCF_OP_ADD        ]  =  _scf_op_semantic_add,
+	[SCF_OP_SUB        ]  =  _scf_op_semantic_sub,
 
-	{SCF_OP_SHL,            _scf_op_semantic_shl},
-	{SCF_OP_SHR,            _scf_op_semantic_shr},
+	[SCF_OP_SHL        ]  =  _scf_op_semantic_shl,
+	[SCF_OP_SHR        ]  =  _scf_op_semantic_shr,
 
-	{SCF_OP_BIT_AND,        _scf_op_semantic_bit_and},
-	{SCF_OP_BIT_OR,         _scf_op_semantic_bit_or},
+	[SCF_OP_BIT_AND    ]  =  _scf_op_semantic_bit_and,
+	[SCF_OP_BIT_OR     ]  =  _scf_op_semantic_bit_or,
 
-	{SCF_OP_EQ,             _scf_op_semantic_eq},
-	{SCF_OP_NE,             _scf_op_semantic_ne},
-	{SCF_OP_GT,             _scf_op_semantic_gt},
-	{SCF_OP_LT,             _scf_op_semantic_lt},
-	{SCF_OP_GE,             _scf_op_semantic_ge},
-	{SCF_OP_LE,             _scf_op_semantic_le},
+	[SCF_OP_EQ         ]  =  _scf_op_semantic_eq,
+	[SCF_OP_NE         ]  =  _scf_op_semantic_ne,
+	[SCF_OP_GT         ]  =  _scf_op_semantic_gt,
+	[SCF_OP_LT         ]  =  _scf_op_semantic_lt,
+	[SCF_OP_GE         ]  =  _scf_op_semantic_ge,
+	[SCF_OP_LE         ]  =  _scf_op_semantic_le,
 
-	{SCF_OP_LOGIC_AND,      _scf_op_semantic_logic_and},
-	{SCF_OP_LOGIC_OR,       _scf_op_semantic_logic_or},
+	[SCF_OP_LOGIC_AND  ]  =  _scf_op_semantic_logic_and,
+	[SCF_OP_LOGIC_OR   ]  =  _scf_op_semantic_logic_or,
 
-	{SCF_OP_ASSIGN,         _scf_op_semantic_assign},
-	{SCF_OP_ADD_ASSIGN,     _scf_op_semantic_add_assign},
-	{SCF_OP_SUB_ASSIGN,     _scf_op_semantic_sub_assign},
-	{SCF_OP_MUL_ASSIGN,     _scf_op_semantic_mul_assign},
-	{SCF_OP_DIV_ASSIGN,     _scf_op_semantic_div_assign},
-	{SCF_OP_MOD_ASSIGN,     _scf_op_semantic_mod_assign},
-	{SCF_OP_SHL_ASSIGN,     _scf_op_semantic_shl_assign},
-	{SCF_OP_SHR_ASSIGN,     _scf_op_semantic_shr_assign},
-	{SCF_OP_AND_ASSIGN,     _scf_op_semantic_and_assign},
-	{SCF_OP_OR_ASSIGN,      _scf_op_semantic_or_assign},
+	[SCF_OP_ASSIGN     ]  =  _scf_op_semantic_assign,
+	[SCF_OP_ADD_ASSIGN ]  =  _scf_op_semantic_add_assign,
+	[SCF_OP_SUB_ASSIGN ]  =  _scf_op_semantic_sub_assign,
+	[SCF_OP_MUL_ASSIGN ]  =  _scf_op_semantic_mul_assign,
+	[SCF_OP_DIV_ASSIGN ]  =  _scf_op_semantic_div_assign,
+	[SCF_OP_MOD_ASSIGN ]  =  _scf_op_semantic_mod_assign,
+	[SCF_OP_SHL_ASSIGN ]  =  _scf_op_semantic_shl_assign,
+	[SCF_OP_SHR_ASSIGN ]  =  _scf_op_semantic_shr_assign,
+	[SCF_OP_AND_ASSIGN ]  =  _scf_op_semantic_and_assign,
+	[SCF_OP_OR_ASSIGN  ]  =  _scf_op_semantic_or_assign,
 
-	{SCF_OP_BLOCK,          _scf_op_semantic_block},
-	{SCF_OP_RETURN,         _scf_op_semantic_return},
-	{SCF_OP_BREAK,          _scf_op_semantic_break},
-	{SCF_OP_CONTINUE,       _scf_op_semantic_continue},
-	{SCF_OP_GOTO,           _scf_op_semantic_goto},
-	{SCF_LABEL,             _scf_op_semantic_label},
+	[SCF_OP_BLOCK      ]  =  _scf_op_semantic_block,
+	[SCF_OP_RETURN     ]  =  _scf_op_semantic_return,
+	[SCF_OP_BREAK      ]  =  _scf_op_semantic_break,
+	[SCF_OP_CONTINUE   ]  =  _scf_op_semantic_continue,
+	[SCF_OP_GOTO       ]  =  _scf_op_semantic_goto,
+	[SCF_LABEL         ]  =  _scf_op_semantic_label,
 
-	{SCF_OP_IF,             _scf_op_semantic_if},
-	{SCF_OP_WHILE,          _scf_op_semantic_while},
-	{SCF_OP_DO,             _scf_op_semantic_do},
-	{SCF_OP_FOR,            _scf_op_semantic_for},
+	[SCF_OP_IF         ]  =  _scf_op_semantic_if,
+	[SCF_OP_WHILE      ]  =  _scf_op_semantic_while,
+	[SCF_OP_DO         ]  =  _scf_op_semantic_do,
+	[SCF_OP_FOR        ]  =  _scf_op_semantic_for,
 
-	{SCF_OP_SWITCH,         _scf_op_semantic_switch},
-	{SCF_OP_CASE,           _scf_op_semantic_case},
-	{SCF_OP_DEFAULT,        _scf_op_semantic_default},
+	[SCF_OP_SWITCH     ]  =  _scf_op_semantic_switch,
+	[SCF_OP_CASE       ]  =  _scf_op_semantic_case,
+	[SCF_OP_DEFAULT    ]  =  _scf_op_semantic_default,
 };
 
-scf_operator_handler_t* scf_find_semantic_operator_handler(const int type)
+scf_operator_handler_pt  scf_find_semantic_operator_handler(const int type)
 {
-	int i;
-	for (i = 0; i < sizeof(semantic_operator_handlers) / sizeof(semantic_operator_handlers[0]); i++) {
+	if (type < 0 || type >= SCF_N_OPS)
+		return NULL;
 
-		scf_operator_handler_t* h = &semantic_operator_handlers[i];
-
-		if (type == h->type)
-			return h;
-	}
-
-	return NULL;
+	return semantic_operator_handlers[type];
 }
 
 int scf_function_semantic_analysis(scf_ast_t* ast, scf_function_t* f)

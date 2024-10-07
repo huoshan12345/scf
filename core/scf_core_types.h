@@ -28,7 +28,8 @@ typedef struct scf_ecomponent_s  ScfEcomponent;
 typedef struct scf_efunction_s   ScfEfunction;
 typedef struct scf_eboard_s      ScfEboard;
 
-enum scf_core_types {
+enum scf_core_types
+{
 	SCF_OP_ADD	= 0,    // +
 	SCF_OP_SUB,         // -
 	SCF_OP_MUL,         // *
@@ -114,6 +115,9 @@ enum scf_core_types {
 	SCF_OP_BREAK,		// break statement
 	SCF_OP_CONTINUE,	// continue statement
 	SCF_OP_ASYNC,       // async statement
+
+	SCF_LABEL,          // label
+	SCF_OP_GOTO,        // goto statement
 
 	SCF_N_OPS, // total operators
 
@@ -202,7 +206,6 @@ enum scf_core_types {
 	SCF_OP_3AC_NOP,
 	SCF_OP_3AC_END,
 
-	SCF_OP_GOTO,		// goto statement
 	SCF_N_3AC_OPS,      // totaol 3ac operators
 
 	SCF_VAR_CHAR,       // char variable
@@ -231,8 +234,6 @@ enum scf_core_types {
 	SCF_VAR_FLOAT,      // float variable
 	SCF_VAR_DOUBLE,		// double variable
 
-
-	SCF_LABEL,			// label
 
 	SCF_FUNCTION,		// function
 
@@ -296,7 +297,7 @@ static int scf_type_is_var(int type)
 
 static int scf_type_is_operator(int type)
 {
-	return type >= SCF_OP_ADD && type <= SCF_OP_GOTO;
+	return type >= SCF_OP_ADD && type < SCF_N_3AC_OPS;
 }
 
 static int scf_type_is_cmp_operator(int type)

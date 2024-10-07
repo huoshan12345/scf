@@ -81,6 +81,7 @@ struct scf_dn_status_s {
 
 scf_dn_index_t*   scf_dn_index_alloc();
 scf_dn_index_t*   scf_dn_index_clone(scf_dn_index_t* di);
+scf_dn_index_t*   scf_dn_index_ref  (scf_dn_index_t* di);
 void              scf_dn_index_free (scf_dn_index_t* di);
 
 int               scf_dn_index_same(const scf_dn_index_t* di0, const scf_dn_index_t* di1);
@@ -240,4 +241,3 @@ static inline int scf_ds_nb_pointers(scf_dn_status_t* ds)
 	} while (0)
 
 #endif
-
