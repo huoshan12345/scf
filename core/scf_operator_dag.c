@@ -260,6 +260,33 @@ SCF_DAG_BINARY(mul, MUL)
 SCF_DAG_BINARY(div, DIV)
 SCF_DAG_BINARY(mod, MOD)
 
+static int _scf_dag_op_assign(scf_list_t* h, scf_dag_node_t* parent, scf_dag_node_t** nodes, int nb_nodes)
+{
+	assert(2 == nb_nodes);
+
+	scf_3ac_operand_t*  dst;
+	scf_3ac_code_t*     c;
+	scf_list_t*         l;
+
+	if (!parent->direct)
+		return _scf_3ac_code_2(h, SCF_OP_ASSIGN, nodes[0], nodes[1]);
+
+	if (!nodes[1]->direct) {
+		nodes [1]->direct = nodes[0];
+
+		l = scf_list_tail(h);
+		c = scf_list_data(l, scf_3ac_code_t, list);
+
+		assert(1 == c->dsts->size);
+		dst = c->dsts->data[0];
+
+		dst->node     = nodes[0]->node;
+		dst->dag_node = nodes[0];
+		return 0;
+	}
+
+	return _scf_3ac_code_2(h, SCF_OP_ASSIGN, nodes[0], nodes[1]->direct);
+}
 
 #define SCF_DAG_BINARY_ASSIGN(name, op) \
 static int _scf_dag_op_##name(scf_list_t* h, scf_dag_node_t* parent, scf_dag_node_t** nodes, int nb_nodes) \
@@ -267,7 +294,6 @@ static int _scf_dag_op_##name(scf_list_t* h, scf_dag_node_t* parent, scf_dag_nod
 	assert(2 == nb_nodes); \
 	return _scf_3ac_code_2(h, SCF_OP_##op, nodes[0], nodes[1]); \
 }
-SCF_DAG_BINARY_ASSIGN(assign,     ASSIGN)
 SCF_DAG_BINARY_ASSIGN(add_assign, ADD_ASSIGN)
 SCF_DAG_BINARY_ASSIGN(sub_assign, SUB_ASSIGN)
 

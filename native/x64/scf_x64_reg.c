@@ -633,7 +633,7 @@ int x64_overflow_reg2(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c, 
 			continue;
 
 		for (j  = 0; j < r2->dag_nodes->size; ) {
-			dn2 = r2->dag_nodes->data[j];
+			dn2 =        r2->dag_nodes->data[j];
 
 			if (dn2 == dn) {
 				j++;
@@ -652,7 +652,9 @@ int x64_overflow_reg2(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c, 
 
 static int _x64_overflow_reg3(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c, scf_function_t* f)
 {
-	scf_register_t*	  r2;
+	scf_variable_t*   v;
+	scf_variable_t*   v2;
+	scf_register_t*   r2;
 	scf_dn_status_t*  ds2;
 	scf_dag_node_t*   dn2;
 
@@ -678,27 +680,27 @@ static int _x64_overflow_reg3(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_cod
 			}
 
 			ds2 = scf_vector_find_cmp(c->active_vars, dn2, scf_dn_status_cmp);
-			if (!ds2) {
-				j++;
-				continue;
-			}
 
-			if (!ds2->active) {
+			if (!ds2 || !ds2->active) {
+				assert(0 == scf_vector_del(r2->dag_nodes, dn2));
+#if 1
+				v2 = dn2->var;
+				if (v2->w)
+					scf_logw("drop inactive v2_%d_%d/%s, bp_offset: %d\n", v2->w->line, v2->w->pos, v2->w->text->data, v2->bp_offset);
+				else
+					scf_logw("drop inactive v2_%#lx, bp_offset: %d\n", 0xffff & (uintptr_t)v2, v2->bp_offset);
+#endif
+				dn2->loaded = 0;
+				dn2->color  = -1;
 				j++;
 				continue;
 			}
 #if 0
-			scf_variable_t* v  = dn->var;
-			scf_variable_t* v2 = dn2->var;
+			v  = dn->var;
 			if (v->w)
 				scf_logi("v_%d_%d/%s, bp_offset: %d\n", v->w->line, v->w->pos, v->w->text->data, v->bp_offset);
 			else
 				scf_logi("v_%#lx, bp_offset: %d\n", 0xffff & (uintptr_t)v, v->bp_offset);
-
-			if (v2->w)
-				scf_logi("v2_%d_%d/%s, bp_offset: %d\n", v2->w->line, v2->w->pos, v2->w->text->data, v2->bp_offset);
-			else
-				scf_logi("v2_%#lx, bp_offset: %d\n", 0xffff & (uintptr_t)v2, v2->bp_offset);
 #endif
 			int ret = x64_save_var(dn2, c, f);
 			if (ret < 0)

@@ -42,6 +42,17 @@ static inline void scf_list_add_front(scf_list_t* h, scf_list_t* n)
 	h->next = n;
 }
 
+static inline void scf_list_mov2(scf_list_t* h0, scf_list_t* h1)
+{
+	if (h1->next == h1)
+		return;
+
+	h0->prev->next = h1->next;
+	h1->next->prev = h0->prev;
+	h1->prev->next = h0;
+	h0->prev       = h1->prev;
+}
+
 #define SCF_LIST_INIT(h)	{&h, &h}
 
 #define scf_list_data(l, type, member)	((type*)((char*)l - offsetof(type, member)))

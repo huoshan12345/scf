@@ -5,6 +5,8 @@ extern scf_optimizer_t   scf_optimizer_inline;
 extern scf_optimizer_t   scf_optimizer_dag;
 
 extern scf_optimizer_t   scf_optimizer_call;
+extern scf_optimizer_t   scf_optimizer_common_expr;
+
 extern scf_optimizer_t   scf_optimizer_pointer_alias;
 extern scf_optimizer_t   scf_optimizer_active_vars;
 
@@ -31,6 +33,8 @@ static scf_optimizer_t*  scf_optimizers[] =
 	&scf_optimizer_dag,
 
 	&scf_optimizer_call,
+	&scf_optimizer_common_expr,
+
 	&scf_optimizer_pointer_alias,
 	&scf_optimizer_active_vars,
 

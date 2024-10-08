@@ -19,17 +19,20 @@ enum scf_dn_alias_type
 	SCF_DN_ALIAS_ALLOC,
 };
 
-struct scf_dag_node_s {
-	scf_list_t			list; // for dag node list in scope
+struct scf_dag_node_s
+{
+	scf_list_t          list; // for dag node list in scope
 
-	int					type;	// node type
+	int                 type; // node type
 
-	scf_variable_t*		var;
+	scf_variable_t*     var;
 	scf_dag_node_t*     old;
 	scf_node_t*         node;
 
-	scf_vector_t*		parents;
-	scf_vector_t*		childs;
+	scf_vector_t*       parents;
+	scf_vector_t*       childs;
+
+	scf_dag_node_t*     direct;
 
 	void*               rabi;
 	void*               rabi2;

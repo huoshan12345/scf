@@ -122,6 +122,7 @@ void                scf_bb_loop_print (scf_bb_group_t* loop);
 void                scf_basic_block_print(scf_basic_block_t* bb, scf_list_t* sentinel);
 void                scf_basic_block_print_list(scf_list_t* h);
 
+int                 scf_basic_block_vars(scf_basic_block_t* bb, scf_list_t* bb_list_head);
 int                 scf_basic_block_dag (scf_basic_block_t* bb, scf_list_t* bb_list_head, scf_list_t* dag_list_head);
 int                 scf_basic_block_dag2(scf_basic_block_t* bb, scf_list_t* dag_list_head);
 
