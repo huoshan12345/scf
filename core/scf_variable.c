@@ -242,35 +242,32 @@ scf_variable_t*	scf_variable_clone(scf_variable_t* v)
 	return v2;
 }
 
-scf_variable_t*	scf_variable_ref(scf_variable_t* var)
+scf_variable_t*	scf_variable_ref(scf_variable_t* v)
 {
-	var->refs++;
-	return var;
+	v->refs++;
+	return v;
 }
 
-void scf_variable_free(scf_variable_t* var)
+void scf_variable_free(scf_variable_t* v)
 {
-	assert(var);
+	if (v) {
+		if (--v->refs > 0)
+			return;
 
-	var->refs--;
-	if (var->refs > 0) {
-		return;
-	} else if (var->refs < 0) {
-		assert(0); // BUGS
+		assert(0 == v->refs);
+
+		if (v->w) {
+			scf_lex_word_free(v->w);
+			v->w = NULL;
+		}
+
+		if (v->signature) {
+			scf_string_free(v->signature);
+			v->signature = NULL;
+		}
+
+		free(v);
 	}
-
-	if (var->w) {
-		scf_lex_word_free(var->w);
-		var->w = NULL;
-	}
-
-	if (var->signature) {
-		scf_string_free(var->signature);
-		var->signature = NULL;
-	}
-
-	free(var);
-	var = NULL;
 }
 
 void scf_variable_add_array_dimention(scf_variable_t* var, int dimention_size)

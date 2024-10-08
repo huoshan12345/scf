@@ -835,7 +835,7 @@ static int _find_so_sym(scf_elf_file_t** pso, scf_vector_t* dlls, scf_elf_sym_t*
 	}
 
 	if (j == dlls->size) {
-		scf_loge("\n");
+		scf_loge("linker don't find symbel '%s'\n", sym->name);
 		return -1;
 	}
 

@@ -617,6 +617,36 @@ int scf_basic_block_dag2(scf_basic_block_t* bb, scf_list_t* dag_list_head)
 	return 0;
 }
 
+int scf_basic_block_vars(scf_basic_block_t* bb, scf_list_t* bb_list_head)
+{
+	scf_list_t*     l;
+	scf_3ac_code_t* c;
+
+	int ret = _bb_vars(bb);
+	if (ret < 0) {
+		scf_loge("\n");
+		return ret;
+	}
+
+	for (l = scf_list_head(&bb->code_list_head); l != scf_list_sentinel(&bb->code_list_head); l = scf_list_next(l)) {
+		c  = scf_list_data(l, scf_3ac_code_t, list);
+
+		if (c->active_vars)
+			scf_vector_clear(c->active_vars, (void (*)(void*))scf_dn_status_free);
+		else {
+			c->active_vars = scf_vector_alloc();
+			if (!c->active_vars)
+				return -ENOMEM;
+		}
+
+		ret = _copy_to_active_vars(c->active_vars, bb->var_dag_nodes);
+		if (ret < 0)
+			return ret;
+	}
+
+	return scf_basic_block_inited_vars(bb, bb_list_head);
+}
+
 int scf_basic_block_dag(scf_basic_block_t* bb, scf_list_t* bb_list_head, scf_list_t* dag_list_head)
 {
 	scf_list_t*     l;
