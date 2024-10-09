@@ -5,13 +5,11 @@ static int __bb_dfs_tree(scf_basic_block_t* root, scf_vector_t* edges, int* tota
 	scf_basic_block_t* bb;
 	scf_bb_edge_t*     edge;
 
-	int i;
-	int ret;
-
 	assert(!root->jmp_flag);
 
 	root->visited_flag = 1;
 
+	int i;
 	for (i = 0; i < root->nexts->size; ++i) {
 		bb =        root->nexts->data[i];
 
@@ -25,7 +23,7 @@ static int __bb_dfs_tree(scf_basic_block_t* root, scf_vector_t* edges, int* tota
 		edge->start = root;
 		edge->end   = bb;
 
-		ret = scf_vector_add(edges, edge);
+		int ret = scf_vector_add(edges, edge);
 		if (ret < 0) {
 			free(edge);
 			return ret;
@@ -48,14 +46,12 @@ static int _bb_dfs_tree(scf_list_t* bb_list_head, scf_function_t* f)
 	if (scf_list_empty(bb_list_head))
 		return 0;
 
-	scf_list_t*        l;
 	scf_basic_block_t* bb;
+	scf_list_t*        l;
 
 	int total = 0;
 
-	for (l = scf_list_tail(bb_list_head); l != scf_list_sentinel(bb_list_head);
-			l = scf_list_prev(l)) {
-
+	for (l = scf_list_tail(bb_list_head); l != scf_list_sentinel(bb_list_head); l = scf_list_prev(l)) {
 		bb = scf_list_data(l, scf_basic_block_t, list);
 
 		bb->visited_flag = 0;
@@ -110,7 +106,6 @@ static int _bb_intersection(scf_vector_t* dst, scf_vector_t* src)
 	}
 
 	dst->size = k0;
-
 	return 0;
 }
 
@@ -136,10 +131,9 @@ static int _bb_find_dominators(scf_list_t* bb_list_head)
 	if (!all)
 		return -ENOMEM;
 
-	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head);
-			l = scf_list_next(l)) {
-
+	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head); l = scf_list_next(l)) {
 		bb = scf_list_data(l, scf_basic_block_t, list);
+
 		if (bb->jmp_flag)
 			continue;
 
@@ -151,7 +145,7 @@ static int _bb_find_dominators(scf_list_t* bb_list_head)
 	scf_vector_qsort(all, _bb_cmp_dfo);
 
 	for (i = 0; i < all->size; i++) {
-		bb = all->data[i];
+		bb =        all->data[i];
 
 		scf_vector_qsort(bb->prevs, _bb_cmp_dfo);
 		scf_vector_qsort(bb->nexts, _bb_cmp_dfo);
@@ -220,7 +214,7 @@ static int _bb_find_dominators(scf_list_t* bb_list_head)
 			scf_basic_block_t* dom1 = bb;
 
 			for (j = 0; j < dominators->size; j++) {
-				dom = dominators->data[j];
+				dom       = dominators->data[j];
 
 				if (bb->dfo == dom->dfo)
 					break;
@@ -229,7 +223,6 @@ static int _bb_find_dominators(scf_list_t* bb_list_head)
 					break;
 			}
 			if (bb->dfo < dom->dfo) {
-
 				for (; j < dominators->size; j++) {
 					dom                 = dominators->data[j];
 					dominators->data[j] = dom1;
@@ -298,29 +291,22 @@ static int _optimize_dominators(scf_ast_t* ast, scf_function_t* f, scf_vector_t*
 	if (!f)
 		return -EINVAL;
 
-	scf_list_t*        bb_list_head = &f->basic_block_list_head;
-	scf_list_t*        l;
-	scf_bb_edge_t*     edge;
-	scf_basic_block_t* bb;
-
-	int ret;
-	int i;
+	scf_bb_edge_t*  edge;
+	scf_list_t*     bb_list_head = &f->basic_block_list_head;
 
 	if (scf_list_empty(bb_list_head))
 		return 0;
 
 	scf_vector_clear(f->dfs_tree, free);
 
-	ret = _bb_dfs_tree(bb_list_head, f);
+	int ret = _bb_dfs_tree(bb_list_head, f);
 	if (ret < 0)
 		return ret;
 
+	int i;
 	for (i = 0; i < f->dfs_tree->size; i++) {
 		edge      = f->dfs_tree->data[i];
-
-		scf_logd("bb_%p_%d --> bb_%p_%d\n",
-				edge->start, edge->start->dfo,
-				edge->end,   edge->end->dfo);
+		scf_logd("bb_%p_%d --> bb_%p_%d\n", edge->start, edge->start->dfo, edge->end, edge->end->dfo);
 	}
 
 	ret = _bb_find_dominators(bb_list_head);

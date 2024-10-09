@@ -20,7 +20,13 @@ static int _optimize_dag(scf_ast_t* ast, scf_function_t* f, scf_vector_t* functi
 
 		bb->index = f->nb_basic_blocks++;
 
-		int ret = scf_basic_block_dag(bb, bb_list_head, &f->dag_list_head);
+		int ret = scf_basic_block_dag(bb, &f->dag_list_head);
+		if (ret < 0) {
+			scf_loge("\n");
+			return ret;
+		}
+
+		ret = scf_basic_block_vars(bb, bb_list_head);
 		if (ret < 0) {
 			scf_loge("\n");
 			return ret;

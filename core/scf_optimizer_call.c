@@ -4,12 +4,11 @@
 static int _alias_call(scf_vector_t* aliases, scf_3ac_code_t* c, scf_basic_block_t* bb, scf_list_t* bb_list_head)
 {
 	scf_3ac_operand_t* src;
+	scf_dn_status_t*   ds;
 	scf_dag_node_t*    dn;
 	scf_variable_t*    v;
-	scf_vector_t*      dn_pointers;
-	scf_dn_status_t*  status;
 	scf_dag_node_t*    dn_pointer;
-	scf_dag_node_t*    dn_alias;
+	scf_vector_t*      dn_pointers;
 
 	int i;
 	int j;
@@ -48,8 +47,7 @@ static int _alias_call(scf_vector_t* aliases, scf_3ac_code_t* c, scf_basic_block
 			dn_pointer = dn_pointers->data[j];
 			v          = dn_pointer->var;
 
-			scf_logd("i: %d, dn_pointers->size: %d, pointer: v_%d_%d/%s\n",
-					i, dn_pointers->size, v->w->line, v->w->pos, v->w->text->data);
+			scf_logd("i: %d, dn_pointers->size: %d, pointer: v_%d_%d/%s\n", i, dn_pointers->size, v->w->line, v->w->pos, v->w->text->data);
 
 			ret  = __alias_dereference(aliases, dn_pointer, c, bb, bb_list_head);
 			if (ret < 0) {
@@ -63,42 +61,42 @@ static int _alias_call(scf_vector_t* aliases, scf_3ac_code_t* c, scf_basic_block
 			if (dn != dn_pointer && dn->var->nb_pointers > 1) {
 				scf_logd("pointer: v_%d_%d/%s, SCF_DN_ALIAS_ALLOC\n", v->w->line, v->w->pos, v->w->text->data);
 
-				status = calloc(1, sizeof(scf_dn_status_t));
-				if (!status) {
+				ds = calloc(1, sizeof(scf_dn_status_t));
+				if (!ds) {
 					scf_vector_free(dn_pointers);
 					return -ENOMEM;
 				}
 
-				ret = scf_vector_add(aliases, status);
+				ret = scf_vector_add(aliases, ds);
 				if (ret < 0) {
-					scf_dn_status_free(status);
+					scf_dn_status_free(ds);
 					scf_vector_free(dn_pointers);
 					return ret;
 				}
 
-				status->dag_node   = dn_pointer;
-				status->alias_type = SCF_DN_ALIAS_ALLOC;
+				ds->dag_node   = dn_pointer;
+				ds->alias_type = SCF_DN_ALIAS_ALLOC;
 			}
 
-			for ( ; k  < aliases->size; k++) {
-				status = aliases->data[k];
+			for ( ; k < aliases->size; k++) {
+				ds    = aliases->data[k];
 
-				if (SCF_DN_ALIAS_VAR != status->alias_type)
+				if (SCF_DN_ALIAS_VAR != ds->alias_type)
 					continue;
 
-				dn_alias = status->alias;
-
-				if (0 == dn_alias->var->nb_pointers)
+				if (0 == ds->alias->var->nb_pointers)
 					continue;
 
-				ret = scf_vector_add_unique(dn_pointers, dn_alias);
+				ret = scf_vector_add_unique(dn_pointers, ds->alias);
 				if (ret < 0) {
 					scf_vector_free(dn_pointers);
 					return ret;
 				}
 			}
 		}
+
 		scf_vector_free(dn_pointers);
+		dn_pointers = NULL;
 	}
 
 	return 0;

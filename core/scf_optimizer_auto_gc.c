@@ -672,10 +672,10 @@ static int _find_ds_malloced(scf_basic_block_t* bb, void* data)
 {
 	scf_dn_status_t* ds = data;
 
-	if (!scf_vector_find_cmp(bb->ds_malloced, ds, scf_dn_status_cmp_same_dn_indexes))
+	if (!scf_vector_find_cmp(bb->ds_malloced, ds, scf_ds_cmp_same_indexes))
 		return 0;
 
-	if (scf_vector_find_cmp(bb->ds_freed, ds, scf_dn_status_cmp_same_dn_indexes)) {
+	if (scf_vector_find_cmp(bb->ds_freed, ds, scf_ds_cmp_same_indexes)) {
 		scf_loge("error free dn: \n");
 		return -1;
 	}
@@ -1088,13 +1088,13 @@ static int _bb_split_prev_add_free(scf_ast_t* ast, scf_function_t* f, scf_basic_
 		for (k  = 0; k < bb2->ds_malloced->size; k++) {
 			ds2 =        bb2->ds_malloced->data[k];
 
-			if (0 == scf_dn_status_cmp_same_dn_indexes(ds2, ds))
+			if (0 == scf_ds_cmp_same_indexes(ds2, ds))
 				continue;
 
-			if (scf_vector_find_cmp(bb2->ds_freed, ds2, scf_dn_status_cmp_same_dn_indexes))
+			if (scf_vector_find_cmp(bb2->ds_freed, ds2, scf_ds_cmp_same_indexes))
 				continue;
 
-			if (scf_vector_find_cmp(bb1->ds_malloced, ds2, scf_dn_status_cmp_same_dn_indexes))
+			if (scf_vector_find_cmp(bb1->ds_malloced, ds2, scf_ds_cmp_same_indexes))
 				continue;
 
 			scf_dn_status_t* ds3 = scf_dn_status_clone(ds2);
@@ -1126,10 +1126,10 @@ static int _bb_split_prevs(scf_basic_block_t* bb, scf_dn_status_t* ds, scf_vecto
 	for (i = 0; i < bb->prevs->size; i++) {
 		bb_prev   = bb->prevs->data[i];
 
-		if (!scf_vector_find_cmp(bb_prev->ds_malloced, ds, scf_dn_status_cmp_like_dn_indexes))
+		if (!scf_vector_find_cmp(bb_prev->ds_malloced, ds, scf_ds_cmp_like_indexes))
 			continue;
 
-		if (scf_vector_find_cmp(bb_prev->ds_freed, ds, scf_dn_status_cmp_same_dn_indexes))
+		if (scf_vector_find_cmp(bb_prev->ds_freed, ds, scf_ds_cmp_same_indexes))
 			continue;
 
 		int ret = scf_vector_add(bb_split_prevs, bb_prev);
@@ -1387,10 +1387,10 @@ static int _bb_prevs_malloced(scf_basic_block_t* bb, scf_vector_t* ds_malloced)
 
 			scf_dn_status_t* ds = bb_prev->ds_malloced->data[j];
 
-			if (scf_vector_find_cmp(bb_prev->ds_freed, ds, scf_dn_status_cmp_same_dn_indexes))
+			if (scf_vector_find_cmp(bb_prev->ds_freed, ds, scf_ds_cmp_same_indexes))
 				continue;
 
-			if (scf_vector_find_cmp(ds_malloced, ds, scf_dn_status_cmp_like_dn_indexes))
+			if (scf_vector_find_cmp(ds_malloced, ds, scf_ds_cmp_like_indexes))
 				continue;
 
 			scf_dn_status_t* ds2 = scf_dn_status_clone(ds);
@@ -1435,13 +1435,13 @@ static int _bb_need_ref(scf_dn_status_t* ds_obj, scf_vector_t* ds_malloced,
 		if (!ds_alias->dag_node)
 			continue;
 
-		if (scf_vector_find_cmp(ds_malloced, ds_alias, scf_dn_status_cmp_like_dn_indexes)) {
+		if (scf_vector_find_cmp(ds_malloced, ds_alias, scf_ds_cmp_like_indexes)) {
 			need = 1;
 			break;
 		}
 	}
 
-	if (scf_vector_find_cmp(ds_malloced, ds_obj, scf_dn_status_cmp_like_dn_indexes)) {
+	if (scf_vector_find_cmp(ds_malloced, ds_obj, scf_ds_cmp_like_indexes)) {
 		need = 1;
 	}
 
@@ -1449,75 +1449,18 @@ static int _bb_need_ref(scf_dn_status_t* ds_obj, scf_vector_t* ds_malloced,
 	return need;
 }
 
-static int _bb_split_prevs_need_free(scf_dn_status_t* ds_obj, scf_vector_t* ds_malloced, scf_vector_t* bb_split_prevs,
-		scf_3ac_code_t* c, scf_basic_block_t* bb, scf_list_t* bb_list_head)
+static int _bb_split_prevs_need_free(scf_dn_status_t* ds_obj, scf_vector_t* ds_malloced, scf_vector_t* bb_split_prevs, scf_basic_block_t* bb)
 {
-	scf_dn_status_t* ds_obj2;
-	scf_dn_status_t* ds_alias;
-	scf_dn_index_t*  di;
-	scf_vector_t*    aliases;
+	if (scf_vector_find_cmp(ds_malloced, ds_obj, scf_ds_cmp_like_indexes)) {
 
-	int ret;
-	int i;
-	int need = 0;
+		int ret = _bb_split_prevs(bb, ds_obj, bb_split_prevs);
+		if (ret < 0)
+			return ret;
 
-	aliases = scf_vector_alloc();
-	if (!aliases)
-		return -ENOMEM;
-
-#define SPLIT_PREVS_NEED_FREE(malloced, obj, split_prevs) \
-		do { \
-			scf_dn_status_t* ds; \
-			\
-			if (scf_vector_find_cmp(malloced, obj, scf_dn_status_cmp_like_dn_indexes)) { \
-				\
-				if (_bb_split_prevs(bb, obj, split_prevs) < 0) { \
-					ret = -ENOMEM; \
-					goto error; \
-				} \
-				\
-				need = 1; \
-			} \
-		} while (0)
-
-#if 0
-	ret = __bb_find_ds_alias(aliases, ds_obj, c, bb, bb_list_head);
-	if (ret < 0)
-		return ret;
-
-#if 0
-	printf("\n");
-	int k;
-	for (k = 0; k < ds_malloced->size; k++) {
-		ds_alias  = ds_malloced->data[k];
-
-		scf_loge("## k: %d, ds_malloced: %p, size: %d\n", k, ds_malloced, ds_malloced->size);
-		scf_dn_status_print(ds_alias);
+		return 1;
 	}
-#endif
-	for (i = 0; i < aliases->size; i++) {
-		ds_alias  = aliases->data[i];
 
-		if (!ds_alias->dag_node)
-			continue;
-
-
-		SPLIT_PREVS_NEED_FREE(ds_malloced, ds_alias, bb_split_prevs);
-	}
-		//		ds = scf_vector_find_cmp(malloced, obj, scf_dn_status_cmp_same_dn_indexes); \
-				if (ds) {\
-				    assert(0 == scf_vector_del(malloced, ds)); \
-				    scf_dn_status_free(ds); \
-				} \
-#endif
-#endif
-	SPLIT_PREVS_NEED_FREE(ds_malloced, ds_obj, bb_split_prevs);
-	ret = need;
-
-error:
-//	scf_vector_clear(aliases, ( void (*)(void*) ) scf_dn_status_free);
-	scf_vector_free (aliases);
-	return ret;
+	return 0;
 }
 
 static int _optimize_auto_gc_bb(scf_ast_t* ast, scf_function_t* f, scf_basic_block_t* bb, scf_list_t* bb_list_head)
@@ -1652,14 +1595,14 @@ static int _optimize_auto_gc_bb(scf_ast_t* ast, scf_function_t* f, scf_basic_blo
 		if (!bb_split_prevs)
 			return -ENOMEM;
 
-		ret = _bb_split_prevs_need_free(ds_obj, ds_malloced, bb_split_prevs, c, bb, bb_list_head);
+		ret = _bb_split_prevs_need_free(ds_obj, ds_malloced, bb_split_prevs, bb);
 		if (ret < 0) {
 			scf_loge("\n");
 			return ret;
 		}
 
 		if (ret) {
-			if (!scf_vector_find_cmp(ds_assigned, ds_obj, scf_dn_status_cmp_like_dn_indexes)
+			if (!scf_vector_find_cmp(ds_assigned, ds_obj, scf_ds_cmp_like_indexes)
 					&& bb_split_prevs->size > 0
 					&& bb_split_prevs->size < bb->prevs->size)
 
@@ -1719,7 +1662,7 @@ _ref:
 					ret->auto_gc_flag = 1;
 				}
 
-				if (!scf_vector_find_cmp(ds_malloced, ds_obj, scf_dn_status_cmp_like_dn_indexes)) {
+				if (!scf_vector_find_cmp(ds_malloced, ds_obj, scf_ds_cmp_like_indexes)) {
 
 					assert(0 == scf_vector_add(ds_malloced, ds_obj));
 				} else {
@@ -1765,7 +1708,7 @@ _ref:
 				if (ret < 0)
 					return ret;
 
-				if (!scf_vector_find_cmp(ds_malloced, ds_obj, scf_dn_status_cmp_like_dn_indexes)) {
+				if (!scf_vector_find_cmp(ds_malloced, ds_obj, scf_ds_cmp_like_indexes)) {
 
 					assert(0 == scf_vector_add(ds_malloced, ds_obj));
 				} else {
@@ -1827,7 +1770,6 @@ static int _optimize_auto_gc(scf_ast_t* ast, scf_function_t* f, scf_vector_t* fu
 		bb = scf_list_data(l, scf_basic_block_t, list);
 
 		for (l  = scf_list_next(l); l != scf_list_sentinel(bb_list_head); l = scf_list_next(l)) {
-
 			bb2 = scf_list_data(l, scf_basic_block_t, list);
 
 			if (!bb2->auto_ref_flag && !bb2->auto_free_flag)
@@ -1845,7 +1787,6 @@ static int _optimize_auto_gc(scf_ast_t* ast, scf_function_t* f, scf_vector_t* fu
 			return -ENOMEM;
 
 		for (l2 = scf_list_prev(l); l2 != scf_list_prev(start); l2 = scf_list_prev(l2)) {
-
 			bb  = scf_list_data(l2, scf_basic_block_t, list);
 
 			ret = scf_basic_block_active_vars(bb);
@@ -1890,7 +1831,7 @@ static int _optimize_auto_gc(scf_ast_t* ast, scf_function_t* f, scf_vector_t* fu
 
 				if (bb->auto_free_flag
 						&& bb2->auto_ref_flag
-						&& 0 == scf_dn_status_cmp_same_dn_indexes(bb->ds_auto_gc, bb2->ds_auto_gc)) {
+						&& 0 == scf_ds_cmp_same_indexes(bb->ds_auto_gc, bb2->ds_auto_gc)) {
 
 					scf_basic_block_t* bb3;
 					scf_basic_block_t* bb4;
@@ -1938,4 +1879,3 @@ scf_optimizer_t  scf_optimizer_auto_gc =
 
 	.flags    = SCF_OPTIMIZER_LOCAL,
 };
-

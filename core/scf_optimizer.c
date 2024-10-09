@@ -106,17 +106,16 @@ int scf_optimize(scf_ast_t* ast, scf_vector_t* functions)
 
 		scf_basic_block_print_list(&f->basic_block_list_head);
 
+		for (j = 0; j < f->bb_loops->size; j++) {
+			bbg       = f->bb_loops->data[j];
+
+			scf_bb_loop_print(bbg);
+		}
+
 		for (j = 0; j < f->bb_groups->size; j++) {
 			bbg       = f->bb_groups->data[j];
 
-			switch (bbg->loop_layers) {
-				case 0:
-					scf_bb_group_print(bbg);
-					break;
-				default:
-					scf_bb_loop_print(bbg);
-					break;
-			};
+			scf_bb_group_print(bbg);
 		}
 	}
 #endif

@@ -115,7 +115,6 @@ static int _bb_dfs_loop(scf_list_t* bb_list_head, scf_vector_t* loops)
 	int nblocks = 0;
 
 	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head); l = scf_list_next(l)) {
-
 		bb = scf_list_data(l, scf_basic_block_t, list);
 
 		bb->index = nblocks++;
@@ -142,24 +141,16 @@ static int _bb_dfs_loop(scf_list_t* bb_list_head, scf_vector_t* loops)
 				continue;
 			}
 
-			scf_vector_t* loop = scf_vector_alloc();
-			if (!loop)
+			scf_bb_group_t* bbg = scf_bb_group_alloc();
+			if (!bbg)
 				return -ENOMEM;
 
-			ret = __bb_dfs_loop(bb_list_head, bb, dom, loop);
+			ret = __bb_dfs_loop(bb_list_head, bb, dom, bbg->body);
 			if (ret < 0) {
-				scf_vector_free(loop);
+				scf_bb_group_free(bbg);
 				return ret;
 			}
-
-			scf_bb_group_t* bbg = calloc(1, sizeof(scf_bb_group_t));
-			if (!bbg) {
-				scf_vector_free(loop);
-				return -ENOMEM;
-			}
 			bbg->loop_layers = 1;
-			bbg->body        = loop;
-			loop             = NULL;
 
 			ret = bbg_find_entry_exit(bbg);
 			if (ret < 0) {
@@ -208,13 +199,10 @@ static int __bb_loop_merge(scf_vector_t* loops)
 				entry     = loop0->entries->data[k];
 
 				if (scf_vector_find(loop1->entries, entry))
-					break;
+					goto found;
 			}
-
-			if (k < loop0->entries->size)
-				break;
 		}
-
+found:
 		if (j == loops->size) {
 			i++;
 			continue;
@@ -369,8 +357,7 @@ static int __bb_loop_layers(scf_function_t* f)
 			if (k < loop0->body->size)
 				continue;
 
-			if (!loop0->loop_parent
-					|| loop0->loop_parent->body->size > loop1->body->size)
+			if (!loop0->loop_parent || loop0->loop_parent->body->size > loop1->body->size)
 				loop0->loop_parent = loop1;
 
 			if (loop1->loop_layers <= loop0->loop_layers + 1)
@@ -457,7 +444,6 @@ static int _bb_loop_add_pre_post(scf_function_t* f)
 		jmp = scf_list_data(scf_list_next(&bbg->entry->list), scf_basic_block_t, list);
 
 		if (jmp->jmp_flag) {
-
 			if (!jmp->jcc_flag)
 				return -EINVAL;
 		} else
@@ -709,7 +695,6 @@ static int _bb_not_in_loop(scf_function_t* f, scf_list_t* bb_list_head)
 
 	bbg = NULL;
 	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head); l = scf_list_next(l)) {
-
 		bb = scf_list_data(l, scf_basic_block_t, list);
 
 		if (bb->jmp_flag || bb->end_flag)
@@ -722,12 +707,10 @@ static int _bb_not_in_loop(scf_function_t* f, scf_list_t* bb_list_head)
 				bb2 =        bbg2->body->data[j];
 
 				if (bb == bb2)
-					break;
+					goto found;
 			}
-			if (j < bbg2->body->size)
-				break;
 		}
-
+found:
 		if (i < f->bb_loops->size) {
 			if (bbg) {
 				if (scf_vector_add(f->bb_groups, bbg) < 0) {
@@ -794,19 +777,8 @@ static int _optimize_loop(scf_ast_t* ast, scf_function_t* f, scf_vector_t* funct
 	if (scf_list_empty(bb_list_head))
 		return 0;
 
-	if (!f->bb_loops) {
-		f->bb_loops = scf_vector_alloc();
-		if (!f->bb_loops)
-			return -ENOMEM;
-	} else
-		scf_vector_clear(f->bb_loops, ( void (*)(void*) ) scf_vector_free);
-
-	if (!f->bb_groups) {
-		f ->bb_groups= scf_vector_alloc();
-		if (!f->bb_groups)
-			return -ENOMEM;
-	} else
-		scf_vector_clear(f->bb_groups, ( void (*)(void*) ) scf_vector_free);
+	scf_vector_clear(f->bb_loops,  ( void (*)(void*) )scf_bb_group_free);
+	scf_vector_clear(f->bb_groups, ( void (*)(void*) )scf_bb_group_free);
 
 	int ret = _bb_dfs_loop(bb_list_head, f->bb_loops);
 	if (ret < 0) {

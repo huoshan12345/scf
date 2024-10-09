@@ -507,11 +507,10 @@ static int _optimize_alias_bb(scf_basic_block_t* bb, scf_list_t* bb_list_head)
 	int ret;
 
 	do {
-		start = scf_list_head(&bb->code_list_head);
+		start = scf_list_head    (&bb->code_list_head);
 		end   = scf_list_sentinel(&bb->code_list_head);
 
-		ret   = __optimize_alias_bb(&end, start, bb, bb_list_head);
-
+		ret = __optimize_alias_bb(&end, start, bb, bb_list_head);
 		if (ret < 0) {
 			scf_loge("\n");
 			return ret;
@@ -538,9 +537,6 @@ static int _optimize_alias_bb(scf_basic_block_t* bb, scf_list_t* bb_list_head)
 		bb2->array_index_flag = bb->array_index_flag;
 
 		scf_basic_block_mov_code(scf_list_next(end), bb2, bb);
-
-//		SCF_XCHG(bb2->dn_status_initeds, bb->dn_status_initeds);
-//		scf_basic_block_inited_by3ac(bb);
 
 		scf_list_add_front(&bb->list, &bb2->list);
 

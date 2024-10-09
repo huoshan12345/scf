@@ -110,4 +110,3 @@ scf_optimizer_t  scf_optimizer_active_vars =
 
 	.flags    = SCF_OPTIMIZER_LOCAL,
 };
-

@@ -185,4 +185,3 @@ scf_optimizer_t  scf_optimizer_pointer_aliases =
 
 	.flags    = SCF_OPTIMIZER_LOCAL,
 };
-

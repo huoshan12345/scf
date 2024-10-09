@@ -100,7 +100,6 @@ scf_dn_status_t* scf_dn_status_null()
 		return NULL;
 
 	ds->refs = 1;
-
 	return ds;
 }
 
@@ -122,7 +121,7 @@ scf_dn_status_t* scf_dn_status_alloc(scf_dag_node_t* dn)
 	return ds;
 }
 
-int scf_dn_status_copy_dn(scf_dn_status_t* dst, scf_dn_status_t* src)
+int scf_ds_copy_dn(scf_dn_status_t* dst, scf_dn_status_t* src)
 {
 	scf_dn_index_t* di;
 	int i;
@@ -145,14 +144,14 @@ int scf_dn_status_copy_dn(scf_dn_status_t* dst, scf_dn_status_t* src)
 			return -ENOMEM;
 
 		for (i = 0; i < dst->dn_indexes->size; i++) {
-			di = dst->dn_indexes->data[i];
+			di =        dst->dn_indexes->data[i];
 			di->refs++;
 		}
 	}
 	return 0;
 }
 
-int scf_dn_status_copy_alias(scf_dn_status_t* dst, scf_dn_status_t* src)
+int scf_ds_copy_alias(scf_dn_status_t* dst, scf_dn_status_t* src)
 {
 	scf_dn_index_t* di;
 	int i;
@@ -176,7 +175,7 @@ int scf_dn_status_copy_alias(scf_dn_status_t* dst, scf_dn_status_t* src)
 			return -ENOMEM;
 
 		for (i = 0; i < dst->alias_indexes->size; i++) {
-			di = dst->alias_indexes->data[i];
+			di =        dst->alias_indexes->data[i];
 			di->refs++;
 		}
 	}
@@ -243,6 +242,7 @@ scf_dn_status_t* scf_dn_status_ref(scf_dn_status_t* ds)
 {
 	if (ds)
 		ds->refs++;
+	return ds;
 }
 
 void scf_dn_status_free(scf_dn_status_t* ds)
@@ -257,17 +257,13 @@ void scf_dn_status_free(scf_dn_status_t* ds)
 			return;
 
 		if (ds->dn_indexes) {
-			for (i = 0; i < ds->dn_indexes->size; i++)
-				scf_dn_index_free(ds->dn_indexes->data[i]);
-
-			scf_vector_free(ds->dn_indexes);
+			scf_vector_clear(ds->dn_indexes, (void (*)(void*))scf_dn_index_free);
+			scf_vector_free (ds->dn_indexes);
 		}
 
 		if (ds->alias_indexes) {
-			for (i = 0; i < ds->alias_indexes->size; i++)
-				scf_dn_index_free(ds->alias_indexes->data[i]);
-
-			scf_vector_free(ds->alias_indexes);
+			scf_vector_clear(ds->alias_indexes, (void (*)(void*))scf_dn_index_free);
+			scf_vector_free (ds->alias_indexes);
 		}
 
 		free(ds);
@@ -398,7 +394,7 @@ void scf_dag_node_free(scf_dag_node_t* dn)
 	}
 }
 
-static int _dn_status_cmp_dn_indexes(const void* p0, const void* p1,
+static int _ds_cmp_indexes(const void* p0, const void* p1,
 		int (*cmp)(const scf_dn_index_t*, const scf_dn_index_t*))
 {
 	const scf_dn_status_t* ds0 = p0;
@@ -431,17 +427,17 @@ static int _dn_status_cmp_dn_indexes(const void* p0, const void* p1,
 	return 0;
 }
 
-int scf_dn_status_cmp_same_dn_indexes(const void* p0, const void* p1)
+int scf_ds_cmp_same_indexes(const void* p0, const void* p1)
 {
-	return _dn_status_cmp_dn_indexes(p0, p1, scf_dn_index_same);
+	return _ds_cmp_indexes(p0, p1, scf_dn_index_same);
 }
 
-int scf_dn_status_cmp_like_dn_indexes(const void* p0, const void* p1)
+int scf_ds_cmp_like_indexes(const void* p0, const void* p1)
 {
-	return _dn_status_cmp_dn_indexes(p0, p1, scf_dn_index_like);
+	return _ds_cmp_indexes(p0, p1, scf_dn_index_like);
 }
 
-int scf_dn_status_cmp_alias(const void* p0, const void* p1)
+int scf_ds_cmp_alias(const void* p0, const void* p1)
 {
 	const scf_dn_status_t* v0 = p0;
 	const scf_dn_status_t* v1 = p1;
@@ -797,56 +793,6 @@ int scf_dag_find_roots(scf_list_t* h, scf_vector_t* roots)
 	return 0;
 }
 
-int scf_dag_find_leafs(scf_list_t* h, scf_vector_t* leafs)
-{
-	scf_dag_node_t* dn;
-	scf_list_t*     l;
-
-	for (l = scf_list_head(h); l != scf_list_sentinel(h); l = scf_list_next(l)) {
-		dn = scf_list_data(l, scf_dag_node_t, list);
-
-		if (!dn->childs) {
-			int ret = scf_vector_add_unique(leafs, dn);
-			if (ret < 0)
-				return ret;
-		}
-	}
-	return 0;
-}
-
-int scf_dag_root_find_leafs(scf_dag_node_t* root, scf_vector_t* leafs)
-{
-	if (!root->childs)
-		return scf_vector_add_unique(leafs, root);
-
-	scf_dag_node_t* dn;
-	int i;
-
-	for (i = 0; i < root->childs->size; i++) {
-		dn =        root->childs->data[i];
-
-		int ret = scf_dag_root_find_leafs(dn, leafs);
-		if (ret < 0)
-			return ret;
-	}
-	return 0;
-}
-
-int scf_dag_vector_find_leafs(scf_vector_t* roots, scf_vector_t* leafs)
-{
-	scf_dag_node_t* root;
-	int i;
-
-	for (i = 0; i < roots->size; i++) {
-		root      = roots->data[i];
-
-		int ret = scf_dag_root_find_leafs(root, leafs);
-		if (ret < 0)
-			return ret;
-	}
-	return 0;
-}
-
 static int _dn_status_index(scf_vector_t* indexes, scf_dag_node_t* dn_index, int type)
 {
 	scf_dn_index_t* di;
@@ -889,19 +835,23 @@ int scf_dn_status_alias_index(scf_dn_status_t* ds, scf_dag_node_t* dn_index, int
 	return _dn_status_index(ds->alias_indexes, dn_index, type);
 }
 
-void scf_dn_status_vector_clear_by_ds(scf_vector_t* vec, scf_dn_status_t* ds)
+void scf_ds_vector_clear_by_ds(scf_vector_t* vec, scf_dn_status_t* ds)
 {
 	scf_dn_status_t* ds2;
 
 	while (1) {
-		ds2 = scf_vector_find_cmp(vec, ds, scf_dn_status_cmp_same_dn_indexes);
+		ds2 = scf_vector_find_cmp(vec, ds, scf_ds_cmp_same_indexes);
 		if (!ds2)
 			break;
+
 		assert(0 == scf_vector_del(vec, ds2));
+
+		scf_dn_status_free(ds2);
+		ds2 = NULL;
 	}
 }
 
-void scf_dn_status_vector_clear_by_dn(scf_vector_t* vec, scf_dag_node_t* dn)
+void scf_ds_vector_clear_by_dn(scf_vector_t* vec, scf_dag_node_t* dn)
 {
 	scf_dn_status_t* ds;
 
@@ -909,7 +859,11 @@ void scf_dn_status_vector_clear_by_dn(scf_vector_t* vec, scf_dag_node_t* dn)
 		ds = scf_vector_find_cmp(vec, dn, scf_dn_status_cmp);
 		if (!ds)
 			break;
+
 		assert(0 == scf_vector_del(vec, ds));
+
+		scf_dn_status_free(ds);
+		ds = NULL;
 	}
 }
 
