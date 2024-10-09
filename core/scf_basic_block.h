@@ -123,8 +123,7 @@ void                scf_basic_block_print(scf_basic_block_t* bb, scf_list_t* sen
 void                scf_basic_block_print_list(scf_list_t* h);
 
 int                 scf_basic_block_vars(scf_basic_block_t* bb, scf_list_t* bb_list_head);
-int                 scf_basic_block_dag (scf_basic_block_t* bb, scf_list_t* bb_list_head, scf_list_t* dag_list_head);
-int                 scf_basic_block_dag2(scf_basic_block_t* bb, scf_list_t* dag_list_head);
+int                 scf_basic_block_dag (scf_basic_block_t* bb, scf_list_t* dag_list_head);
 
 int                 scf_basic_block_active_vars(scf_basic_block_t* bb);
 int                 scf_basic_block_inited_vars(scf_basic_block_t* bb, scf_list_t* bb_list_head);

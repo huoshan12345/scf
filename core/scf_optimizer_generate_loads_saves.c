@@ -27,12 +27,16 @@ static int _optimize_generate_loads_saves(scf_ast_t* ast, scf_function_t* f, scf
 	scf_basic_block_t* bb;
 	scf_basic_block_t* post;
 	scf_bb_group_t*    bbg;
+
+	scf_dn_status_t*   ds;
 	scf_dag_node_t*    dn;
 	scf_3ac_code_t*    load;
 	scf_3ac_code_t*    save;
 	scf_3ac_code_t*    c;
 
 	int i;
+	int j;
+	int k;
 	int ret;
 
 #define SCF_OPTIMIZER_LOAD(load_type, h) \
@@ -60,8 +64,7 @@ static int _optimize_generate_loads_saves(scf_ast_t* ast, scf_function_t* f, scf
 	f->nb_basic_blocks = 0;
 
 	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head); l = scf_list_next(l)) {
-
-		bb        = scf_list_data(l, scf_basic_block_t, list);
+		bb = scf_list_data(l, scf_basic_block_t, list);
 
 		bb->index = f->nb_basic_blocks++;
 
@@ -133,9 +136,6 @@ static int _optimize_generate_loads_saves(scf_ast_t* ast, scf_function_t* f, scf
 	for (i = 0; i < f->bb_groups->size; i++) {
 		bbg       = f->bb_groups->data[i];
 
-		scf_dn_status_t* ds;
-		int j;
-		int k;
 		for (j = 0; j < bbg->body->size; j++) {
 			bb =        bbg->body->data[j];
 
@@ -174,13 +174,10 @@ static int _optimize_generate_loads_saves(scf_ast_t* ast, scf_function_t* f, scf
 	}
 
 	for (i = 0; i < f->bb_loops->size; i++) {
-		bbg = f->bb_loops->data[i];
+		bbg       = f->bb_loops->data[i];
 
 		qsort(bbg->body->data, bbg->body->size, sizeof(void*), _bb_index_cmp);
 
-		scf_dn_status_t* ds;
-		int j;
-		int k;
 		for (j = 0; j < bbg->body->size; j++) {
 			bb =        bbg->body->data[j];
 
@@ -229,4 +226,3 @@ scf_optimizer_t  scf_optimizer_generate_loads_saves =
 
 	.flags    = SCF_OPTIMIZER_LOCAL,
 };
-

@@ -52,7 +52,7 @@ int __optimize_common_expr(scf_basic_block_t* bb, scf_function_t* f)
 	if (!roots)
 		return -ENOMEM;
 
-	ret = scf_basic_block_dag2(bb, &bb->dag_list_head);
+	ret = scf_basic_block_dag(bb, &bb->dag_list_head);
 	if (ret < 0)
 		goto error;
 
@@ -123,9 +123,7 @@ static int _optimize_common_expr(scf_ast_t* ast, scf_function_t* f, scf_vector_t
 			return ret;
 	}
 
-	scf_loge("-------------------------\n");
-	scf_basic_block_print_list(bb_list_head);
-	scf_loge("-------------------------\n");
+//	scf_basic_block_print_list(bb_list_head);
 	return 0;
 }
 

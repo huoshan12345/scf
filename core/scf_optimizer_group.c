@@ -22,7 +22,6 @@ int bbg_find_entry_exit(scf_bb_group_t* bbg)
 	} else
 		scf_vector_clear(bbg->exits, NULL);
 
-
 	for (j = 0; j < bbg->body->size; j++) {
 		bb =        bbg->body->data[j];
 
@@ -105,15 +104,10 @@ int _optimize_peep_hole(scf_bb_group_t* bbg, scf_basic_block_t* bb)
 static int _optimize_bbg_loads_saves(scf_function_t* f)
 {
 	scf_basic_block_t* bb;
-	scf_basic_block_t* bb2;
-	scf_basic_block_t* entry;
-	scf_basic_block_t* exit;
 	scf_bb_group_t*    bbg;
-	scf_dag_node_t*    dn;
 
 	int i;
 	int j;
-	int k;
 
 	for (i  = 0; i < f->bb_groups->size; i++) {
 		bbg =        f->bb_groups->data[i];
@@ -155,4 +149,3 @@ scf_optimizer_t  scf_optimizer_group =
 
 	.flags    = SCF_OPTIMIZER_LOCAL,
 };
-

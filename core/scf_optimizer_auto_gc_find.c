@@ -3,10 +3,10 @@
 
 static int _bb_find_ds(scf_basic_block_t* bb, scf_dn_status_t* ds_obj)
 {
-	if (scf_vector_find_cmp(bb->ds_freed, ds_obj, scf_dn_status_cmp_same_dn_indexes))
+	if (scf_vector_find_cmp(bb->ds_freed, ds_obj, scf_ds_cmp_same_indexes))
 		return 0;
 
-	if (scf_vector_find_cmp(bb->ds_malloced, ds_obj, scf_dn_status_cmp_same_dn_indexes))
+	if (scf_vector_find_cmp(bb->ds_malloced, ds_obj, scf_ds_cmp_same_indexes))
 		return 1;
 	return 0;
 }
@@ -15,7 +15,7 @@ static int _bb_add_ds(scf_basic_block_t* bb, scf_dn_status_t* ds_obj)
 {
 	scf_dn_status_t*   ds2;
 
-	ds2 = scf_vector_find_cmp(bb->ds_freed, ds_obj, scf_dn_status_cmp_same_dn_indexes);
+	ds2 = scf_vector_find_cmp(bb->ds_freed, ds_obj, scf_ds_cmp_same_indexes);
 	if (ds2) {
 		scf_vector_del(bb->ds_freed, ds2);
 		if (ds2 != ds_obj)
@@ -23,10 +23,10 @@ static int _bb_add_ds(scf_basic_block_t* bb, scf_dn_status_t* ds_obj)
 		ds2 = NULL;
 	}
 
-	ds2 = scf_vector_find_cmp(bb->ds_malloced, ds_obj, scf_dn_status_cmp_same_dn_indexes);
+	ds2 = scf_vector_find_cmp(bb->ds_malloced, ds_obj, scf_ds_cmp_same_indexes);
 	if (!ds2) {
 
-		ds2 = scf_vector_find_cmp(bb->ds_malloced, ds_obj, scf_dn_status_cmp_like_dn_indexes);
+		ds2 = scf_vector_find_cmp(bb->ds_malloced, ds_obj, scf_ds_cmp_like_indexes);
 		if (!ds2) {
 			assert(0 == scf_vector_add(bb->ds_malloced, ds_obj));
 			return 0;
@@ -43,9 +43,9 @@ static int _bb_del_ds(scf_basic_block_t* bb, scf_dn_status_t* ds_obj)
 {
 	scf_dn_status_t*   ds2;
 
-	if (!scf_vector_find_cmp(bb->ds_freed, ds_obj, scf_dn_status_cmp_same_dn_indexes)) {
+	if (!scf_vector_find_cmp(bb->ds_freed, ds_obj, scf_ds_cmp_same_indexes)) {
 
-		ds2 = scf_vector_find_cmp(bb->ds_freed, ds_obj, scf_dn_status_cmp_like_dn_indexes);
+		ds2 = scf_vector_find_cmp(bb->ds_freed, ds_obj, scf_ds_cmp_like_indexes);
 		if (!ds2) {
 			ds2 = scf_dn_status_clone(ds_obj);
 			assert(ds2);
@@ -54,7 +54,7 @@ static int _bb_del_ds(scf_basic_block_t* bb, scf_dn_status_t* ds_obj)
 		}
 	}
 
-	ds2 = scf_vector_find_cmp(bb->ds_malloced, ds_obj, scf_dn_status_cmp_same_dn_indexes);
+	ds2 = scf_vector_find_cmp(bb->ds_malloced, ds_obj, scf_ds_cmp_same_indexes);
 	if (ds2) {
 		scf_vector_del(bb->ds_malloced, ds2);
 		if (ds2 != ds_obj)
@@ -390,15 +390,15 @@ static int _bb_find_ds_alias(scf_dn_status_t* ds_obj, scf_3ac_code_t* c, scf_bas
 		if (!ds_alias->dag_node)
 			continue;
 
-		if (scf_vector_find_cmp(bb->ds_malloced, ds_alias, scf_dn_status_cmp_same_dn_indexes)
-				&& !scf_vector_find_cmp(bb->ds_freed, ds_alias, scf_dn_status_cmp_same_dn_indexes)) {
+		if (scf_vector_find_cmp(bb->ds_malloced, ds_alias, scf_ds_cmp_same_indexes)
+				&& !scf_vector_find_cmp(bb->ds_freed, ds_alias, scf_ds_cmp_same_indexes)) {
 			need = 1;
 			break;
 		}
 	}
 
-	if (scf_vector_find_cmp(bb->ds_malloced, ds_obj, scf_dn_status_cmp_same_dn_indexes)
-			&& !scf_vector_find_cmp(bb->ds_freed, ds_obj, scf_dn_status_cmp_same_dn_indexes)) {
+	if (scf_vector_find_cmp(bb->ds_malloced, ds_obj, scf_ds_cmp_same_indexes)
+			&& !scf_vector_find_cmp(bb->ds_freed, ds_obj, scf_ds_cmp_same_indexes)) {
 		need = 1;
 	}
 
@@ -847,13 +847,13 @@ static int _auto_gc_bb_next_find(scf_basic_block_t* bb, void* data, scf_vector_t
 		for (k = 0; k < bb->ds_malloced->size; k++) {
 			ds =        bb->ds_malloced->data[k];
 
-			if (scf_vector_find_cmp(bb->ds_freed, ds, scf_dn_status_cmp_same_dn_indexes))
+			if (scf_vector_find_cmp(bb->ds_freed, ds, scf_ds_cmp_same_indexes))
 				continue;
 
-			if (scf_vector_find_cmp(next_bb->ds_freed, ds, scf_dn_status_cmp_same_dn_indexes))
+			if (scf_vector_find_cmp(next_bb->ds_freed, ds, scf_ds_cmp_same_indexes))
 				continue;
 
-			ds2 = scf_vector_find_cmp(next_bb->ds_malloced, ds, scf_dn_status_cmp_like_dn_indexes);
+			ds2 = scf_vector_find_cmp(next_bb->ds_malloced, ds, scf_ds_cmp_like_indexes);
 			if (ds2) {
 				uint32_t tmp = ds2->ret;
 

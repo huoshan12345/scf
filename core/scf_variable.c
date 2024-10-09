@@ -93,74 +93,83 @@ int scf_member_add_index(scf_member_t* m, scf_variable_t* member, int index)
 
 scf_variable_t*	scf_variable_alloc(scf_lex_word_t* w, scf_type_t* t)
 {
-	scf_variable_t* var = calloc(1, sizeof(scf_variable_t));
-	assert(var);
+	scf_variable_t* v = calloc(1, sizeof(scf_variable_t));
+	if (!v)
+		return NULL;
 
-	var->refs = 1;
-	var->type = t->type;
+	v->refs = 1;
+	v->type = t->type;
 
-	var->const_flag  = t->node.const_flag;
-	var->nb_pointers = t->nb_pointers;
-	var->func_ptr    = t->func_ptr;
+	v->const_flag  = t->node.const_flag;
+	v->nb_pointers = t->nb_pointers;
+	v->func_ptr    = t->func_ptr;
 
-	if (var->nb_pointers > 0)
-		var->size = sizeof(void*);
+	if (v->nb_pointers > 0)
+		v->size = sizeof(void*);
 	else
-		var->size = t->size;
+		v->size = t->size;
 
-	if (var->nb_pointers > 1)
-		var->data_size = sizeof(void*);
+	if (v->nb_pointers > 1)
+		v->data_size = sizeof(void*);
 	else
-		var->data_size = t->size;
+		v->data_size = t->size;
 
-	var->offset = t->offset;
+	v->offset = t->offset;
 
 	if (w) {
-		var->w = scf_lex_word_clone(w);
+		v->w = scf_lex_word_clone(w);
+		if (!v->w) {
+			free(v);
+			return NULL;
+		}
 
 		if (scf_lex_is_const(w)) {
-			var->const_flag         = 1;
-			var->const_literal_flag = 1;
+			v->const_flag         = 1;
+			v->const_literal_flag = 1;
 
 			switch (w->type) {
 				case SCF_LEX_WORD_CONST_CHAR:
-					var->data.u32 = w->data.u32;
+					v->data.u32 = w->data.u32;
 					break;
+
 				case SCF_LEX_WORD_CONST_STRING:
-					var->data.s = scf_string_clone(w->data.s);
+					v->data.s = scf_string_clone(w->data.s);
+					if (!v->data.s) {
+						scf_lex_word_free(v->w);
+						free(v);
+						return NULL;
+					}
 					break;
 
 				case SCF_LEX_WORD_CONST_INT:
-					var->data.i = w->data.i;
+					v->data.i = w->data.i;
 					break;
 				case SCF_LEX_WORD_CONST_U32:
-					var->data.u32 = w->data.u32;
+					v->data.u32 = w->data.u32;
 					break;
 				case SCF_LEX_WORD_CONST_FLOAT:
-					var->data.f = w->data.f;
+					v->data.f = w->data.f;
 					break;
 				case SCF_LEX_WORD_CONST_DOUBLE:
-					var->data.d = w->data.d;
+					v->data.d = w->data.d;
 					break;
 				case SCF_LEX_WORD_CONST_COMPLEX:
-					var->data.z = w->data.z;
+					v->data.z = w->data.z;
 					break;
 
 				case SCF_LEX_WORD_CONST_I64:
-					var->data.i64 = w->data.i64;
+					v->data.i64 = w->data.i64;
 					break;
 				case SCF_LEX_WORD_CONST_U64:
-					var->data.u64 = w->data.u64;
+					v->data.u64 = w->data.u64;
 					break;
 				default:
 					break;
 			};
 		}
-	} else {
-		var->w = NULL;
 	}
 
-	return var;
+	return v;
 }
 
 scf_variable_t*	scf_variable_clone(scf_variable_t* v)
@@ -200,18 +209,7 @@ scf_variable_t*	scf_variable_clone(scf_variable_t* v)
 	v2->data_size = v->data_size;
 	v2->offset    = v->offset;
 
-	if (SCF_STRUCT >= v->type) {
-		if (v->data.p) {
-			v2->data.p = malloc(v->size);
-			if (!v2->data.p) {
-				scf_variable_free(v2);
-				return NULL;
-			}
-
-			memcpy(v2->data.p, v->data.p, v->size);
-		}
-
-	} else if (v->nb_dimentions > 0) {
+	if (scf_variable_is_struct(v) || scf_variable_is_array(v)) {
 
 		int size = scf_variable_size(v);
 
@@ -223,6 +221,14 @@ scf_variable_t*	scf_variable_clone(scf_variable_t* v)
 			}
 
 			memcpy(v2->data.p, v->data.p, size);
+		}
+
+	} else if (scf_variable_const_string(v)) {
+
+		v2->data.s = scf_string_clone(v->data.s);
+		if (!v2->data.s) {
+			scf_variable_free(v2);
+			return NULL;
 		}
 	} else
 		memcpy(&v2->data, &v->data, sizeof(v->data));
@@ -256,28 +262,48 @@ void scf_variable_free(scf_variable_t* v)
 
 		assert(0 == v->refs);
 
-		if (v->w) {
-			scf_lex_word_free(v->w);
-			v->w = NULL;
-		}
-
 		if (v->signature) {
 			scf_string_free(v->signature);
 			v->signature = NULL;
 		}
 
+		if (v->dimentions) {
+			free(v->dimentions);
+			v->dimentions = NULL;
+		}
+
+		if (scf_variable_is_struct(v) || scf_variable_is_array(v)) {
+			if (v->data.p) {
+				free(v->data.p);
+				v->data.p = NULL;
+			}
+
+		} else if (scf_variable_const_string(v)) {
+			if (v->data.s) {
+				scf_string_free(v->data.s);
+				v->data.s = NULL;
+			}
+		}
+
+		if (v->w) {
+			scf_lex_word_free(v->w);
+			v->w = NULL;
+		}
+
 		free(v);
+		v = NULL;
 	}
 }
 
-void scf_variable_add_array_dimention(scf_variable_t* var, int dimention_size)
+void scf_variable_add_array_dimention(scf_variable_t* v, int dimention_size)
 {
-	assert(var);
+	assert(v);
 
-	void* p = realloc(var->dimentions, sizeof(int) * (var->nb_dimentions + 1));
+	void* p = realloc(v->dimentions, sizeof(int) * (v->nb_dimentions + 1));
 	assert(p);
-	var->dimentions = p;
-	var->dimentions[var->nb_dimentions++] = dimention_size;
+
+	v->dimentions = p;
+	v->dimentions[v->nb_dimentions++] = dimention_size;
 }
 
 void scf_variable_get_array_member(scf_variable_t* array, int index, scf_variable_t* member)
@@ -302,29 +328,22 @@ void scf_variable_set_array_member(scf_variable_t* array, int index, scf_variabl
 	memcpy(array->data.p + index * member->size, &(member->data.i), member->size);
 }
 
-void scf_variable_print(scf_variable_t* var)
+void scf_variable_print(scf_variable_t* v)
 {
-	assert(var);
+	assert(v);
 
-	if (var->nb_pointers > 0) {
-		printf("%s(),%d, print var: name: %s, type: %d, value: %p\n",
-				__func__, __LINE__, var->w->text->data, var->type, var->data.p);
-		return;	
+	if (v->nb_pointers > 0) {
+		printf("print var: name: %s, type: %d, value: %p\n", v->w->text->data, v->type, v->data.p);
+		return;
 	}
 
-	if (SCF_VAR_CHAR == var->type || SCF_VAR_INT == var->type) {
-		printf("%s(),%d, print var: name: %s, type: %d, value: %d\n",
-				__func__, __LINE__, var->w->text->data, var->type, var->data.i);
+	if (SCF_VAR_CHAR == v->type || SCF_VAR_INT == v->type)
+		printf("print var: name: %s, type: %d, value: %d\n", v->w->text->data, v->type, v->data.i);
 
-		//assert(0);
-
-	} else if (SCF_VAR_DOUBLE == var->type) {
-		printf("%s(),%d, print var: name: %s, type: %d, value: %lg\n",
-				__func__, __LINE__, var->w->text->data, var->type, var->data.d);
-	} else {
-		printf("%s(),%d, print var: name: %s, type: %d\n",
-				__func__, __LINE__, var->w->text->data, var->type);
-	}
+	else if (SCF_VAR_DOUBLE == v->type)
+		printf("print var: name: %s, type: %d, value: %lg\n", v->w->text->data, v->type, v->data.d);
+	else
+		printf("print var: name: %s, type: %d\n", v->w->text->data, v->type);
 }
 
 int scf_variable_same_type(scf_variable_t* v0, scf_variable_t* v1)
@@ -457,5 +476,3 @@ int scf_variable_size(scf_variable_t* v)
 
 	return capacity * v->size;
 }
-
-

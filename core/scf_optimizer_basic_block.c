@@ -211,7 +211,7 @@ static int __optimize_basic_block(scf_basic_block_t* bb, scf_function_t* f)
 	if (!roots)
 		return -ENOMEM;
 
-	ret = scf_basic_block_dag2(bb, &bb->dag_list_head);
+	ret = scf_basic_block_dag(bb, &bb->dag_list_head);
 	if (ret < 0)
 		goto error;
 
@@ -266,8 +266,7 @@ static int _optimize_basic_block(scf_ast_t* ast, scf_function_t* f, scf_vector_t
 	scf_logd("------- %s() ------\n", f->node.w->text->data);
 
 	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head); l = scf_list_next(l)) {
-
-		bb  = scf_list_data(l, scf_basic_block_t, list);
+		bb = scf_list_data(l, scf_basic_block_t, list);
 
 		if (bb->jmp_flag
 				|| bb->end_flag

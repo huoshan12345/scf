@@ -84,7 +84,6 @@ const char* scf_type_find_abbrev(const char* name)
 	int n = sizeof(type_abbrevs) / sizeof(type_abbrevs[0]);
 
 	for (i = 0; i < n; i++) {
-
 		t  = &type_abbrevs[i];
 
 		if (!strcmp(t->name, name))
@@ -93,4 +92,3 @@ const char* scf_type_find_abbrev(const char* name)
 
 	return NULL;
 }
-
