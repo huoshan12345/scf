@@ -536,7 +536,7 @@ static int _optimize_alias_bb(scf_basic_block_t* bb, scf_list_t* bb_list_head)
 		bb2->dereference_flag = 0;
 		bb2->array_index_flag = bb->array_index_flag;
 
-		scf_basic_block_mov_code(scf_list_next(end), bb2, bb);
+		scf_basic_block_mov_code(bb2, scf_list_next(end), bb);
 
 		scf_list_add_front(&bb->list, &bb2->list);
 

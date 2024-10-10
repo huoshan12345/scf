@@ -171,7 +171,7 @@ static int __optimize_call_bb(scf_3ac_code_t* c, scf_basic_block_t* bb, scf_list
 				bb1->ret_flag         = bb0->ret_flag; \
 				bb0->ret_flag         = 0; \
 				scf_list_add_front(&bb0->list, &bb1->list); \
-				scf_basic_block_mov_code(start, bb1, bb0); \
+				scf_basic_block_mov_code(bb1, start, bb0); \
 			} while (0)
 
 static int _optimize_call_bb(scf_basic_block_t* bb, scf_list_t* bb_list_head)
@@ -265,4 +265,3 @@ scf_optimizer_t  scf_optimizer_call =
 
 	.flags    = SCF_OPTIMIZER_LOCAL,
 };
-

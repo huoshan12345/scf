@@ -7,13 +7,13 @@ static int __bb_dfs_tree(scf_basic_block_t* root, scf_vector_t* edges, int* tota
 
 	assert(!root->jmp_flag);
 
-	root->visited_flag = 1;
+	root->visit_flag = 1;
 
 	int i;
 	for (i = 0; i < root->nexts->size; ++i) {
 		bb =        root->nexts->data[i];
 
-		if (bb->visited_flag)
+		if (bb->visit_flag)
 			continue;
 
 		edge = malloc(sizeof(scf_bb_edge_t));
@@ -54,7 +54,7 @@ static int _bb_dfs_tree(scf_list_t* bb_list_head, scf_function_t* f)
 	for (l = scf_list_tail(bb_list_head); l != scf_list_sentinel(bb_list_head); l = scf_list_prev(l)) {
 		bb = scf_list_data(l, scf_basic_block_t, list);
 
-		bb->visited_flag = 0;
+		bb->visit_flag = 0;
 
 		if (!bb->jmp_flag)
 			++total;

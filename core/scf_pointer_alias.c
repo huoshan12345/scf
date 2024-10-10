@@ -12,14 +12,14 @@ static int __bb_dfs_initeds(scf_basic_block_t* root, scf_dn_status_t* ds, scf_ve
 
 	assert(!root->jmp_flag);
 
-	root->visited_flag = 1;
+	root->visit_flag = 1;
 
 	int like = scf_dn_status_is_like(ds);
 
 	for (i = 0; i < root->prevs->size; ++i) {
 		bb =        root->prevs->data[i];
 
-		if (bb->visited_flag)
+		if (bb->visit_flag)
 			continue;
 
 		for (j = 0; j < bb->dn_status_initeds->size; j++) {
@@ -40,7 +40,7 @@ static int __bb_dfs_initeds(scf_basic_block_t* root, scf_dn_status_t* ds, scf_ve
 			if (ret < 0)
 				return ret;
 
-			bb->visited_flag = 1;
+			bb->visit_flag = 1;
 			continue;
 		}
 
@@ -62,15 +62,15 @@ static int __bb_dfs_check_initeds(scf_basic_block_t* root, scf_basic_block_t* ob
 	if (root == obj)
 		return -1;
 
-	if (root->visited_flag)
+	if (root->visit_flag)
 		return 0;
 
-	root->visited_flag = 1;
+	root->visit_flag = 1;
 
 	for (i = 0; i < root->nexts->size; ++i) {
 		bb =        root->nexts->data[i];
 
-		if (bb->visited_flag)
+		if (bb->visit_flag)
 			continue;
 
 		if (bb == obj)
@@ -86,16 +86,7 @@ static int __bb_dfs_check_initeds(scf_basic_block_t* root, scf_basic_block_t* ob
 
 static int _bb_dfs_initeds(scf_list_t* bb_list_head, scf_basic_block_t* bb, scf_dn_status_t* ds, scf_vector_t* initeds)
 {
-	scf_list_t*        l;
-	scf_basic_block_t* bb2;
-
-	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head);
-			l = scf_list_next(l)) {
-
-		bb2 = scf_list_data(l, scf_basic_block_t, list);
-
-		bb2->visited_flag = 0;
-	}
+	scf_basic_block_visit_flag(bb_list_head, 0);
 
 	return __bb_dfs_initeds(bb, ds, initeds);
 }
@@ -104,21 +95,14 @@ static int _bb_dfs_check_initeds(scf_list_t* bb_list_head, scf_basic_block_t* bb
 {
 	scf_list_t*        l;
 	scf_basic_block_t* bb2;
-
 	int i;
 
-	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head);
-			l = scf_list_next(l)) {
-
-		bb2 = scf_list_data(l, scf_basic_block_t, list);
-
-		bb2->visited_flag = 0;
-	}
+	scf_basic_block_visit_flag(bb_list_head, 0);
 
 	for (i = 0; i < initeds->size; i++) {
 		bb2       = initeds->data[i];
 
-		bb2->visited_flag = 1;
+		bb2->visit_flag = 1;
 	}
 
 	l   = scf_list_head(bb_list_head);
