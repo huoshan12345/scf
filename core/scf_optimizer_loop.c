@@ -7,12 +7,12 @@ static int __bb_dfs_loop2(scf_basic_block_t* root, scf_vector_t* loop)
 
 	assert(!root->jmp_flag);
 
-	root->visited_flag = 1;
+	root->visit_flag = 1;
 
 	for (i = 0; i < root->prevs->size; ++i) {
 		bb =        root->prevs->data[i];
 
-		if (bb->visited_flag)
+		if (bb->visit_flag)
 			continue;
 
 		int ret = scf_vector_add(loop, bb);
@@ -29,9 +29,6 @@ static int __bb_dfs_loop2(scf_basic_block_t* root, scf_vector_t* loop)
 
 static int __bb_dfs_loop(scf_list_t* bb_list_head, scf_basic_block_t* bb, scf_basic_block_t* dom, scf_vector_t* loop)
 {
-	scf_list_t*        l;
-	scf_basic_block_t* bb2;
-
 	int ret = scf_vector_add(loop, bb);
 	if (ret < 0)
 		return ret;
@@ -43,15 +40,9 @@ static int __bb_dfs_loop(scf_list_t* bb_list_head, scf_basic_block_t* bb, scf_ba
 	if (ret < 0)
 		return ret;
 
-	for (l  = scf_list_tail(bb_list_head); l != scf_list_sentinel(bb_list_head); l = scf_list_prev(l)) {
-		bb2 = scf_list_data(l, scf_basic_block_t, list);
+	scf_basic_block_visit_flag(bb_list_head, 0);
 
-		if (bb2->jmp_flag)
-			continue;
-
-		bb2->visited_flag = 0;
-	}
-	dom->visited_flag = 1;
+	dom->visit_flag = 1;
 
 	return __bb_dfs_loop2(bb, loop);
 }
@@ -467,34 +458,9 @@ static int _bb_loop_add_pre_post(scf_function_t* f)
 			jmp = scf_list_data(scf_list_prev(&exit->list), scf_basic_block_t, list);
 
 			if (!jmp->jmp_flag) {
-
-				scf_3ac_operand_t* dst;
-				scf_3ac_code_t*    c;
-
-				jmp = scf_basic_block_alloc();
+				jmp = scf_basic_block_jcc(exit, f, SCF_OP_GOTO);
 				if (!jmp)
 					return -ENOMEM;
-
-				c = scf_3ac_jmp_code(SCF_OP_GOTO, NULL, NULL);
-				if (!c) {
-					scf_basic_block_free(jmp);
-					return -ENOMEM;
-				}
-
-				if (scf_vector_add(f->jmps, c) < 0) {
-					scf_3ac_code_free(c);
-					scf_basic_block_free(jmp);
-					return -ENOMEM;
-				}
-
-				jmp->jmp_flag  = 1;
-
-				c->basic_block = jmp;
-
-				dst     = c->dsts->data[0];
-				dst->bb = exit;
-
-				scf_list_add_tail(&jmp->code_list_head, &c->list);
 
 				scf_list_add_tail(&exit->list, &jmp->list);
 			}

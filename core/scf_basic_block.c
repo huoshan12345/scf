@@ -134,6 +134,38 @@ error_prevs:
 	return NULL;
 }
 
+scf_basic_block_t* scf_basic_block_jcc(scf_basic_block_t* to, scf_function_t* f, int jcc)
+{
+	scf_basic_block_t* bb;
+	scf_3ac_operand_t* dst;
+	scf_3ac_code_t*    c;
+
+	bb = scf_basic_block_alloc();
+	if (!bb)
+		return NULL;
+
+	c = scf_3ac_jmp_code(jcc, NULL, NULL);
+	if (!c) {
+		scf_basic_block_free(bb);
+		return NULL;
+	}
+
+	scf_list_add_tail(&bb->code_list_head, &c->list);
+
+	if (scf_vector_add(f->jmps, c) < 0) {
+		scf_basic_block_free(bb);
+		return NULL;
+	}
+
+	dst     = c->dsts->data[0];
+	dst->bb = to;
+
+	c->basic_block = bb;
+
+	bb->jmp_flag = 1;
+	return bb;
+}
+
 void scf_basic_block_free(scf_basic_block_t* bb)
 {
 	if (bb) {
@@ -1190,23 +1222,6 @@ int scf_basic_block_split(scf_basic_block_t* bb_parent, scf_basic_block_t** pbb_
 	return 0;
 }
 
-void scf_basic_block_mov_code(scf_list_t* start, scf_basic_block_t* bb_dst, scf_basic_block_t* bb_src)
-{
-	scf_list_t*     l;
-	scf_3ac_code_t* c;
-
-	for (l = start; l != scf_list_sentinel(&bb_src->code_list_head); ) {
-
-		c  = scf_list_data(l, scf_3ac_code_t, list);
-		l  = scf_list_next(l);
-
-		scf_list_del(&c->list);
-		scf_list_add_tail(&bb_dst->code_list_head, &c->list);
-
-		c->basic_block = bb_dst;
-	}
-}
-
 int scf_basic_block_search_bfs(scf_basic_block_t* root, scf_basic_block_bfs_pt find, void* data)
 {
 	if (!root)
@@ -1271,12 +1286,12 @@ int scf_basic_block_search_dfs_prev(scf_basic_block_t* root, scf_basic_block_dfs
 
 	assert(!root->jmp_flag);
 
-	root->visited_flag = 1;
+	root->visit_flag = 1;
 
 	for (i = 0; i < root->prevs->size; ++i) {
 		bb =        root->prevs->data[i];
 
-		if (bb->visited_flag)
+		if (bb->visit_flag)
 			continue;
 
 		ret = find(bb, data);
@@ -1288,7 +1303,7 @@ int scf_basic_block_search_dfs_prev(scf_basic_block_t* root, scf_basic_block_dfs
 			if (ret < 0)
 				return ret;
 
-			bb->visited_flag = 1;
+			bb->visit_flag = 1;
 			continue;
 		}
 
@@ -1357,4 +1372,38 @@ int scf_basic_block_loads_saves(scf_basic_block_t* bb, scf_list_t* bb_list_head)
 	}
 
 	return 0;
+}
+
+void scf_basic_block_mov_code(scf_basic_block_t* to, scf_list_t* start, scf_basic_block_t* from)
+{
+	scf_list_t*     l;
+	scf_3ac_code_t* c;
+
+	for (l = start; l != scf_list_sentinel(&from->code_list_head); ) {
+
+		c  = scf_list_data(l, scf_3ac_code_t, list);
+		l  = scf_list_next(l);
+
+		scf_list_del(&c->list);
+		scf_list_add_tail(&to->code_list_head, &c->list);
+
+		c->basic_block = to;
+	}
+}
+
+void scf_basic_block_add_code(scf_basic_block_t* bb, scf_list_t* h)
+{
+	scf_3ac_code_t* c;
+	scf_list_t*     l;
+
+	for (l = scf_list_head(h); l != scf_list_sentinel(h); ) {
+
+		c  = scf_list_data(l, scf_3ac_code_t, list);
+		l  = scf_list_next(l);
+
+		scf_list_del(&c->list);
+		scf_list_add_tail(&bb->code_list_head, &c->list);
+
+		c->basic_block = bb;
+	}
 }

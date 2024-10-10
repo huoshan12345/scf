@@ -1,9 +1,9 @@
 #ifndef SCF_BASIC_BLOCK_H
 #define SCF_BASIC_BLOCK_H
 
+#include"scf_core_types.h"
 #include"scf_list.h"
 #include"scf_vector.h"
-#include"scf_graph.h"
 
 typedef struct scf_basic_block_s  scf_basic_block_t;
 
@@ -100,7 +100,7 @@ struct scf_basic_block_s
 	uint32_t        back_flag   :1;
 	uint32_t        loop_flag   :1;
 	uint32_t        group_flag  :1;
-	uint32_t        visited_flag:1;
+	uint32_t        visit_flag  :1;
 	uint32_t        native_flag :1;
 };
 
@@ -112,6 +112,7 @@ int                 scf_basic_block_search_dfs_prev(scf_basic_block_t* root, scf
 
 
 scf_basic_block_t*  scf_basic_block_alloc();
+scf_basic_block_t*  scf_basic_block_jcc (scf_basic_block_t* to, scf_function_t* f, int jcc);
 void                scf_basic_block_free(scf_basic_block_t* bb);
 
 scf_bb_group_t*     scf_bb_group_alloc();
@@ -133,8 +134,22 @@ int                 scf_basic_block_connect(scf_basic_block_t* prev_bb, scf_basi
 
 int                 scf_basic_block_split(scf_basic_block_t* bb_parent, scf_basic_block_t** pbb_child);
 
-void                scf_basic_block_mov_code(scf_list_t* start, scf_basic_block_t* bb_dst, scf_basic_block_t* bb_src);
-
 int                 scf_basic_block_inited_by3ac(scf_basic_block_t* bb);
+
+void                scf_basic_block_mov_code(scf_basic_block_t* to, scf_list_t* start, scf_basic_block_t* from);
+void                scf_basic_block_add_code(scf_basic_block_t* bb, scf_list_t* h);
+
+static inline void scf_basic_block_visit_flag(scf_list_t* h, int visit_flag)
+{
+	scf_basic_block_t* bb;
+	scf_list_t*        l;
+
+	for (l = scf_list_head(h); l != scf_list_sentinel(h); l = scf_list_next(l)) {
+
+		bb = scf_list_data(l, scf_basic_block_t, list);
+
+		bb->visit_flag = visit_flag;
+	}
+}
 
 #endif
