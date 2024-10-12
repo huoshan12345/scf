@@ -95,8 +95,6 @@ struct scf_basic_block_s
 	uint32_t        auto_ref_flag :1;
 	uint32_t        auto_free_flag:1;
 
-	uint32_t        generate_flag :1;
-
 	uint32_t        back_flag   :1;
 	uint32_t        loop_flag   :1;
 	uint32_t        group_flag  :1;

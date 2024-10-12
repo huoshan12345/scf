@@ -94,6 +94,8 @@ int _function_add_function(scf_dfa_t* dfa, dfa_data_t* d)
 		return SCF_DFA_ERROR;
 	}
 
+	f->void_flag = void_flag;
+
 	if (f->rets->size > 4) {
 		scf_loge("function return values must NOT more than 4!\n");
 		return SCF_DFA_ERROR;

@@ -2593,8 +2593,8 @@ static int _semantic_multi_rets_assign(scf_ast_t* ast, scf_node_t** nodes, int n
 
 	assert(call->nb_nodes > 0);
 
-	scf_loge("rets->nb_nodes: %d, call->result_nodes: %p\n", rets->nb_nodes, call->result_nodes);
-	scf_loge("rets->nb_nodes: %d, call->result_nodes->size: %d\n", rets->nb_nodes, call->result_nodes->size);
+	scf_logd("rets->nb_nodes: %d, call->result_nodes: %p\n", rets->nb_nodes, call->result_nodes);
+	scf_logd("rets->nb_nodes: %d, call->result_nodes->size: %d\n", rets->nb_nodes, call->result_nodes->size);
 
 	assert(rets->nb_nodes <= call->result_nodes->size);
 

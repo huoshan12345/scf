@@ -90,7 +90,6 @@ scf_basic_block_t* scf_basic_block_alloc()
 	if (!bb->ds_freed)
 		goto error_freed;
 
-	bb->generate_flag = 1;
 	return bb;
 
 error_freed:

@@ -51,7 +51,6 @@ struct scf_function_s {
 	int               local_vars_size;
 	int               code_bytes;
 
-	uint32_t          vargs_flag  :1;
 	uint32_t          visited_flag:1;
 	uint32_t          bp_used_flag:1;
 
@@ -59,6 +58,9 @@ struct scf_function_s {
 	uint32_t          extern_flag:1;
 	uint32_t          inline_flag:1;
 	uint32_t          member_flag:1;
+
+	uint32_t          vargs_flag :1;
+	uint32_t          void_flag  :1;
 };
 
 scf_function_t*	scf_function_alloc(scf_lex_word_t* w);

@@ -33,7 +33,8 @@ static int _bb_add_ds(scf_basic_block_t* bb, scf_dn_status_t* ds_obj)
 		}
 	}
 
-	ds->ret |= ds_obj->ret;
+	ds->ret_flag |= ds_obj->ret_flag;
+	ds->ret_index = ds_obj->ret_index;
 	return 0;
 }
 
@@ -236,7 +237,7 @@ static int _bb_add_ds_for_ret(scf_basic_block_t* bb, scf_dn_status_t* ds_obj, sc
 	for (i  = 0; i < bb2->ds_malloced->size; i++) {
 		ds2 =        bb2->ds_malloced->data[i];
 
-		if (!ds2->ret)
+		if (!ds2->ret_flag)
 			continue;
 
 		__bb_add_ds_append(bb, ds_obj, bb2, ds2);
@@ -320,9 +321,9 @@ static int _auto_gc_find_argv_out(scf_basic_block_t* cur_bb, scf_3ac_code_t* c)
 			return ret;
 
 		if (ds_obj->dag_node->var->arg_flag)
-			ds_obj->ret = 1;
+			ds_obj->ret_flag = 1;
 
-		ret = scf_vector_add_unique(cur_bb->dn_reloads, ds_obj->dag_node);
+		ret = scf_vector_add_unique(cur_bb->entry_dn_actives, ds_obj->dag_node);
 		if (ret < 0) {
 			scf_dn_status_free(ds_obj);
 			return ret;
@@ -348,31 +349,40 @@ static int _auto_gc_find_ret(scf_basic_block_t* cur_bb, scf_3ac_code_t* c)
 	scf_3ac_operand_t* dst;
 	scf_3ac_operand_t* src = c->srcs->data[0];
 	scf_function_t*    f2  = src->dag_node->var->func_ptr;
-	scf_variable_t*    ret = f2->rets->data[0];
+	scf_variable_t*    fret;
 	scf_variable_t*    v;
 	scf_dn_status_t*   ds_obj;
 
-	if (ret->auto_gc_flag) {
-		dst = c->dsts->data[0];
-		v   = dst->dag_node->var;
+	assert(c->dsts->size <= f2->rets->size);
 
-		if (!scf_variable_may_malloced(v))
-			return 0;
+	int i;
+	for (i = 0; i < c->dsts->size; i++) {
+		dst       = c->dsts->data[i];
 
-		ds_obj = scf_dn_status_alloc(dst->dag_node);
-		if (!ds_obj)
-			return -ENOMEM;
+		fret = f2->rets->data[i];
+		v    = dst->dag_node->var;
 
-		_bb_add_ds(cur_bb, ds_obj);
+		scf_logd("--- f2: %s(), i: %d, auto_gc_flag: %d\n", f2->node.w->text->data, i, fret->auto_gc_flag);
 
-		scf_dn_status_free(ds_obj);
-		ds_obj = NULL;
+		if (fret->auto_gc_flag) {
+			if (!scf_variable_may_malloced(v))
+				return 0;
+
+			ds_obj = scf_dn_status_alloc(dst->dag_node);
+			if (!ds_obj)
+				return -ENOMEM;
+
+			_bb_add_ds(cur_bb, ds_obj);
+
+			scf_dn_status_free(ds_obj);
+			ds_obj = NULL;
+		}
 	}
 
 	return 0;
 }
 
-static int __auto_gc_ds_for_assign(scf_dn_status_t** ds, scf_dag_node_t** dn, scf_3ac_code_t* c)
+int __auto_gc_ds_for_assign(scf_dn_status_t** ds, scf_dag_node_t** dn, scf_3ac_code_t* c)
 {
 	scf_3ac_operand_t* base;
 	scf_3ac_operand_t* member;
@@ -451,6 +461,145 @@ static int __auto_gc_ds_for_assign(scf_dn_status_t** ds, scf_dag_node_t** dn, sc
 	return 0;
 }
 
+static int _auto_gc_find_ref(scf_dn_status_t* ds_obj, scf_dag_node_t* dn, scf_3ac_code_t* c,
+		scf_basic_block_t* bb,
+		scf_basic_block_t* cur_bb,
+		scf_function_t*    f)
+{
+	scf_dn_status_t*  ds;
+	scf_dag_node_t*   pf;
+	scf_function_t*   f2;
+	scf_variable_t*   fret;
+	scf_node_t*       parent;
+	scf_node_t*       result;
+
+	if (SCF_OP_CALL == dn->type || dn->node->split_flag) {
+		int i = 0;
+
+		if (dn->node->split_flag) {
+			parent = dn->node->split_parent;
+
+			assert(SCF_OP_CALL == parent->type || SCF_OP_CREATE == parent->type);
+
+			for (i = 0; i < parent->result_nodes->size; i++) {
+				result    = parent->result_nodes->data[i];
+
+				if (dn->node == result)
+					break;
+			}
+		}
+
+		pf   = dn->childs->data[0];
+		f2   = pf->var->func_ptr;
+		fret = f2->rets->data[i];
+
+		scf_logd("f2: %s, rets[%d], auto_gc_flag: %d\n", f2->node.w->text->data, i, fret->auto_gc_flag);
+
+		if (!strcmp(f2->node.w->text->data, "scf__auto_malloc")) {
+			_bb_add_ds(cur_bb, ds_obj);
+			return 1;
+		}
+
+		if (fret->auto_gc_flag) {
+			_bb_add_ds        (cur_bb, ds_obj);
+			_bb_add_ds_for_ret(cur_bb, ds_obj, f2);
+
+			ds = scf_dn_status_alloc(dn);
+			if (!ds)
+				return -ENOMEM;
+
+			_bb_del_ds(cur_bb, ds);
+
+			scf_dn_status_free(ds);
+			ds = NULL;
+			return 2;
+		}
+	} else {
+		ds  = NULL;
+		int ret = scf_ds_for_dn(&ds, dn);
+		if (ret < 0)
+			return ret;
+
+		ret = _bb_find_ds_alias(ds, c, bb, &f->basic_block_list_head);
+
+		scf_dn_status_free(ds);
+		ds = NULL;
+		if (ret < 0)
+			return ret;
+
+		if (1 == ret) {
+			_bb_add_ds(cur_bb, ds_obj);
+			return 2;
+		}
+	}
+
+	return 0;
+}
+
+static int _auto_gc_find_return(scf_vector_t* objs, scf_3ac_code_t* c, scf_basic_block_t* bb, scf_basic_block_t* cur_bb, scf_function_t* f)
+{
+	scf_3ac_operand_t* src;
+	scf_dn_status_t*   ds_obj;
+	scf_dag_node_t*    dn;
+	scf_variable_t*    v;
+
+	int count = 0;
+	int i;
+
+	for (i  = 0; i < c->srcs->size; i++) {
+		src =        c->srcs->data[i];
+
+		dn  = src->dag_node;
+		v   = dn->var;
+
+		if (!scf_variable_may_malloced(dn->var))
+			continue;
+
+		if (v->w)
+			scf_logd("v: %s, line: %d\n", v->w->text->data, v->w->line);
+
+		while (dn) {
+			if (SCF_OP_TYPE_CAST == dn->type)
+				dn = dn->childs->data[0];
+
+			else if (SCF_OP_EXPR == dn->type)
+				dn = dn->childs->data[0];
+			else
+				break;
+		}
+
+		ds_obj = scf_dn_status_alloc(dn);
+		if (!ds_obj)
+			return -ENOMEM;
+
+		ds_obj->ret_flag  = 1;
+		ds_obj->ret_index = i;
+
+		scf_logd("i: %d, ds: %#lx, ret_index: %d\n", i, 0xffffff &(uintptr_t)ds_obj, ds_obj->ret_index);
+//		scf_dn_status_print(ds_obj);
+
+		int ret = _auto_gc_find_ref(ds_obj, dn, c, bb, cur_bb, f);
+		if (ret < 0) {
+			scf_dn_status_free(ds_obj);
+			return ret;
+		}
+
+		count += ret > 0;
+
+		if (ret > 1) {
+			ret = scf_vector_add(objs, ds_obj);
+			if (ret < 0) {
+				scf_dn_status_free(ds_obj);
+				return ret;
+			}
+		} else
+			scf_dn_status_free(ds_obj);
+		ds_obj = NULL;
+	}
+
+	return count;
+}
+
 static int _auto_gc_bb_find(scf_basic_block_t* bb, scf_function_t* f)
 {
 	scf_basic_block_t* cur_bb = bb;
@@ -460,6 +609,7 @@ static int _auto_gc_bb_find(scf_basic_block_t* bb, scf_function_t* f)
 
 	int count = 0;
 	int ret;
+	int i;
 
 	for (l = scf_list_head(&bb->code_list_head); l != scf_list_sentinel(&bb->code_list_head); ) {
 
@@ -485,23 +635,49 @@ static int _auto_gc_bb_find(scf_basic_block_t* bb, scf_function_t* f)
 
 			if (SCF_OP_ASSIGN != c->op->type) {
 				if (ds_obj->dag_node->var->arg_flag)
-					ds_obj->ret = 1;
+					ds_obj->ret_flag = 1;
 			}
-#if 1
+
 		} else if (SCF_OP_RETURN == c->op->type) {
-			src = c->srcs->data[0];
-			dn  = src->dag_node;
 
-			if (!scf_variable_may_malloced(dn->var))
-				goto end;
-
-			ds_obj = scf_dn_status_alloc(dn);
-			if (!ds_obj)
+			scf_vector_t* objs = scf_vector_alloc();
+			if (!objs)
 				return -ENOMEM;
 
-			ds_obj->ret = 1;
-			goto ref;
-#endif
+			ret = _auto_gc_find_return(objs, c, bb, cur_bb, f);
+			if (ret < 0) {
+				scf_vector_clear(objs, ( void (*)(void*) )scf_dn_status_free);
+				scf_vector_free (objs);
+				return ret;
+			}
+			count += ret;
+
+			if (cur_bb != bb) {
+				scf_list_del(&c->list);
+				scf_list_add_tail(&cur_bb->code_list_head, &c->list);
+			}
+
+			if (objs->size > 0 && l != scf_list_sentinel(&bb->code_list_head)) {
+
+				AUTO_GC_FIND_BB_SPLIT(cur_bb, bb2);
+				cur_bb = bb2;
+
+				for (i = 0; i < objs->size; i++) {
+					ds_obj    = objs->data[i];
+
+					ret = scf_vector_add_unique(cur_bb->entry_dn_actives, ds_obj->dag_node);
+					if (ret < 0) {
+						scf_vector_clear(objs, ( void (*)(void*) )scf_dn_status_free);
+						scf_vector_free (objs);
+						return ret;
+					}
+				}
+			}
+
+			scf_vector_clear(objs, ( void (*)(void*) )scf_dn_status_free);
+			scf_vector_free (objs);
+			continue;
+
 		} else if (SCF_OP_CALL == c->op->type) {
 			assert(c->srcs->size > 0);
 
@@ -524,7 +700,6 @@ static int _auto_gc_bb_find(scf_basic_block_t* bb, scf_function_t* f)
 
 		_bb_del_ds(cur_bb, ds_obj);
 		count++;
-
 ref:
 		while (dn) {
 			if (SCF_OP_TYPE_CAST == dn->type)
@@ -536,102 +711,34 @@ ref:
 				break;
 		}
 
-		if (SCF_OP_CALL == dn->type || dn->node->split_flag) {
+		ret = _auto_gc_find_ref(ds_obj, dn, c, bb, cur_bb, f);
+		if (ret < 0) {
+			scf_dn_status_free(ds_obj);
+			return ret;
+		}
 
-			if (dn->node->split_flag) {
-				assert(SCF_OP_CALL   == dn->node->split_parent->type
-					|| SCF_OP_CREATE == dn->node->split_parent->type);
-			}
+		count += ret > 0;
 
-			scf_dag_node_t* dn_pf = dn->childs->data[0];
-			scf_function_t* f2    = dn_pf->var->func_ptr;
-			scf_variable_t* ret   = f2->rets->data[0];
+		if (cur_bb != bb) {
+			scf_list_del(&c->list);
+			scf_list_add_tail(&cur_bb->code_list_head, &c->list);
+		}
 
-			scf_logd("f2: %s, ret->auto_gc_flag: %d\n", f2->node.w->text->data, ret->auto_gc_flag);
+		if (ret > 1 && l != scf_list_sentinel(&bb->code_list_head)) {
 
-			if (!strcmp(f2->node.w->text->data, "scf__auto_malloc")) {
-				_bb_add_ds(cur_bb, ds_obj);
-				count++;
+			AUTO_GC_FIND_BB_SPLIT(cur_bb, bb2);
+			cur_bb = bb2;
 
-				scf_dn_status_free(ds_obj);
-				ds_obj = NULL;
-				goto end;
-
-			} else if (ret->auto_gc_flag) {
-
-				if (cur_bb != bb) {
-					scf_list_del(&c->list);
-					scf_list_add_tail(&cur_bb->code_list_head, &c->list);
-				}
-
-				_bb_add_ds        (cur_bb, ds_obj);
-				_bb_add_ds_for_ret(cur_bb, ds_obj, f2);
-
-				ds = scf_dn_status_alloc(dn);
-				if (!ds) {
-					scf_dn_status_free(ds_obj);
-					return -ENOMEM;
-				}
-				_bb_del_ds(cur_bb, ds);
-
-				scf_dn_status_free(ds);
-				ds = NULL;
-
-				if (l != scf_list_sentinel(&bb->code_list_head)) {
-
-					AUTO_GC_FIND_BB_SPLIT(cur_bb, bb2);
-					cur_bb = bb2;
-					scf_vector_add_unique(cur_bb->dn_reloads, ds_obj->dag_node);
-				}
-
-				scf_dn_status_free(ds_obj);
-				ds_obj = NULL;
-
-				count++;
-				continue;
-			}
-		} else {
-			ds  = NULL;
-			ret = scf_ds_for_dn(&ds, dn);
+			ret = scf_vector_add_unique(cur_bb->entry_dn_actives, ds_obj->dag_node);
 			if (ret < 0) {
 				scf_dn_status_free(ds_obj);
 				return ret;
-			}
-
-			ret = _bb_find_ds_alias(ds, c, bb, &f->basic_block_list_head);
-
-			scf_dn_status_free(ds);
-			ds = NULL;
-			if (ret < 0) {
-				scf_dn_status_free(ds_obj);
-				return ret;
-			}
-
-			if (1 == ret) {
-				if (cur_bb != bb) {
-					scf_list_del(&c->list);
-					scf_list_add_tail(&cur_bb->code_list_head, &c->list);
-				}
-
-				_bb_add_ds(cur_bb, ds_obj);
-
-				if (l != scf_list_sentinel(&bb->code_list_head)) {
-
-					AUTO_GC_FIND_BB_SPLIT(cur_bb, bb2);
-					cur_bb = bb2;
-					scf_vector_add_unique(cur_bb->dn_reloads, ds_obj->dag_node);
-				}
-
-				scf_dn_status_free(ds_obj);
-				ds_obj = NULL;
-
-				count++;
-				continue;
 			}
 		}
 
 		scf_dn_status_free(ds_obj);
 		ds_obj = NULL;
+		continue;
 end:
 		if (cur_bb != bb) {
 			scf_list_del(&c->list);
@@ -691,12 +798,13 @@ static int _auto_gc_function_find(scf_ast_t* ast, scf_function_t* f, scf_list_t*
 	scf_basic_block_t* bb;
 	scf_dn_status_t*   ds;
 	scf_3ac_code_t*    c;
+	scf_variable_t*    fret;
 
 	int total = 0;
-	int count;
+	int count = 0;
 	int ret;
 
-	scf_logw("f: %s\n", f->node.w->text->data);
+	scf_logw("--- %s() ---\n", f->node.w->text->data);
 
 	do {
 		for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head); ) {
@@ -733,24 +841,27 @@ static int _auto_gc_function_find(scf_ast_t* ast, scf_function_t* f, scf_list_t*
 	int i;
 	for (i = 0; i < bb->ds_malloced->size; i++) {
 		ds =        bb->ds_malloced->data[i];
-#if 1
-		scf_logi("ds->ret: %u, ds->dag_node->var->arg_flag: %u\n", ds->ret, ds->dag_node->var->arg_flag);
-		scf_dn_status_print(ds);
-		printf("\n");
-#endif
-		if (!ds->ret)
+
+		if (!ds->ret_flag)
 			continue;
+#if 1
+		scf_logi("ds: %#lx, ds->ret_flag: %u, ds->ret_index: %d, ds->dag_node->var->arg_flag: %u\n",
+				0xffff & (uintptr_t)ds, ds->ret_flag, ds->ret_index, ds->dag_node->var->arg_flag);
+		scf_dn_status_print(ds);
+#endif
 
 		if (ds->dag_node->var->arg_flag)
 			ds->dag_node->var->auto_gc_flag = 1;
 		else {
-			scf_variable_t* ret = f->rets->data[0];
-			ret->auto_gc_flag = 1;
+			assert(ds->ret_index < f->rets->size);
+
+			fret = f->rets->data[ds->ret_index];
+			fret->auto_gc_flag = 1;
 
 			_bb_find_ds_alias_leak(ds, c, bb, bb_list_head);
 		}
 	}
-	scf_logi("f: %s *****\n\n", f->node.w->text->data);
+	scf_logi("--- %s() ---\n\n", f->node.w->text->data);
 
 	return total;
 }

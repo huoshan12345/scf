@@ -9,12 +9,13 @@
 
 struct scf_operator_s
 {
-	int						type;
-	char*					name;
+	char*  name;
+	char*  signature;
+	int    type;
 
-	int						priority;
-	int						nb_operands;
-	int						associativity;
+	int    priority;
+	int    nb_operands;
+	int    associativity;
 };
 
 scf_operator_t* scf_find_base_operator(const char* name, const int nb_operands);
@@ -22,4 +23,3 @@ scf_operator_t* scf_find_base_operator(const char* name, const int nb_operands);
 scf_operator_t* scf_find_base_operator_by_type(const int type);
 
 #endif
-

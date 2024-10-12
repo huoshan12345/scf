@@ -1070,7 +1070,7 @@ static int _bb_add_gc_code_ref(scf_list_t* dag_list_head, scf_ast_t* ast, scf_ba
 	scf_list_t     h;
 	scf_list_init(&h);
 
-	if (scf_vector_add_unique(bb->dn_reloads, ds->dag_node) < 0)
+	if (scf_vector_add_unique(bb->entry_dn_actives, ds->dag_node) < 0)
 		return -ENOMEM;
 
 	int ret = _auto_gc_code_list_ref(&h, dag_list_head, ast, ds);
@@ -1086,7 +1086,7 @@ static int _bb_add_gc_code_freep(scf_list_t* dag_list_head, scf_ast_t* ast, scf_
 	scf_list_t     h;
 	scf_list_init(&h);
 
-	if (scf_vector_add_unique(bb->dn_reloads, ds->dag_node) < 0)
+	if (scf_vector_add_unique(bb->entry_dn_actives, ds->dag_node) < 0)
 		return -ENOMEM;
 
 	int ret = _auto_gc_code_list_freep(&h, dag_list_head, ast, ds);
@@ -1102,7 +1102,7 @@ static int _bb_add_gc_code_memset_array(scf_list_t* dag_list_head, scf_ast_t* as
 	scf_list_t     h;
 	scf_list_init(&h);
 
-	if (scf_vector_add_unique(bb->dn_reloads, dn_array) < 0)
+	if (scf_vector_add_unique(bb->entry_dn_actives, dn_array) < 0)
 		return -ENOMEM;
 
 	int ret = _auto_gc_code_list_memset_array(&h, dag_list_head, ast, dn_array);
@@ -1118,7 +1118,7 @@ static int _bb_add_gc_code_free_array(scf_list_t* dag_list_head, scf_ast_t* ast,
 	scf_list_t     h;
 	scf_list_init(&h);
 
-	if (scf_vector_add_unique(bb->dn_reloads, dn_array) < 0)
+	if (scf_vector_add_unique(bb->entry_dn_actives, dn_array) < 0)
 		return -ENOMEM;
 
 	int ret = _auto_gc_code_list_free_array(&h, dag_list_head, ast, dn_array);

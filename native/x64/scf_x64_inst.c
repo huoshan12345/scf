@@ -1844,7 +1844,7 @@ static int _x64_inst_address_of_pointer_handler(scf_native_t* ctx, scf_3ac_code_
 	return x64_inst_pointer(ctx, c, 1);
 }
 
-static int _x64_inst_push_rax_handler(scf_native_t* ctx, scf_3ac_code_t* c)
+static int _x64_inst_push_rets_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
 	if (!c->instructions) {
 		c->instructions = scf_vector_alloc();
@@ -1852,19 +1852,34 @@ static int _x64_inst_push_rax_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 			return -ENOMEM;
 	}
 
-	scf_register_t*     rax  = x64_find_register("rax");
-	scf_x64_OpCode_t*   push = x64_find_OpCode(SCF_X64_PUSH, 8,8, SCF_X64_G);
+	scf_x64_context_t*  x64 = ctx->priv;
+	scf_function_t*     f   = x64->f;
+
 	scf_instruction_t*  inst;
+	scf_x64_OpCode_t*   push = x64_find_OpCode(SCF_X64_PUSH, 8,8, SCF_X64_G);
+	scf_register_t*     r;
 
-	inst = x64_make_inst_G(push, rax);
-	X64_INST_ADD_CHECK(c->instructions, inst);
+	int n = 0;
+	int i;
 
-	inst = x64_make_inst_G(push, rax);
-	X64_INST_ADD_CHECK(c->instructions, inst);
+	if (!f->void_flag) {
+		n = f->rets->size;
+
+		if (n > X64_ABI_RET_NB)
+			return -EINVAL;
+	}
+
+	for (i = 0; i < n; i++) {
+		r  = x64_find_register_type_id_bytes(0, x64_abi_ret_regs[i], 8);
+
+		inst = x64_make_inst_G(push, r);
+		X64_INST_ADD_CHECK(c->instructions, inst);
+	}
+
 	return 0;
 }
 
-static int _x64_inst_pop_rax_handler(scf_native_t* ctx, scf_3ac_code_t* c)
+static int _x64_inst_pop_rets_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
 	if (!c->instructions) {
 		c->instructions = scf_vector_alloc();
@@ -1872,15 +1887,30 @@ static int _x64_inst_pop_rax_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 			return -ENOMEM;
 	}
 
-	scf_register_t*     rax  = x64_find_register("rax");
-	scf_x64_OpCode_t*   pop  = x64_find_OpCode(SCF_X64_POP, 8,8, SCF_X64_G);
+	scf_x64_context_t*  x64 = ctx->priv;
+	scf_function_t*     f   = x64->f;
+
 	scf_instruction_t*  inst;
+	scf_x64_OpCode_t*   pop  = x64_find_OpCode(SCF_X64_POP, 8,8, SCF_X64_G);
+	scf_register_t*     r;
 
-	inst = x64_make_inst_G(pop, rax);
-	X64_INST_ADD_CHECK(c->instructions, inst);
+	int n = 0;
+	int i;
 
-	inst = x64_make_inst_G(pop, rax);
-	X64_INST_ADD_CHECK(c->instructions, inst);
+	if (!f->void_flag) {
+		n = f->rets->size;
+
+		if (n > X64_ABI_RET_NB)
+			return -EINVAL;
+	}
+
+	for (i = n - 1; i >= 0; i--) {
+		r  = x64_find_register_type_id_bytes(0, x64_abi_ret_regs[i], 8);
+
+		inst = x64_make_inst_G(pop, r);
+		X64_INST_ADD_CHECK(c->instructions, inst);
+	}
+
 	return 0;
 }
 
@@ -2228,8 +2258,8 @@ static x64_inst_handler_pt  x64_inst_handlers[] =
 	[SCF_OP_3AC_INC     ]  =  _x64_inst_inc_handler,
 	[SCF_OP_3AC_DEC     ]  =  _x64_inst_dec_handler,
 
-	[SCF_OP_3AC_PUSH_RAX]  =  _x64_inst_push_rax_handler,
-	[SCF_OP_3AC_POP_RAX ]  =  _x64_inst_pop_rax_handler,
+	[SCF_OP_3AC_PUSH_RETS] =  _x64_inst_push_rets_handler,
+	[SCF_OP_3AC_POP_RETS]  =  _x64_inst_pop_rets_handler,
 
 	[SCF_OP_3AC_MEMSET  ]  =  _x64_inst_memset_handler,
 

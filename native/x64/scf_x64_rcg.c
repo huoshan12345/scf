@@ -1322,8 +1322,8 @@ static x64_rcg_handler_pt  x64_rcg_handlers[SCF_N_3AC_OPS] =
 	[SCF_OP_3AC_INC     ]  =  _x64_rcg_inc_handler,
 	[SCF_OP_3AC_DEC     ]  =  _x64_rcg_dec_handler,
 
-	[SCF_OP_3AC_PUSH_RAX]  =  _x64_rcg_push_rax_handler,
-	[SCF_OP_3AC_POP_RAX ]  =  _x64_rcg_pop_rax_handler,
+	[SCF_OP_3AC_PUSH_RETS] =  _x64_rcg_push_rax_handler,
+	[SCF_OP_3AC_POP_RETS]  =  _x64_rcg_pop_rax_handler,
 
 	[SCF_OP_3AC_MEMSET  ]  =  _x64_rcg_memset_handler,
 

@@ -68,31 +68,29 @@ static int _optimize_generate_loads_saves(scf_ast_t* ast, scf_function_t* f, scf
 
 		bb->index = f->nb_basic_blocks++;
 
-		if (bb->generate_flag) {
-			for (i = 0; i < bb->dn_loads->size; i++) {
-				dn =        bb->dn_loads->data[i];
+		for (i = 0; i < bb->dn_loads->size; i++) {
+			dn =        bb->dn_loads->data[i];
 
-				if (scf_vector_find(bb->dn_reloads, dn))
-					continue;
+			if (scf_vector_find(bb->dn_reloads, dn))
+				continue;
 
-				SCF_OPTIMIZER_LOAD(SCF_OP_3AC_LOAD, &bb->code_list_head);
-			}
+			SCF_OPTIMIZER_LOAD(SCF_OP_3AC_LOAD, &bb->code_list_head);
+		}
 
-			for (i = 0; i < bb->dn_saves->size; i++) {
-				dn =        bb->dn_saves->data[i];
+		for (i = 0; i < bb->dn_saves->size; i++) {
+			dn =        bb->dn_saves->data[i];
 
-				if (scf_vector_find(bb->dn_resaves, dn))
-					continue;
+			if (scf_vector_find(bb->dn_resaves, dn))
+				continue;
 
-				if (bb->loop_flag)
-					SCF_OPTIMIZER_SAVE(SCF_OP_3AC_SAVE, &bb->save_list_head);
-				else {
-					SCF_OPTIMIZER_SAVE(SCF_OP_3AC_SAVE, &bb->code_list_head);
+			if (bb->loop_flag)
+				SCF_OPTIMIZER_SAVE(SCF_OP_3AC_SAVE, &bb->save_list_head);
+			else {
+				SCF_OPTIMIZER_SAVE(SCF_OP_3AC_SAVE, &bb->code_list_head);
 
-					if (bb->cmp_flag) {
-						scf_list_del(&save->list);
-						scf_list_add_front(&bb->code_list_head, &save->list);
-					}
+				if (bb->cmp_flag) {
+					scf_list_del(&save->list);
+					scf_list_add_front(&bb->code_list_head, &save->list);
 				}
 			}
 		}
@@ -113,16 +111,18 @@ static int _optimize_generate_loads_saves(scf_ast_t* ast, scf_function_t* f, scf
 		}
 
 		if (bb->auto_ref_flag || bb->auto_free_flag) {
-
+#if 1
 			scf_3ac_code_t* c0 = scf_3ac_code_alloc();
 			scf_3ac_code_t* c1 = scf_3ac_code_alloc();
 
-			c0->op = scf_3ac_find_operator(SCF_OP_3AC_PUSH_RAX);
-			c1->op = scf_3ac_find_operator(SCF_OP_3AC_POP_RAX);
+			c0->op = scf_3ac_find_operator(SCF_OP_3AC_PUSH_RETS);
+			c1->op = scf_3ac_find_operator(SCF_OP_3AC_POP_RETS);
 
 			scf_list_add_front(&bb->code_list_head, &c0->list);
 			scf_list_add_tail(&bb->code_list_head,  &c1->list);
+#endif
 		}
+
 #if 1
 		scf_logd("bb: %p, bb->index: %d\n", bb, bb->index);
 		ret = scf_basic_block_active_vars(bb);
