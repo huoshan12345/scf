@@ -5729,8 +5729,8 @@ static risc_inst_handler_pt  risc_inst_handlers[SCF_N_3AC_OPS] =
 	[SCF_OP_3AC_INC     ]  =  _risc_inst_inc_handler,
 	[SCF_OP_3AC_DEC     ]  =  _risc_inst_dec_handler,
 
-	[SCF_OP_3AC_PUSH_RAX]  =  _risc_inst_push_rax_handler,
-	[SCF_OP_3AC_POP_RAX ]  =  _risc_inst_pop_rax_handler,
+	[SCF_OP_3AC_PUSH_RETS] =  _risc_inst_push_rax_handler,
+	[SCF_OP_3AC_POP_RETS ] =  _risc_inst_pop_rax_handler,
 
 	[SCF_OP_3AC_MEMSET  ]  =  _risc_inst_memset_handler,
 

@@ -234,7 +234,9 @@ scf_dn_status_t* scf_dn_status_clone(scf_dn_status_t* ds)
 	ds2->active      = ds->active;
 	ds2->inited      = ds->inited;
 	ds2->updated     = ds->updated;
-	ds2->ret         = ds->ret;
+
+	ds2->ret_flag    = ds->ret_flag;
+	ds2->ret_index   = ds->ret_index;
 	return ds2;
 }
 

@@ -224,17 +224,16 @@ int scf_function_same_type(scf_function_t* f0, scf_function_t* f1)
 
 int scf_function_signature(scf_function_t* f)
 {
+	scf_string_t* s;
+	scf_type_t*   t = (scf_type_t*)f->node.parent;
+
 	int ret;
 	int i;
 
-	if (f->signature)
-		scf_string_free(f->signature);
-
-	scf_string_t* s = scf_string_alloc();
+	s = scf_string_alloc();
 	if (!s)
 		return -ENOMEM;
 
-	scf_type_t*   t = (scf_type_t*)f->node.parent;
 	if (t->node.type >= SCF_STRUCT) {
 		assert(t->node.class_flag);
 
@@ -247,12 +246,24 @@ int scf_function_signature(scf_function_t* f)
 			goto error;
 	}
 
-	ret = scf_string_cat(s, f->node.w->text);
+	if (f->op_type >= 0) {
+		scf_operator_t* op = scf_find_base_operator_by_type(f->op_type);
+
+		if (!op->signature)
+			goto error;
+
+		ret = scf_string_cat_cstr(s, op->signature);
+	} else
+		ret = scf_string_cat(s, f->node.w->text);
+
 	if (ret < 0)
 		goto error;
 	scf_logd("f signature: %s\n", s->data);
 
 	if (t->node.type < SCF_STRUCT) {
+		if (f->signature)
+			scf_string_free(f->signature);
+
 		f->signature = s;
 		return 0;
 	}
@@ -287,6 +298,8 @@ int scf_function_signature(scf_function_t* f)
 
 	scf_logd("f signature: %s\n", s->data);
 
+	if (f->signature)
+		scf_string_free(f->signature);
 	f->signature = s;
 	return 0;
 

@@ -254,7 +254,8 @@ static int _operator_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 		}
 	} else {
 		scf_operator_t* op = scf_find_base_operator(d->current_function->node.w->text->data, d->current_function->argv->size);
-		if (!op) {
+
+		if (!op || !op->signature) {
 			scf_loge("operator: '%s', nb_operands: %d\n",
 					d->current_function->node.w->text->data, d->current_function->argv->size);
 			return SCF_DFA_ERROR;

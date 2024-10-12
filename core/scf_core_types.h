@@ -193,8 +193,8 @@ enum scf_core_types
 	SCF_OP_3AC_PUSH,    // push a var to stack,  only for 3ac & native
 	SCF_OP_3AC_POP,     // pop a var from stack, only for 3ac & native
 
-	SCF_OP_3AC_PUSH_RAX, // push rax, only for 3ac & native
-	SCF_OP_3AC_POP_RAX,  // pop  rax, only for 3ac & native
+	SCF_OP_3AC_PUSH_RETS, // push return value registers, only for 3ac & native
+	SCF_OP_3AC_POP_RETS,  // pop  return value registers, only for 3ac & native
 
 	SCF_OP_3AC_MEMSET,  //
 

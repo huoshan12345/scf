@@ -66,76 +66,8 @@ struct mat
 		return 0;
 	}
 
-/*	int operator+=(mat* this, mat* that)
-	{
-		if (this->depth != that->depth
-				|| this->width  != that->width
-				|| this->height != that->height
-				|| this->count  != that->count
-				|| this->type   != that->type)
-			return -1;
-
-		if (MAT_TYPE_DOUBLE != this->type)
-			return -1;
-
-		int64_t c;
-		int64_t y;
-		int64_t x;
-		int64_t z;
-
-		double* d0 = (double*)this->data;
-		double* d1 = (double*)that->data;
-
-		for (c = 0; c < this->count; c++) {
-
-			int64_t c0 = this->c + this->cstep * c;
-			int64_t c1 = that->c + that->cstep * c;
-
-			int64_t coffset0 = c0 * this->height * this->xstride;
-			int64_t coffset1 = c1 * that->height * that->xstride;
-
-			for (y = 0; y < this->height; y++) {
-
-				int64_t y0 = this->y + this->ystep * y;
-				int64_t y1 = that->y + that->ystep * y;
-
-				int64_t yoffset0 = y0 * this->xstride * this->depth;
-				int64_t yoffset1 = y1 * that->xstride * that->depth;
-
-				for (x = 0; x < this->width; x++) {
-
-					int64_t x0 = this->x + this->xstep * x;
-					int64_t x1 = that->x + that->xstep * x;
-
-					int64_t xoffset0 = x0 * this->depth;
-					int64_t xoffset1 = x1 * that->depth;
-
-					for (z = 0; z < this->depth; z++) {
-
-						int64_t z0 = this->z + this->zstep * z;
-						int64_t z1 = that->z + that->zstep * z;
-
-						d0[coffset0 + yoffset0 + xoffset0 + z0] += d1[coffset1 + yoffset1 + xoffset1 + z1];
-					}
-				}
-			}
-		}
-
-		return 0;
-	}
-*/
 	mat*, int operator+(mat* this, mat* that)
 	{
-/*		if (this->depth != that->depth
-				|| this->width  != that->width
-				|| this->height != that->height
-				|| this->count  != that->count
-				|| this->type   != that->type)
-			return NULL, -1;
-
-		if (MAT_TYPE_DOUBLE != this->type)
-			return NULL, -1;
-*/
 		mat* res;
 
 		res = create mat(MAT_TYPE_DOUBLE, NULL, this->depth, this->width, this->height, this->count);
@@ -217,15 +149,12 @@ int main()
 	m2 = create mat(MAT_TYPE_DOUBLE, (uint8_t*)c, 1, 2, 2, 1);
 
 	m3 = m0 + m1 + m2;
-//	scf_printf("%s(),%d\n", __func__, __LINE__);
 
 	double* dd = (double*)m3->data;
 
 	int i;
 	for (i = 0; i < 4; i++)
 		printf("m3: %lf\n", dd[i]);
-//		scf_printf("m1: %lf\n", *(double*)(m1->data + i * sizeof(double)));
 
 	return 0;
 }
-

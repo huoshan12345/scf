@@ -193,7 +193,7 @@ static int _auto_gc_find_argv_in(scf_basic_block_t* cur_bb, scf_3ac_code_t* c)
 
 		scf_logd("v: %s\n", v->w->text->data);
 
-		if (scf_vector_add_unique(cur_bb->dn_reloads, dn) < 0)
+		if (scf_vector_add_unique(cur_bb->entry_dn_actives, dn) < 0)
 			return -ENOMEM;
 	}
 
@@ -225,12 +225,18 @@ static int _auto_gc_bb_next_find(scf_basic_block_t* bb, void* data, scf_vector_t
 
 			ds2 = scf_vector_find_cmp(next_bb->ds_malloced, ds, scf_ds_cmp_like_indexes);
 			if (ds2) {
-				uint32_t tmp = ds2->ret;
+				uint32_t tmp = ds2->ret_flag;
 
-				ds2->ret |= ds->ret;
+				ds2->ret_flag |= ds->ret_flag;
 
-				if (tmp != ds2->ret)
+				if (tmp != ds2->ret_flag) {
+					scf_logd("*** ds2: %#lx, ret_index: %d, ret_flag: %d, ds: %#lx, ret_index: %d, ret_flag: %d\n",
+							0xffff & (uintptr_t)ds2, ds2->ret_index, ds2->ret_flag,
+							0xffff & (uintptr_t)ds,   ds->ret_index,  ds->ret_flag);
+
 					count++;
+					ds2->ret_index = ds->ret_index;
+				}
 				continue;
 			}
 
