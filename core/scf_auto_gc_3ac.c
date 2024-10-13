@@ -167,6 +167,7 @@ static scf_3ac_code_t* _auto_gc_code_memset_array(scf_list_t* dag_list_head, scf
 		return NULL;
 	}
 	v->data.i64 = 0;
+	v->const_literal_flag = 1;
 	AUTO_GC_CODE_ADD_VAR();
 
 	v = SCF_VAR_ALLOC_BY_TYPE(dn_array->var->w, t, 1, 0, NULL);
@@ -175,6 +176,7 @@ static scf_3ac_code_t* _auto_gc_code_memset_array(scf_list_t* dag_list_head, scf
 		return NULL;
 	}
 	v->data.i64 = scf_variable_size(dn_array->var);
+	v->const_literal_flag = 1;
 	AUTO_GC_CODE_ADD_VAR();
 
 	return c;
@@ -216,6 +218,7 @@ static scf_3ac_code_t* _auto_gc_code_free_array(scf_list_t* dag_list_head, scf_a
 		return NULL;
 	}
 	v->data.i64 = capacity;
+	v->const_literal_flag = 1;
 	AUTO_GC_CODE_ADD_VAR();
 
 	v = SCF_VAR_ALLOC_BY_TYPE(dn_array->var->w, t, 1, 0, NULL);
@@ -224,6 +227,7 @@ static scf_3ac_code_t* _auto_gc_code_free_array(scf_list_t* dag_list_head, scf_a
 		return NULL;
 	}
 	v->data.i64 = nb_pointers;
+	v->const_literal_flag = 1;
 	AUTO_GC_CODE_ADD_VAR();
 
 	if (dn_array->var->type >= SCF_STRUCT) {
@@ -279,6 +283,7 @@ static scf_3ac_code_t* _auto_gc_code_freep_array(scf_list_t* dag_list_head, scf_
 		return NULL;
 	}
 	v->data.i64 = nb_pointers;
+	v->const_literal_flag = 1;
 
 	char buf[128];
 	snprintf(buf, sizeof(buf) - 1, "%d", nb_pointers);
