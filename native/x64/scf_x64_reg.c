@@ -1391,4 +1391,3 @@ int x64_pop_callee_regs(scf_3ac_code_t* c, scf_function_t* f)
 
 	return 0;
 }
-
