@@ -25,6 +25,7 @@ static int _optimize_generate_loads_saves(scf_ast_t* ast, scf_function_t* f, scf
 
 	scf_list_t*        l;
 	scf_basic_block_t* bb;
+	scf_basic_block_t* bb_auto_gc;
 	scf_basic_block_t* post;
 	scf_bb_group_t*    bbg;
 
@@ -62,6 +63,8 @@ static int _optimize_generate_loads_saves(scf_ast_t* ast, scf_function_t* f, scf
 			} while (0)
 
 	f->nb_basic_blocks = 0;
+
+	bb_auto_gc = NULL;
 
 	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head); l = scf_list_next(l)) {
 		bb = scf_list_data(l, scf_basic_block_t, list);
@@ -109,19 +112,38 @@ static int _optimize_generate_loads_saves(scf_ast_t* ast, scf_function_t* f, scf
 				scf_list_add_front(&bb->code_list_head, &save->list);
 			}
 		}
-
-		if (bb->auto_ref_flag || bb->auto_free_flag) {
 #if 1
-			scf_3ac_code_t* c0 = scf_3ac_code_alloc();
-			scf_3ac_code_t* c1 = scf_3ac_code_alloc();
+		if (bb->auto_ref_flag || bb->auto_free_flag) {
 
-			c0->op = scf_3ac_find_operator(SCF_OP_3AC_PUSH_RETS);
-			c1->op = scf_3ac_find_operator(SCF_OP_3AC_POP_RETS);
+			if (!bb_auto_gc) {
+				c = scf_3ac_code_alloc();
+				if (!c) {
+					scf_loge("\n");
+					return -ENOMEM;
+				}
+				c->op          = scf_3ac_find_operator(SCF_OP_3AC_PUSH_RETS);
+				c->basic_block = bb;
 
-			scf_list_add_front(&bb->code_list_head, &c0->list);
-			scf_list_add_tail(&bb->code_list_head,  &c1->list);
-#endif
+				scf_list_add_front(&bb->code_list_head, &c->list);
+			}
+
+			bb_auto_gc = bb;
+
+		} else {
+			if (bb_auto_gc) {
+				c = scf_3ac_code_alloc();
+				if (!c) {
+					scf_loge("\n");
+					return -ENOMEM;
+				}
+				c->op          = scf_3ac_find_operator(SCF_OP_3AC_POP_RETS);
+				c->basic_block = bb_auto_gc;
+
+				scf_list_add_tail(&bb_auto_gc->code_list_head, &c->list);
+				bb_auto_gc = NULL;
+			}
 		}
+#endif
 
 #if 1
 		scf_logd("bb: %p, bb->index: %d\n", bb, bb->index);
@@ -144,7 +166,9 @@ static int _optimize_generate_loads_saves(scf_ast_t* ast, scf_function_t* f, scf
 
 				for (l = scf_list_tail(&bb->code_list_head); l != scf_list_sentinel(&bb->code_list_head); l = scf_list_prev(l)) {
 					c  = scf_list_data(l, scf_3ac_code_t, list);
-					assert(c->active_vars);
+
+					if (!c->active_vars)
+						continue;
 
 					ds = scf_vector_find_cmp(c->active_vars, dn, scf_dn_status_cmp);
 					if (ds)
@@ -160,7 +184,9 @@ static int _optimize_generate_loads_saves(scf_ast_t* ast, scf_function_t* f, scf
 
 				for (l = scf_list_tail(&bb->code_list_head); l != scf_list_sentinel(&bb->code_list_head); l = scf_list_prev(l)) {
 					c  = scf_list_data(l, scf_3ac_code_t, list);
-					assert(c->active_vars);
+
+					if (!c->active_vars)
+						continue;
 
 					ds = scf_vector_find_cmp(c->active_vars, dn, scf_dn_status_cmp);
 					if (ds)
@@ -183,7 +209,9 @@ static int _optimize_generate_loads_saves(scf_ast_t* ast, scf_function_t* f, scf
 
 			for (l = scf_list_tail(&bb->code_list_head); l != scf_list_sentinel(&bb->code_list_head); l = scf_list_prev(l)) {
 				c  = scf_list_data(l, scf_3ac_code_t, list);
-				assert(c->active_vars);
+
+				if (!c->active_vars)
+					continue;
 
 				int n;
 				for (n = 0; n < bbg->posts->size; n++) {

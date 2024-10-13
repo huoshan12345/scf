@@ -879,6 +879,74 @@ error:
 	return ret;
 }
 
+static int _auto_gc_prev_dn_actives(scf_list_t* current, scf_list_t* sentinel)
+{
+	scf_basic_block_t* bb;
+	scf_dag_node_t*    dn;
+	scf_vector_t*      dn_actives;
+	scf_list_t*        l;
+
+	int ret;
+	int i;
+
+	dn_actives = scf_vector_alloc();
+	if (!dn_actives)
+		return -ENOMEM;
+
+	for (l = current; l != sentinel; l = scf_list_prev(l)) {
+		bb = scf_list_data(l, scf_basic_block_t, list);
+
+		ret = scf_basic_block_active_vars(bb);
+		if (ret < 0)
+			goto error;
+
+		for (i = 0; i < dn_actives->size; i++) {
+			dn =        dn_actives->data[i];
+
+			ret = scf_vector_add_unique(bb->exit_dn_actives, dn);
+			if (ret < 0)
+				goto error;
+		}
+
+		for (i = 0; i < bb->entry_dn_actives->size; i++) {
+			dn =        bb->entry_dn_actives->data[i];
+
+			ret = scf_vector_add_unique(dn_actives, dn);
+			if (ret < 0)
+				goto error;
+		}
+	}
+
+	ret = 0;
+error:
+	scf_vector_free(dn_actives);
+	return ret;
+}
+
+static void _auto_gc_delete(scf_basic_block_t* bb, scf_basic_block_t* bb2)
+{
+	scf_basic_block_t* bb3;
+	scf_basic_block_t* bb4;
+
+	assert(1 == bb2->prevs->size);
+	assert(1 == bb ->nexts->size);
+
+	bb3 = bb2->prevs->data[0];
+	bb4 = bb ->nexts->data[0];
+
+	assert(1 == bb3->nexts->size);
+	assert(1 == bb4->prevs->size);
+
+	bb3->nexts->data[0] = bb4;
+	bb4->prevs->data[0] = bb3;
+
+	scf_list_del(&bb->list);
+	scf_list_del(&bb2->list);
+
+	scf_basic_block_free(bb);
+	scf_basic_block_free(bb2);
+}
+
 static int _optimize_auto_gc(scf_ast_t* ast, scf_function_t* f, scf_vector_t* functions)
 {
 	if (!ast || !f)
@@ -892,9 +960,7 @@ static int _optimize_auto_gc(scf_ast_t* ast, scf_function_t* f, scf_vector_t* fu
 	scf_basic_block_t* bb;
 	scf_basic_block_t* bb2;
 
-	int ret;
-
-	ret = _auto_gc_last_free(ast, f);
+	int ret = _auto_gc_last_free(ast, f);
 	if (ret < 0) {
 		scf_loge("\n");
 		return ret;
@@ -902,11 +968,8 @@ static int _optimize_auto_gc(scf_ast_t* ast, scf_function_t* f, scf_vector_t* fu
 
 	for (l = scf_list_head(bb_list_head); l != scf_list_sentinel(bb_list_head); ) {
 
-		scf_dag_node_t* dn;
-		scf_vector_t*   dn_actives;
-
-		scf_list_t*     start = l;
-		scf_list_t*     l2;
+		scf_list_t*  start = l;
+		scf_list_t*  l2;
 
 		bb = scf_list_data(l, scf_basic_block_t, list);
 
@@ -923,85 +986,28 @@ static int _optimize_auto_gc(scf_ast_t* ast, scf_function_t* f, scf_vector_t* fu
 			return ret;
 		}
 
-		dn_actives = scf_vector_alloc();
-		if (!dn_actives)
-			return -ENOMEM;
-
-		for (l2 = scf_list_prev(l); l2 != scf_list_prev(start); l2 = scf_list_prev(l2)) {
-			bb  = scf_list_data(l2, scf_basic_block_t, list);
-
-			ret = scf_basic_block_active_vars(bb);
-			if (ret < 0) {
-				scf_loge("\n");
-				return ret;
-			}
-
-			int i;
-			for (i = 0; i < dn_actives->size; i++) {
-				dn =        dn_actives->data[i];
-
-				ret = scf_vector_add_unique(bb->exit_dn_actives, dn);
-				if (ret < 0) {
-					scf_vector_free(dn_actives);
-					return ret;
-				}
-			}
-
-			for (i = 0; i < bb->entry_dn_actives->size; i++) {
-				dn =        bb->entry_dn_actives->data[i];
-
-				ret = scf_vector_add_unique(dn_actives, dn);
-				if (ret < 0) {
-					scf_vector_free(dn_actives);
-					return ret;
-				}
-			}
-		}
-
-		scf_vector_free(dn_actives);
-		dn_actives = NULL;
+		ret = _auto_gc_prev_dn_actives(scf_list_prev(l), scf_list_prev(start));
+		if (ret < 0)
+			return ret;
 
 		for (l2 = scf_list_prev(l); l2 != scf_list_prev(start); ) {
-
 			bb  = scf_list_data(l2, scf_basic_block_t, list);
 			l2  = scf_list_prev(l2);
-#if 1
-			if (l2 != start && scf_list_prev(l) != &bb->list) {
 
+			if (l2 != start && scf_list_prev(l) != &bb->list) {
 				bb2 = scf_list_data(l2, scf_basic_block_t, list);
 
 				if (bb->auto_free_flag
 						&& bb2->auto_ref_flag
 						&& 0 == scf_ds_cmp_same_indexes(bb->ds_auto_gc, bb2->ds_auto_gc)) {
 
-					scf_basic_block_t* bb3;
-					scf_basic_block_t* bb4;
-
-					assert(1 == bb2->prevs->size);
-					assert(1 == bb ->nexts->size);
-
-					bb3 = bb2->prevs->data[0];
-					bb4 = bb ->nexts->data[0];
-
-					assert(1 == bb3->nexts->size);
-					assert(1 == bb4->prevs->size);
-
-					bb3->nexts->data[0] = bb4;
-					bb4->prevs->data[0] = bb3;
-
 					l2 = scf_list_prev(l2);
 
-					scf_list_del(&bb->list);
-					scf_list_del(&bb2->list);
-
-					scf_basic_block_free(bb);
-					scf_basic_block_free(bb2);
-					bb  = NULL;
-					bb2 = NULL;
+					_auto_gc_delete(bb, bb2);
 					continue;
 				}
 			}
-#endif
+
 			ret = scf_basic_block_loads_saves(bb, bb_list_head);
 			if (ret < 0)
 				return ret;
