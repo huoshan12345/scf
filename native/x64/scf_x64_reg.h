@@ -54,9 +54,9 @@ static uint32_t x64_abi_float_regs[] =
 static uint32_t x64_abi_ret_regs[] =
 {
 	SCF_X64_REG_RAX,
-	SCF_X64_REG_RCX,
-	SCF_X64_REG_RDX,
 	SCF_X64_REG_RDI,
+	SCF_X64_REG_RSI,
+	SCF_X64_REG_RDX,
 };
 #define X64_ABI_RET_NB (sizeof(x64_abi_ret_regs) / sizeof(x64_abi_ret_regs[0]))
 

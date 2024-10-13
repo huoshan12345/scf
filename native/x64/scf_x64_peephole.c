@@ -414,6 +414,8 @@ static void _x64_peephole_function(scf_vector_t* tmp_insts, scf_function_t* f, i
 		f->bp_used_flag = 1;
 	else
 		f->bp_used_flag = 0;
+
+	scf_logw("%s(), f->bp_used_flag: %d\n", f->node.w->text->data, f->bp_used_flag);
 }
 
 int x64_optimize_peephole(scf_native_t* ctx, scf_function_t* f)
@@ -446,7 +448,7 @@ int x64_optimize_peephole(scf_native_t* ctx, scf_function_t* f)
 	int ret = 0;
 
 	for (l = scf_list_head(&f->basic_block_list_head); l != scf_list_sentinel(&f->basic_block_list_head);
-			l = scf_list_next(l)) {
+		l  = scf_list_next(l)) {
 
 		bb = scf_list_data(l, scf_basic_block_t, list);
 
@@ -461,7 +463,6 @@ int x64_optimize_peephole(scf_native_t* ctx, scf_function_t* f)
 
 			if (dst->bb->index < bb->index)
 				jmp_back_flag = 1;
-
 			continue;
 		}
 
@@ -469,9 +470,9 @@ int x64_optimize_peephole(scf_native_t* ctx, scf_function_t* f)
 			scf_vector_clear(std_insts, NULL);
 
 		for (l2 = scf_list_head(&bb->code_list_head); l2 != scf_list_sentinel(&bb->code_list_head);
-				l2 = scf_list_next(l2)) {
+			l2  = scf_list_next(l2)) {
 
-			c = scf_list_data(l2, scf_3ac_code_t, list);
+			c   = scf_list_data(l2, scf_3ac_code_t, list);
 
 			if (!c->instructions)
 				continue;
@@ -528,4 +529,3 @@ error:
 	scf_vector_free(std_insts);
 	return ret;
 }
-
