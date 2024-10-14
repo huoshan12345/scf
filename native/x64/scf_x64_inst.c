@@ -112,10 +112,13 @@ static int _x64_inst_call_argv(scf_3ac_code_t* c, scf_function_t* f)
 	scf_x64_OpCode_t*   mov;
 	scf_x64_OpCode_t*   movx;
 	scf_instruction_t*  inst;
+	scf_instruction_t*  inst_movx[X64_ABI_NB + X64_ABI_FLOAT_NB] = {NULL};
 
+	int nb_movx   = 0;
 	int nb_floats = 0;
 	int ret;
 	int i;
+
 	for (i = c->srcs->size - 1; i >= 1; i--) {
 		scf_3ac_operand_t*  src   = c->srcs->data[i];
 		scf_variable_t*     v     = src->dag_node->var;
@@ -199,12 +202,12 @@ static int _x64_inst_call_argv(scf_3ac_code_t* c, scf_function_t* f)
 			rs = x64_find_register_color_bytes(rs->color, 8);
 		}
 
-		if (movx) {
-			inst = x64_make_inst_E2G(movx, rs,  rs);
-			X64_INST_ADD_CHECK(c->instructions, inst);
-		}
-
 		if (!rd) {
+			if (movx) {
+				inst = x64_make_inst_E2G(movx, rs,  rs);
+				X64_INST_ADD_CHECK(c->instructions, inst);
+			}
+
 			inst = x64_make_inst_G2P(mov, rsp, v->sp_offset, rs);
 			X64_INST_ADD_CHECK(c->instructions, inst);
 			continue;
@@ -217,10 +220,28 @@ static int _x64_inst_call_argv(scf_3ac_code_t* c, scf_function_t* f)
 		}
 
 		if (!X64_COLOR_CONFLICT(rd->color, rs->color)) {
+			if (movx) {
+				inst = x64_make_inst_E2G(movx, rs,  rs);
+				X64_INST_ADD_CHECK(c->instructions, inst);
+			}
+
 			rd   = x64_find_register_color_bytes(rd->color, rs->bytes);
 			inst = x64_make_inst_G2E(mov, rd, rs);
 			X64_INST_ADD_CHECK(c->instructions, inst);
+
+		} else if (movx) {
+			inst = x64_make_inst_E2G(movx, rs,  rs);
+			if (!inst) {
+				scf_loge("\n");
+				return -ENOMEM;
+			}
+
+			inst_movx[nb_movx++] = inst;
 		}
+	}
+
+	for (i = 0; i < nb_movx; i++) {
+		X64_INST_ADD_CHECK(c->instructions, inst_movx[i]);
 	}
 
 	return nb_floats;
@@ -459,6 +480,7 @@ static int _x64_inst_call_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	scf_register_t*     rsp  = x64_find_register("rsp");
 	scf_register_t*     rax  = x64_find_register("rax");
+	scf_register_t*     eax  = x64_find_register("eax");
 //	scf_x64_OpCode_t*   xor;
 	scf_x64_OpCode_t*   mov;
 	scf_x64_OpCode_t*   sub;
@@ -502,15 +524,15 @@ static int _x64_inst_call_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 		scf_loge("\n");
 		return ret;
 	}
-	uint64_t imm = ret > 0;
+	uint32_t imm = ret > 0;
 
-	mov  = x64_find_OpCode(SCF_X64_MOV, 8,8, SCF_X64_I2G);
-	inst = x64_make_inst_I2G(mov, rax, (uint8_t*)&imm, sizeof(imm));
+	mov  = x64_find_OpCode(SCF_X64_MOV, 4,4, SCF_X64_I2G);
+	inst = x64_make_inst_I2G(mov, eax, (uint8_t*)&imm, sizeof(imm));
 	X64_INST_ADD_CHECK(c->instructions, inst);
 
 	scf_register_t* saved_regs[X64_ABI_CALLER_SAVES_NB];
 
-	int save_size = x64_caller_save_regs(c->instructions, x64_abi_caller_saves, X64_ABI_CALLER_SAVES_NB, stack_size, saved_regs);
+	int save_size = x64_caller_save_regs(c, x64_abi_caller_saves, X64_ABI_CALLER_SAVES_NB, stack_size, saved_regs);
 	if (save_size < 0) {
 		scf_loge("\n");
 		return save_size;
@@ -2117,7 +2139,7 @@ static int _x64_inst_va_arg_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	int size     = x64_variable_size(v);
 
 	uint32_t nints   = X64_ABI_NB;
-	uint32_t nfloats = X64_ABI_NB;
+	uint32_t nfloats = X64_ABI_FLOAT_NB;
 	uint32_t offset  = 0;
 	uint32_t incptr  = 8;
 

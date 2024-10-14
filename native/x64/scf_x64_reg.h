@@ -41,6 +41,7 @@ static uint32_t x64_abi_regs[] =
 	SCF_X64_REG_R8,
 	SCF_X64_REG_R9,
 };
+#define X64_ABI_NB (sizeof(x64_abi_regs) / sizeof(x64_abi_regs[0]))
 
 static uint32_t x64_abi_float_regs[] =
 {
@@ -48,8 +49,12 @@ static uint32_t x64_abi_float_regs[] =
 	SCF_X64_REG_XMM1,
 	SCF_X64_REG_XMM2,
 	SCF_X64_REG_XMM3,
+	SCF_X64_REG_XMM4,
+	SCF_X64_REG_XMM5,
+	SCF_X64_REG_XMM6,
+	SCF_X64_REG_XMM7,
 };
-#define X64_ABI_NB (sizeof(x64_abi_regs) / sizeof(x64_abi_regs[0]))
+#define X64_ABI_FLOAT_NB (sizeof(x64_abi_float_regs) / sizeof(x64_abi_float_regs[0]))
 
 static uint32_t x64_abi_ret_regs[] =
 {
@@ -132,7 +137,8 @@ int                 x64_save_var2(scf_dag_node_t* dn, scf_register_t* r, scf_3ac
 
 int                 x64_push_regs(scf_vector_t* instructions, uint32_t* regs, int nb_regs);
 int                 x64_pop_regs (scf_vector_t* instructions, scf_register_t** regs, int nb_regs, scf_register_t** updated_regs, int nb_updated);
-int                 x64_caller_save_regs(scf_vector_t* instructions, uint32_t* regs, int nb_regs, int stack_size, scf_register_t** saved_regs);
+
+int                 x64_caller_save_regs(scf_3ac_code_t* c, uint32_t* regs, int nb_regs, int stack_size, scf_register_t** saved_regs);
 
 int                 x64_push_callee_regs(scf_3ac_code_t* c, scf_function_t* f);
 int                 x64_pop_callee_regs (scf_3ac_code_t* c, scf_function_t* f);

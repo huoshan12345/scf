@@ -53,7 +53,7 @@ static void _x64_argv_rabi(scf_function_t* f)
 
 		if (is_float) {
 
-			if (f->args_float < X64_ABI_NB) {
+			if (f->args_float < X64_ABI_FLOAT_NB) {
 
 				v->rabi       = x64_find_register_type_id_bytes(is_float, x64_abi_float_regs[f->args_float], size);
 				v->bp_offset  = bp_floats;
@@ -93,7 +93,7 @@ static int _x64_function_init(scf_function_t* f, scf_vector_t* local_vars)
 
 	_x64_argv_rabi(f);
 
-	int local_vars_size = 8 + X64_ABI_NB * 8 * 2;
+	int local_vars_size = 8 + (X64_ABI_NB + X64_ABI_FLOAT_NB) * 8;
 
 	for (i = 0; i < local_vars->size; i++) {
 		v  =        local_vars->data[i];
