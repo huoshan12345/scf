@@ -207,19 +207,23 @@ void x64_registers_print()
 	}
 }
 
-int x64_caller_save_regs(scf_vector_t* instructions, uint32_t* regs, int nb_regs, int stack_size, scf_register_t** saved_regs)
+int x64_caller_save_regs(scf_3ac_code_t* c, uint32_t* regs, int nb_regs, int stack_size, scf_register_t** saved_regs)
 {
-	int i;
-	int j;
+	scf_basic_block_t*  bb = c->basic_block;
+	scf_dag_node_t*     dn;
+
+	scf_instruction_t*  inst;
+	scf_x64_OpCode_t*   push = x64_find_OpCode(SCF_X64_PUSH, 8,8, SCF_X64_G);
+	scf_x64_OpCode_t*   mov  = x64_find_OpCode(SCF_X64_MOV,  8,8, SCF_X64_G2E);
+	scf_register_t*     rsp  = x64_find_register("rsp");
 	scf_register_t*     r;
 	scf_register_t*     r2;
-	scf_register_t*     rsp  = x64_find_register("rsp");
-	scf_x64_OpCode_t*   mov  = x64_find_OpCode(SCF_X64_MOV,  8,8, SCF_X64_G2E);
-	scf_x64_OpCode_t*   push = x64_find_OpCode(SCF_X64_PUSH, 8,8, SCF_X64_G);
-	scf_instruction_t*  inst;
 
+	int i;
+	int j;
+	int k;
 	int size = 0;
-	int k    = 0;
+	int n    = 0;
 
 	for (j = 0; j < nb_regs; j++) {
 		r2 = x64_find_register_type_id_bytes(0, regs[j], 8);
@@ -233,8 +237,27 @@ int x64_caller_save_regs(scf_vector_t* instructions, uint32_t* regs, int nb_regs
 			if (0 == r->dag_nodes->size)
 				continue;
 
-			if (X64_COLOR_CONFLICT(r2->color, r->color))
-				break;
+			if (X64_COLOR_CONFLICT(r2->color, r->color)) {
+
+				for (k = 0; k < r->dag_nodes->size; k++) {
+					dn =        r->dag_nodes->data[k];
+
+					if (scf_vector_find(bb->exit_dn_actives, dn)
+							|| scf_vector_find(bb->dn_saves, dn)
+							|| scf_vector_find(bb->dn_resaves, dn)) {
+
+						scf_variable_t* v = dn->var;
+						if (v && v->w)
+							scf_logw("dn: %#lx, v_%d/%s/%#lx\n", 0xffff & (uintptr_t)dn, v->w->line, v->w->text->data, 0xffff & (uintptr_t)v);
+						else
+							scf_logw("dn: %#lx, v_%#lx\n", 0xffff & (uintptr_t)dn, 0xffff & (uintptr_t)v);
+						break;
+					}
+				}
+
+				if (k < r->dag_nodes->size)
+					break;
+			}
 		}
 
 		if (i == sizeof(x64_registers) / sizeof(x64_registers[0]))
@@ -244,29 +267,29 @@ int x64_caller_save_regs(scf_vector_t* instructions, uint32_t* regs, int nb_regs
 			inst = x64_make_inst_G2P(mov, rsp, size + stack_size, r2);
 		else
 			inst = x64_make_inst_G(push, r2);
-		X64_INST_ADD_CHECK(instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst);
 
-		saved_regs[k++] = r2;
+		saved_regs[n++] = r2;
 		size += 8;
 	}
 
 	if (size & 0xf) {
-		r2 = saved_regs[k - 1];
+		r2 = saved_regs[n - 1];
 
 		if (stack_size > 0)
 			inst = x64_make_inst_G2P(mov, rsp, size + stack_size, r2);
 		else
 			inst = x64_make_inst_G(push, r2);
-		X64_INST_ADD_CHECK(instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst);
 
-		saved_regs[k++] = r2;
+		saved_regs[n++] = r2;
 		size += 8;
 	}
 
 	if (stack_size > 0) {
-		for (j = 0; j < k / 2; j++) {
+		for (j = 0; j < n / 2; j++) {
 
-			i  = k - 1 - j;
+			i  = n - 1 - j;
 			SCF_XCHG(saved_regs[i], saved_regs[j]);
 		}
 	}
@@ -1296,7 +1319,7 @@ void x64_call_rabi(int* p_nints, int* p_nfloats, scf_3ac_code_t* c)
 		int size     = x64_variable_size (dn->var);
 
 		if (is_float) {
-			if (nfloats < X64_ABI_NB)
+			if (nfloats < X64_ABI_FLOAT_NB)
 				dn->rabi2 = x64_find_register_type_id_bytes(is_float, x64_abi_float_regs[nfloats++], size);
 			else
 				dn->rabi2 = NULL;

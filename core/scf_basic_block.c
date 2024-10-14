@@ -379,7 +379,7 @@ void scf_basic_block_print_list(scf_list_t* h)
 
 				v  = dn->var;
 				if (v && v->w)
-					printf("entry active: v_%d_%d/%s\n", v->w->line, v->w->pos, v->w->text->data);
+					printf("entry active: v_%d_%d/%s_%#lx\n", v->w->line, v->w->pos, v->w->text->data, 0xffff & (uintptr_t)dn);
 			}
 		}
 
@@ -389,7 +389,7 @@ void scf_basic_block_print_list(scf_list_t* h)
 
 				v  = dn->var;
 				if (v && v->w)
-					printf("exit  active: v_%d_%d/%s, dn: %#lx\n", v->w->line, v->w->pos, v->w->text->data, 0xffff & (uintptr_t)dn);
+					printf("exit  active: v_%d_%d/%s_%#lx\n", v->w->line, v->w->pos, v->w->text->data, 0xffff & (uintptr_t)dn);
 			}
 		}
 
@@ -418,7 +418,7 @@ void scf_basic_block_print_list(scf_list_t* h)
 
 				v  = dn->var;
 				if (v && v->w)
-					printf("updated:      v_%d_%d/%s\n", v->w->line, v->w->pos, v->w->text->data);
+					printf("updated:      v_%d_%d/%s_%#lx\n", v->w->line, v->w->pos, v->w->text->data, 0xffff & (uintptr_t)dn);
 			}
 		}
 
@@ -517,9 +517,6 @@ static int _copy_vars_by_active(scf_vector_t* dn_vec, scf_vector_t* ds_vars, int
 		ds =        ds_vars->data[j];
 
 		dn = ds->dag_node;
-
-		if (scf_variable_const(dn->var))
-			continue;
 
 		if (active == ds->active && scf_dn_through_bb(dn)) {
 

@@ -140,8 +140,10 @@ void              scf_ds_vector_clear_by_dn(scf_vector_t* vec, scf_dag_node_t*  
 
 static int scf_dn_through_bb(scf_dag_node_t* dn)
 {
-	return (dn->var->global_flag || dn->var->local_flag || dn->var->tmp_flag)
-		&& !scf_variable_const(dn->var);
+	scf_variable_t* v = dn->var;
+
+	return (v->global_flag || v->local_flag || v->tmp_flag)
+		&& !(v->const_flag && 0 == v->nb_pointers + v->nb_dimentions);
 }
 
 static int scf_dn_status_cmp(const void* p0, const void* p1)

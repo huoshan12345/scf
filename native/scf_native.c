@@ -14,9 +14,12 @@ void scf_instruction_print(scf_instruction_t* inst)
 			printf("%d(%s, %s, %d), ", inst->src.disp, inst->src.base->name,
 					inst->src.index->name, inst->src.scale);
 
-		else if (inst->src.base)
-			printf("%d(%s), ", inst->src.disp, inst->src.base->name);
-		else
+		else if (inst->src.base) {
+			if (inst->src.disp < 0)
+				printf("-%#x(%s), ", -inst->src.disp, inst->src.base->name);
+			else
+				printf("%#x(%s), ", inst->src.disp, inst->src.base->name);
+		} else
 			printf("%d(rip), ", inst->dst.disp);
 
 	} else if (inst->src.base)
@@ -30,9 +33,12 @@ void scf_instruction_print(scf_instruction_t* inst)
 			printf("%d(%s, %s, %d), ", inst->dst.disp, inst->dst.base->name,
 					inst->dst.index->name, inst->dst.scale);
 
-		else if (inst->dst.base)
-			printf("%d(%s), ", inst->dst.disp, inst->dst.base->name);
-		else
+		else if (inst->dst.base) {
+			if (inst->dst.disp < 0)
+				printf("-%#x(%s), ", -inst->dst.disp, inst->dst.base->name);
+			else
+				printf("%#x(%s), ", inst->dst.disp, inst->dst.base->name);
+		} else
 			printf("%d(rip), ", inst->dst.disp);
 
 	} else if (inst->dst.base)
