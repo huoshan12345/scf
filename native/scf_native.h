@@ -6,7 +6,8 @@
 
 typedef struct scf_native_ops_s scf_native_ops_t;
 
-struct scf_register_s {
+struct scf_register_s
+{
 	uint32_t		id;
 	int				bytes;
 	char*			name;
@@ -18,8 +19,10 @@ struct scf_register_s {
 	uint32_t        updated;
 	uint32_t        used;
 };
+#define SCF_COLOR_CONFLICT(c0, c1)   ((c0) >> 16 == (c1) >> 16 && (c0) & (c1) & 0xffff)
 
-struct scf_OpCode_s {
+struct scf_OpCode_s
+{
 	int				type;
 	char*			name;
 };
@@ -34,7 +37,6 @@ typedef struct {
 } scf_sib_t;
 
 typedef struct {
-
 	scf_register_t* base;
 	scf_register_t* index;
 	int             scale;
@@ -47,7 +49,6 @@ typedef struct {
 } scf_inst_data_t;
 
 typedef struct {
-
 	scf_3ac_code_t* c;
 
 	scf_OpCode_t*	OpCode;
@@ -244,14 +245,20 @@ static inline int scf_inst_data_same(scf_inst_data_t* id0, scf_inst_data_t* id1)
 	if ((id0->flag && !id0->base) || (id1->flag && !id1->base))
 		return 0;
 
-	if (id0->base == id1->base
-			&& id0->scale == id1->scale
-			&& id0->index == id1->index
+	if (id0->scale == id1->scale
 			&& id0->disp  == id1->disp
 			&& id0->flag  == id1->flag
 			&& id0->imm   == id1->imm
-			&& id0->imm_size == id1->imm_size)
-		return 1;
+			&& id0->imm_size == id1->imm_size) {
+
+		if (id0->base == id1->base
+		|| (id0->base && id1->base && SCF_COLOR_CONFLICT(id0->base->color, id1->base->color))) {
+
+			if (id0->index == id1->index
+			|| (id0->index && id1->index && SCF_COLOR_CONFLICT(id0->index->color, id1->index->color)))
+				return 1;
+		}
+	}
 	return 0;
 }
 
