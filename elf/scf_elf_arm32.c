@@ -21,14 +21,14 @@ static int _arm32_elf_link_cs(elf_native_t* arm32, elf_section_t* s, elf_section
 
 		int sym_idx = ELF32_R_SYM(rela->r_info);
 
-		scf_loge("i: %d, sym_idx '%d'\n", i, sym_idx);
+		scf_logd("i: %d, sym_idx '%d'\n", i, sym_idx);
 
 		assert(sym_idx >= 1);
 		assert(sym_idx -  1 < arm32->symbols->size);
 
 		sym = arm32->symbols->data[sym_idx - 1];
 		if (sym->dyn_flag) {
-			scf_loge("sym '%s' in dynamic so\n", sym->name->data);
+			scf_logd("sym '%s' in dynamic so\n", sym->name->data);
 			continue;
 		}
 
@@ -47,7 +47,7 @@ static int _arm32_elf_link_cs(elf_native_t* arm32, elf_section_t* s, elf_section
 				offset -= 8; // 'pc' is 'current + 8'.
 				assert(0 == (offset & 0x3));
 
-				scf_loge("sym: %s, offset: %#x, %#x\n", sym->name->data, offset, rela->r_offset);
+				scf_logd("sym: %s, offset: %#x, %#x\n", sym->name->data, offset, rela->r_offset);
 				offset >>= 2;
 
 				if (offset > 0x7fffff || offset < -0x7fffff) {
@@ -55,20 +55,20 @@ static int _arm32_elf_link_cs(elf_native_t* arm32, elf_section_t* s, elf_section
 					return -EINVAL;
 				}
 
-				scf_loge("sym: %s, offset: %#x, %#x\n", sym->name->data, offset, rela->r_offset);
+				scf_logd("sym: %s, offset: %#x, %#x\n", sym->name->data, offset, rela->r_offset);
 
 				*(uint32_t*)(s->data + rela->r_offset) &= 0xff000000;
 				*(uint32_t*)(s->data + rela->r_offset) |= 0x00ffffff & offset;
 				break;
 
 			case R_ARM_REL32:
-				scf_loge("sym: %s, offset: %#x, %#x, st_value: %#x, cs: %#lx\n", sym->name->data, offset, rela->r_offset,
+				scf_logd("sym: %s, offset: %#x, %#x, st_value: %#x, cs: %#lx\n", sym->name->data, offset, rela->r_offset,
 						sym->sym.st_value, cs_base + rela->r_offset);
 
 				*(uint32_t*)(s->data + rela->r_offset) += offset;
 				break;
 			default:
-				scf_loge("ELF32_R_TYPE(rela->r_info): %d\n", ELF32_R_TYPE(rela->r_info));
+				scf_logd("ELF32_R_TYPE(rela->r_info): %d\n", ELF32_R_TYPE(rela->r_info));
 				return -EINVAL;
 				break;
 		};
@@ -194,7 +194,7 @@ static int _arm32_elf_link_sections(elf_native_t* arm32, uint32_t cs_index, uint
 
 		s = arm32->sections->data[rs->sh.sh_info - 1];
 
-		scf_loge("s: %s, rs: %s, rs->sh.sh_info: %u\n", s->name->data, rs->name->data, rs->sh.sh_info);
+		scf_logd("s: %s, rs: %s, rs->sh.sh_info: %u\n", s->name->data, rs->name->data, rs->sh.sh_info);
 
 		assert(!strcmp(s->name->data, rs->name->data + 5));
 
@@ -236,7 +236,7 @@ static int _arm32_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 	for (i = 0; i < arm32->sections->size; i++) {
 		s  =        arm32->sections->data[i];
 
-		scf_logw("i: %d, section: %s\n", i, s->name->data);
+		scf_logd("i: %d, section: %s\n", i, s->name->data);
 
 		if (!strcmp(".text", s->name->data)) {
 
@@ -260,7 +260,7 @@ static int _arm32_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 
 			assert(!crela);
 			crela = s;
-			scf_loge("i: %d, section: %s\n", i, s->name->data);
+			scf_logd("i: %d, section: %s\n", i, s->name->data);
 
 		} else if (!strcmp(".rela.data", s->name->data)) {
 

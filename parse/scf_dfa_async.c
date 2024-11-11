@@ -35,13 +35,12 @@ static int _async_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* da
 {
 	scf_parse_t*  parse = dfa->priv;
 	dfa_data_t*   d     = data;
+	scf_expr_t*   e     = d->expr;
 
 	if (!d->expr) {
 		scf_loge("\n");
 		return SCF_DFA_ERROR;
 	}
-
-	scf_expr_t* e = d->expr;
 
 	while (SCF_OP_EXPR == e->type) {
 
@@ -61,10 +60,13 @@ static int _async_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* da
 	d->expr = NULL;
 	d->expr_local_flag = 0;
 
-	scf_type_t*     pt = NULL;
-	scf_function_t* f  = NULL;
+	scf_type_t*     t   = NULL;
+	scf_function_t* f   = NULL;
+	scf_variable_t* v   = NULL;
+	scf_node_t*     pf  = NULL;
+	scf_node_t*     fmt = NULL;
 
-	if (scf_ast_find_type_type(&pt, parse->ast, SCF_FUNCTION_PTR) < 0)
+	if (scf_ast_find_type_type(&t, parse->ast, SCF_FUNCTION_PTR) < 0)
 		return SCF_DFA_ERROR;
 
 	if (scf_ast_find_function(&f, parse->ast, "scf_async") < 0)
@@ -74,26 +76,46 @@ static int _async_action_semicolon(scf_dfa_t* dfa, scf_vector_t* words, void* da
 		return SCF_DFA_ERROR;
 	}
 
-	scf_variable_t* var_pf = SCF_VAR_ALLOC_BY_TYPE(f->node.w, pt, 1, 1, f);
-	if (!var_pf) {
+	v = SCF_VAR_ALLOC_BY_TYPE(f->node.w, t, 1, 1, f);
+	if (!v) {
 		scf_loge("\n");
 		return SCF_DFA_ERROR;
 	}
-	var_pf->const_literal_flag = 1;
+	v->const_literal_flag = 1;
 
-	scf_node_t* node_pf = scf_node_alloc(d->current_async_w, var_pf->type, var_pf);
-	if (!node_pf) {
+	pf = scf_node_alloc(d->current_async_w, v->type, v);
+	if (!pf) {
 		scf_loge("\n");
 		return SCF_DFA_ERROR;
 	}
 
-	scf_node_add_child(e, node_pf);
+	if (scf_ast_find_type_type(&t, parse->ast, SCF_VAR_CHAR) < 0)
+		return SCF_DFA_ERROR;
+
+	v = SCF_VAR_ALLOC_BY_TYPE(d->current_async_w, t, 1, 1, NULL);
+	if (!v) {
+		scf_loge("\n");
+		return SCF_DFA_ERROR;
+	}
+	v->const_literal_flag = 1;
+	v->data.s = scf_string_cstr("");
+
+	fmt = scf_node_alloc(d->current_async_w, v->type, v);
+	if (!fmt) {
+		scf_loge("\n");
+		return SCF_DFA_ERROR;
+	}
+
+	scf_node_add_child(e, pf);
+	scf_node_add_child(e, fmt);
 
 	int i;
-	for (i = e->nb_nodes - 2; i >= 0; i--)
-		e->nodes[i + 1] = e->nodes[i];
+	for (i = e->nb_nodes - 3; i >= 0; i--)
+		e->nodes[i + 2] = e->nodes[i];
 
-	e->nodes[0] = node_pf;
+	e->nodes[0] = pf;
+	e->nodes[1] = e->nodes[2];
+	e->nodes[2] = fmt;
 
 	if (d->current_node)
 		scf_node_add_child(d->current_node, e);

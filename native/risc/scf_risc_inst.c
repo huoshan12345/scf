@@ -92,7 +92,7 @@ static int _risc_inst_call_argv(scf_native_t* ctx, scf_3ac_code_t* c, scf_functi
 			}
 		}
 
-		scf_loge("i: %d, size: %d, v: %s, rabi: %s\n", i, size, v->w->text->data, rabi->name);
+		scf_logd("i: %d, size: %d, v: %s, rabi: %s\n", i, size, v->w->text->data, rabi->name);
 
 		movx = NULL;
 
@@ -447,7 +447,7 @@ static int _risc_inst_call_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	int data_rela_size = f->data_relas->size;
 	int text_rela_size = f->text_relas->size;
-	scf_loge("f->data_relas->size: %d, f->text_relas->size: %d\n", f->data_relas->size, f->text_relas->size);
+	scf_logd("f->data_relas->size: %d, f->text_relas->size: %d\n", f->data_relas->size, f->text_relas->size);
 
 	uint32_t opcode;
 	int ret;
@@ -494,7 +494,7 @@ static int _risc_inst_call_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 		return save_size;
 	}
 
-	scf_loge("stack_size: %d, save_size: %d\n", stack_size, save_size);
+	scf_logd("stack_size: %d, save_size: %d\n", stack_size, save_size);
 
 	if (stack_size > 0) {
 		assert(inst_sp);
@@ -1828,7 +1828,7 @@ static int _risc_inst_va_start_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 			return -ENOMEM;
 	}
 
-	scf_loge("c->srcs->size: %d\n", c->srcs->size);
+	scf_logd("c->srcs->size: %d\n", c->srcs->size);
 	assert(3 == c->srcs->size);
 
 	scf_register_t* rbp   = f->rops->find_register("rbp");

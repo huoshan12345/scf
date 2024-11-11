@@ -992,12 +992,12 @@ int	_scf_risc_select_inst(scf_native_t* ctx)
 					return ret;
 			}
 
-			scf_loge("************ bb: %d, cmp_flag: %d\n", bb->index, bb->cmp_flag);
+			scf_logd("************ bb: %d, cmp_flag: %d\n", bb->index, bb->cmp_flag);
 			ret = _risc_make_insts_for_list(ctx, bb, 0);
 			if (ret < 0)
 				return ret;
 			bb->native_flag = 1;
-			scf_loge("************ bb: %d\n", bb->index);
+			scf_logd("************ bb: %d\n", bb->index);
 
 			ret = risc_save_bb_colors(bb->dn_colors_exit, bbg, bb);
 			if (ret < 0)

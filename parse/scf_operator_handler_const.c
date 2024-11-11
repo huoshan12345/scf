@@ -133,7 +133,6 @@ static int _scf_op_const_create(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes
 	scf_function_t* callee2 = v2->func_ptr;
 
 	if (caller != callee0) {
-
 		if (scf_vector_add_unique(caller->callee_functions, callee0) < 0)
 			return -1;
 
@@ -142,7 +141,6 @@ static int _scf_op_const_create(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes
 	}
 
 	if (caller != callee2) {
-
 		if (scf_vector_add_unique(caller->callee_functions, callee2) < 0)
 			return -1;
 
@@ -170,7 +168,7 @@ static int _scf_op_const_array_index(scf_ast_t* ast, scf_node_t** nodes, int nb_
 		return -1;
 	}
 
-	scf_handler_data_t* d    = data;
+	scf_handler_data_t* d = data;
 
 	int ret = _scf_expr_calculate_internal(ast, nodes[1], d);
 
@@ -448,12 +446,21 @@ static int _scf_op_const_call(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, 
 	scf_function_t* callee = v0->func_ptr;
 
 	if (caller != callee) {
-
 		if (scf_vector_add_unique(caller->callee_functions, callee) < 0)
 			return -1;
 
 		if (scf_vector_add_unique(callee->caller_functions, caller) < 0)
 			return -1;
+	}
+
+	int i;
+	for (i = 1; i < nb_nodes; i++) {
+
+		int ret = _scf_expr_calculate_internal(ast, nodes[i], data);
+		if (ret < 0) {
+			scf_loge("\n");
+			return -1;
+		}
 	}
 
 	return 0;
@@ -578,7 +585,7 @@ static int _scf_op_const_type_cast(scf_ast_t* ast, scf_node_t** nodes, int nb_no
 	if (scf_variable_integer(src) && scf_variable_integer(dst)) {
 
 		int size;
-		if (src ->nb_dimentions > 0)
+		if (src->nb_dimentions > 0)
 			size = sizeof(void*);
 		else
 			size = src->size;

@@ -53,7 +53,7 @@ static int _naja_elf_link_cs(elf_native_t* naja, elf_section_t* s, elf_section_t
 
 				offset &= 0x3ffffff;
 
-				scf_loge("sym: %s, offset: %#x, %#lx\n", sym->name->data, offset, rela->r_offset);
+				scf_logi("sym: %s, offset: %#x, %#lx\n", sym->name->data, offset, rela->r_offset);
 
 				*(uint32_t*)(s->data + rela->r_offset) |= offset;
 				break;
@@ -207,7 +207,7 @@ static int _naja_elf_link_sections(elf_native_t* naja, uint32_t cs_index, uint32
 
 		s = naja->sections->data[rs->sh.sh_info - 1];
 
-		scf_loge("s: %s, rs: %s, rs->sh.sh_info: %u\n", s->name->data, rs->name->data, rs->sh.sh_info);
+		scf_logi("s: %s, rs: %s, rs->sh.sh_info: %u\n", s->name->data, rs->name->data, rs->sh.sh_info);
 
 		assert(!strcmp(s->name->data, rs->name->data + 5));
 

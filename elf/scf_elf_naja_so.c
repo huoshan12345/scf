@@ -467,7 +467,7 @@ int __naja_elf_add_dyn(elf_native_t* naja, const char* sysroot)
 
 		s->index = naja->sections->size + 1 + sizeof(sh_names) / sizeof(sh_names[0]);
 
-		scf_logw("s: %s, link: %d, info: %d\n", s->name->data, s->sh.sh_link, s->sh.sh_info);
+		scf_logd("s: %s, link: %d, info: %d\n", s->name->data, s->sh.sh_link, s->sh.sh_info);
 
 		if (s->sh.sh_link > 0) {
 			assert(s->sh.sh_link - 1 < naja->sections->size);
@@ -512,7 +512,7 @@ int __naja_elf_add_dyn(elf_native_t* naja, const char* sysroot)
 
 		syms[i + 1].st_name = str->len;
 
-		scf_loge("i: %d, st_value: %#lx\n", i, syms[i + 1].st_value);
+		scf_logi("i: %d, st_value: %#lx\n", i, syms[i + 1].st_value);
 
 		scf_string_cat_cstr_len(str, xsym->name->data, xsym->name->len + 1);
 	}
@@ -553,7 +553,7 @@ int __naja_elf_add_dyn(elf_native_t* naja, const char* sysroot)
 		dyns[i].d_tag = DT_NEEDED;
 		dyns[i].d_un.d_val = str->len;
 
-		scf_logw("i: %d, %s, %s\n", i, needed->data, needed->data + prefix);
+		scf_logd("i: %d, %s, %s\n", i, needed->data, needed->data + prefix);
 
 		scf_string_cat_cstr_len(str, needed->data + prefix, needed->len - prefix + 1);
 	}
@@ -633,7 +633,7 @@ int __naja_elf_add_dyn(elf_native_t* naja, const char* sysroot)
 	for (i = 0; i < naja->sections->size; i++) {
 		s  =        naja->sections->data[i];
 
-		scf_loge("i: %d, s: %s, index: %d\n", i, s->name->data, s->index);
+		scf_logd("i: %d, s: %s, index: %d\n", i, s->name->data, s->index);
 
 		if (s->link) {
 			scf_logd("link: %s, index: %d\n", s->link->name->data, s->link->index);
@@ -651,7 +651,7 @@ int __naja_elf_add_dyn(elf_native_t* naja, const char* sysroot)
 		sym =        naja->symbols->data[i];
 
 		if (sym->section) {
-			scf_logw("sym: %s, index: %d->%d\n", sym->name->data, sym->sym.st_shndx, sym->section->index);
+			scf_logd("sym: %s, index: %d->%d\n", sym->name->data, sym->sym.st_shndx, sym->section->index);
 			sym->sym.st_shndx = sym->section->index;
 		}
 	}
@@ -671,8 +671,8 @@ int __naja_elf_post_dyn(elf_native_t* naja, uint64_t rx_base, uint64_t rw_base, 
 	naja->interp->sh.sh_addr   = rx_base + naja->interp->offset;
 	naja->plt->sh.sh_addr      = rx_base + naja->plt->offset;
 
-	scf_loge("rw_base: %#lx, offset: %#lx\n", rw_base, naja->got_plt->offset);
-	scf_loge("got_addr: %#lx\n", naja->got_plt->sh.sh_addr);
+	scf_logi("rw_base: %#lx, offset: %#lx\n", rw_base, naja->got_plt->offset);
+	scf_logi("got_addr: %#lx\n", naja->got_plt->sh.sh_addr);
 
 	Elf64_Rela* rela_plt = (Elf64_Rela*)naja->rela_plt->data;
 	Elf64_Sym*  dynsym   = (Elf64_Sym* )naja->dynsym->data;
@@ -691,7 +691,7 @@ int __naja_elf_post_dyn(elf_native_t* naja, uint64_t rx_base, uint64_t rw_base, 
 	got_plt   += 3;
 	got_addr  += 8;
 
-	scf_loge("got_addr: %#lx, plt_addr: %#lx, offset: %d, %#x\n", got_addr, plt_addr, offset, offset);
+	scf_logi("got_addr: %#lx, plt_addr: %#lx, offset: %d, %#x\n", got_addr, plt_addr, offset, offset);
 
 	plt[2] |=  (offset >> 15) & 0x1fffff;
 	plt[3] |=  (got_addr & 0x7fff) << 5;
@@ -710,7 +710,7 @@ int __naja_elf_post_dyn(elf_native_t* naja, uint64_t rx_base, uint64_t rw_base, 
 
 		offset = got_addr - plt_addr;
 
-		scf_loge("i: %d, got_addr: %#lx, plt_addr: %#lx, offset: %d, %#x\n", i, got_addr, plt_addr, offset, offset);
+		scf_logi("i: %d, got_addr: %#lx, plt_addr: %#lx, offset: %d, %#x\n", i, got_addr, plt_addr, offset, offset);
 
 		plt[0] |= (offset >> 15) & 0x1fffff;
 		plt[1] |= (got_addr & 0x7fff) << 5;
