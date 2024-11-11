@@ -188,9 +188,9 @@ int naja_vm_init(scf_vm_t* vm, const char* path, const char* sys)
 				return -1;
 			}
 
-			scf_loge("i: %d, ph->p_offset: %#lx, ph->p_filesz: %#lx\n", i, ph->ph.p_offset, ph->ph.p_filesz);
+			scf_logi("i: %d, ph->p_offset: %#lx, ph->p_filesz: %#lx\n", i, ph->ph.p_offset, ph->ph.p_filesz);
 
-			scf_loge("i: %d, ph->addr: %#lx, ph->len: %#lx, %#lx, ph->flags: %#x\n", i, ph->addr, ph->len, ph->ph.p_memsz, ph->ph.p_flags);
+			scf_logi("i: %d, ph->addr: %#lx, ph->len: %#lx, %#lx, ph->flags: %#x\n", i, ph->addr, ph->len, ph->ph.p_memsz, ph->ph.p_flags);
 
 			if ((PF_X | PF_R) == ph->ph.p_flags)
 				vm->text   =  ph;
@@ -211,11 +211,11 @@ int naja_vm_init(scf_vm_t* vm, const char* path, const char* sys)
 
 			vm->dynamic = ph;
 
-			scf_loge("ph->addr: %#lx, ph->len: %#lx, %#lx, ph->p_offset: %#lx\n", ph->addr, ph->len, ph->ph.p_memsz, ph->ph.p_offset);
+			scf_logi("ph->addr: %#lx, ph->len: %#lx, %#lx, ph->p_offset: %#lx\n", ph->addr, ph->len, ph->ph.p_memsz, ph->ph.p_offset);
 		}
 	}
 
-	scf_loge("\n\n");
+	scf_logi("\n\n");
 
 	if (vm->dynamic) {
 		Elf64_Dyn* d = (Elf64_Dyn*)(vm->data->data + vm->dynamic->ph.p_offset);
@@ -226,23 +226,23 @@ int naja_vm_init(scf_vm_t* vm, const char* path, const char* sys)
 			switch (d[i].d_tag) {
 
 				case DT_STRTAB:
-					scf_loge("dynstr: %#lx\n", d[i].d_un.d_ptr);
+					scf_logi("dynstr: %#lx\n", d[i].d_un.d_ptr);
 					vm->dynstr = d[i].d_un.d_ptr - vm->text->addr + vm->text->data;
 					break;
 
 				case DT_SYMTAB:
-					scf_loge("dynsym: %#lx\n", d[i].d_un.d_ptr);
+					scf_logi("dynsym: %#lx\n", d[i].d_un.d_ptr);
 					vm->dynsym = (Elf64_Sym*)(d[i].d_un.d_ptr - vm->text->addr + vm->text->data);
 					break;
 
 				case DT_JMPREL:
-					scf_loge("JMPREL: %#lx\n", d[i].d_un.d_ptr);
+					scf_logi("JMPREL: %#lx\n", d[i].d_un.d_ptr);
 					vm->jmprel      = (Elf64_Rela*)(d[i].d_un.d_ptr - vm->text->addr + vm->text->data);
 					vm->jmprel_addr = d[i].d_un.d_ptr;
 					break;
 
 				case DT_PLTGOT:
-					scf_loge("PLTGOT: %#lx\n", d[i].d_un.d_ptr);
+					scf_logi("PLTGOT: %#lx\n", d[i].d_un.d_ptr);
 					vm->pltgot = (uint64_t*)(d[i].d_un.d_ptr - vm->data->addr + vm->data->data);
 					break;
 
@@ -267,7 +267,7 @@ int naja_vm_init(scf_vm_t* vm, const char* path, const char* sys)
 					}
 				}
 
-				scf_loge("needed: %s\n", name);
+				scf_logi("needed: %s\n", name);
 
 				void* so = dlopen(name, RTLD_LAZY);
 				if (!so) {

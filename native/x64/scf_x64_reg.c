@@ -122,7 +122,7 @@ int x64_reg_cached_vars(scf_register_t* r)
 
 		scf_register_t*	r2 = &(x64_registers[i]);
 
-		if (SCF_X64_REG_RSP == r2->id || SCF_X64_REG_RBP == r2->id)
+		if (!X64_COLOR_TYPE(r2->color) && (SCF_X64_REG_RSP == r2->id || SCF_X64_REG_RBP == r2->id))
 			continue;
 
 		if (!X64_COLOR_CONFLICT(r->color, r2->color))
@@ -141,7 +141,7 @@ int x64_registers_init()
 
 		scf_register_t*	r = &(x64_registers[i]);
 
-		if (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id)
+		if (!X64_COLOR_TYPE(r->color) && (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id))
 			continue;
 
 		assert(!r->dag_nodes);
@@ -163,7 +163,7 @@ void x64_registers_clear()
 
 		scf_register_t*	r = &(x64_registers[i]);
 
-		if (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id)
+		if (!X64_COLOR_TYPE(r->color) && (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id))
 			continue;
 
 		if (r->dag_nodes) {
@@ -187,7 +187,7 @@ void x64_registers_print()
 
 		r  = &(x64_registers[i]);
 
-		if (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id)
+		if (!X64_COLOR_TYPE(r->color) && (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id))
 			continue;
 
 		if (!r->dag_nodes)
@@ -231,7 +231,7 @@ int x64_caller_save_regs(scf_3ac_code_t* c, uint32_t* regs, int nb_regs, int sta
 		for (i = 0; i < sizeof(x64_registers) / sizeof(x64_registers[0]); i++) {
 			r  = &(x64_registers[i]);
 
-			if (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id)
+			if (!X64_COLOR_TYPE(r->color) && (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id))
 				continue;
 
 			if (0 == r->dag_nodes->size)
@@ -312,7 +312,7 @@ int x64_push_regs(scf_vector_t* instructions, uint32_t* regs, int nb_regs)
 		for (i = 0; i < sizeof(x64_registers) / sizeof(x64_registers[0]); i++) {
 			r  = &(x64_registers[i]);
 
-			if (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id)
+			if (!X64_COLOR_TYPE(r->color) && (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id))
 				continue;
 
 			if (0 == r->dag_nodes->size)
@@ -351,7 +351,7 @@ int x64_pop_regs(scf_vector_t* instructions, scf_register_t** regs, int nb_regs,
 		for (i = 0; i < sizeof(x64_registers) / sizeof(x64_registers[0]); i++) {
 			r  = &(x64_registers[i]);
 
-			if (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id)
+			if (!X64_COLOR_TYPE(r->color) && (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id))
 				continue;
 
 			if (0 == r->dag_nodes->size)
@@ -390,7 +390,7 @@ int x64_registers_reset()
 
 		scf_register_t*	r = &(x64_registers[i]);
 
-		if (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id)
+		if (!X64_COLOR_TYPE(r->color) && (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id))
 			continue;
 
 		if (!r->dag_nodes)
@@ -482,7 +482,7 @@ scf_vector_t* x64_register_colors()
 
 		scf_register_t*	r = &(x64_registers[i]);
 
-		if (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id)
+		if (!X64_COLOR_TYPE(r->color) && (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id))
 			continue;
 
 		// ah bh ch dh can't use
@@ -620,7 +620,7 @@ int x64_overflow_reg(scf_register_t* r, scf_3ac_code_t* c, scf_function_t* f)
 
 		scf_register_t*	r2 = &(x64_registers[i]);
 
-		if (SCF_X64_REG_RSP == r2->id || SCF_X64_REG_RBP == r2->id)
+		if (!X64_COLOR_TYPE(r2->color) && (SCF_X64_REG_RSP == r2->id || SCF_X64_REG_RBP == r2->id))
 			continue;
 
 		if (!X64_COLOR_CONFLICT(r->color, r2->color))
@@ -649,7 +649,7 @@ int x64_overflow_reg2(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c, 
 
 		r2 = &(x64_registers[i]);
 
-		if (SCF_X64_REG_RSP == r2->id || SCF_X64_REG_RBP == r2->id)
+		if (!X64_COLOR_TYPE(r2->color) && (SCF_X64_REG_RSP == r2->id || SCF_X64_REG_RBP == r2->id))
 			continue;
 
 		if (!X64_COLOR_CONFLICT(r->color, r2->color))
@@ -685,7 +685,7 @@ int x64_reg_used(scf_register_t* r, scf_dag_node_t* dn)
 
 		r2 = &(x64_registers[i]);
 
-		if (SCF_X64_REG_RSP == r2->id || SCF_X64_REG_RBP == r2->id)
+		if (!X64_COLOR_TYPE(r2->color) && (SCF_X64_REG_RSP == r2->id || SCF_X64_REG_RBP == r2->id))
 			continue;
 
 		if (!X64_COLOR_CONFLICT(r->color, r2->color))
@@ -754,7 +754,7 @@ scf_register_t* x64_select_overflowed_reg(scf_dag_node_t* dn, scf_3ac_code_t* c)
 
 		scf_register_t*	r = &(x64_registers[i]);
 
-		if (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id)
+		if (!X64_COLOR_TYPE(r->color) && (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id))
 			continue;
 
 		if (1 == bytes) {
@@ -799,7 +799,7 @@ scf_register_t* x64_select_overflowed_reg(scf_dag_node_t* dn, scf_3ac_code_t* c)
 
 		scf_register_t*	r = &(x64_registers[i]);
 
-		if (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id)
+		if (!X64_COLOR_TYPE(r->color) && (SCF_X64_REG_RSP == r->id || SCF_X64_REG_RBP == r->id))
 			continue;
 
 		if (1 == bytes) {

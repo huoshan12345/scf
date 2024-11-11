@@ -18,6 +18,8 @@ typedef struct scf_co_thread_s  scf_co_thread_t;
 
 typedef struct scf_co_buf_s     scf_co_buf_t;
 
+extern         scf_co_thread_t* __co_thread;
+
 struct scf_co_buf_s
 {
 	scf_co_buf_t*      next;
@@ -48,6 +50,7 @@ struct scf_co_task_s
 	intptr_t           stack_len;
 	intptr_t           stack_capacity;
 
+	int                n_floats;
 	int                err;
 
 	uint32_t           events;
@@ -63,7 +66,7 @@ struct scf_co_thread_s
 	scf_rbtree_t       timers;
 
 	scf_list_t         tasks;
-	int                nb_tasks;
+	int                n_tasks;
 
 	scf_co_task_t*     current;
 
@@ -78,17 +81,19 @@ int  __async_connect(int fd, const struct sockaddr *addr, socklen_t addrlen, int
 int  __async_loop();
 
 
-int scf_co_thread_open (scf_co_thread_t** pthread);
-int scf_co_thread_close(scf_co_thread_t*  thread);
+int  scf_co_thread_open (scf_co_thread_t** pthread);
+int  scf_co_thread_close(scf_co_thread_t*  thread);
 
-int scf_co_thread_add_task(scf_co_thread_t* thread, scf_co_task_t* task);
+void scf_co_thread_add_task(scf_co_thread_t* thread, scf_co_task_t* task);
 
-int scf_co_thread_run(scf_co_thread_t*  thread);
+int  scf_co_thread_run(scf_co_thread_t*  thread);
 
-int scf_co_task_alloc(scf_co_task_t** ptask, uintptr_t func_ptr, uintptr_t rdi, uintptr_t rsi, uintptr_t rdx, uintptr_t rcx);
+int  scf_co_task_alloc(scf_co_task_t** ptask, uintptr_t funcptr, const char* fmt, uintptr_t rdx, uintptr_t rcx, uintptr_t r8, uintptr_t r9, uintptr_t* rsp,
+		double xmm0, double xmm1, double xmm2, double xmm3, double xmm4, double xmm5, double xmm6, double xmm7);
+
 void scf_co_task_free(scf_co_task_t* task);
 
-int scf_async(uintptr_t funcptr, uintptr_t rdi, uintptr_t rsi, uintptr_t rdx);
+int  __scf_async(uintptr_t funcptr, const char* fmt, uintptr_t rdx, uintptr_t rcx, uintptr_t r8, uintptr_t r9, uintptr_t* rsp,
+		double xmm0, double xmm1, double xmm2, double xmm3, double xmm4, double xmm5, double xmm6, double xmm7);
 
 #endif
-

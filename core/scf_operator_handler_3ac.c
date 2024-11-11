@@ -1492,6 +1492,7 @@ static int _scf_op_call(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* 
 
 	scf_handler_data_t* d      = data;
 	scf_variable_t*     v      = NULL;
+	scf_variable_t*     fmt    = NULL;
 	scf_function_t*     f      = NULL;
 	scf_vector_t*       argv   = NULL;
 	scf_node_t*         parent = nodes[0]->parent;
@@ -1561,6 +1562,19 @@ static int _scf_op_call(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* 
 				&& !v->local_flag
 				&& !v->const_flag)
 			v->tmp_flag = 1;
+
+		if (!strcmp(f->node.w->text->data, "scf_async") && i > 2) {
+
+			fmt = _scf_operand_get(nodes[2]);
+
+			if (scf_variable_float(v))
+				ret = scf_string_cat_cstr_len(fmt->data.s, "f", 1);
+			else
+				ret = scf_string_cat_cstr_len(fmt->data.s, "d", 1);
+
+			if (ret < 0)
+				return ret;
+		}
 	}
 
 	if (parent->result_nodes) {

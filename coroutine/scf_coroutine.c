@@ -1,6 +1,6 @@
 #include"scf_coroutine.h"
 
-static scf_co_thread_t* co_thread = NULL;
+scf_co_thread_t* __co_thread = NULL;
 
 int  __scf_co_task_run(scf_co_task_t* task);
 void __asm_co_task_yield(scf_co_task_t* task, uintptr_t* task_rip, uintptr_t* task_rsp, uintptr_t task_rsp0);
@@ -31,7 +31,7 @@ int scf_co_thread_open (scf_co_thread_t** pthread)
 	scf_rbtree_init(&thread->timers);
 	scf_list_init  (&thread->tasks);
 
-	co_thread = thread;
+	__co_thread = thread;
 
 	*pthread = thread;
 	return 0;
@@ -43,31 +43,118 @@ int scf_co_thread_close(scf_co_thread_t*  thread)
 	return -1;
 }
 
-int scf_co_task_alloc(scf_co_task_t** ptask, uintptr_t func_ptr, uintptr_t rdi, uintptr_t rsi, uintptr_t rdx, uintptr_t rcx)
+int scf_co_task_alloc(scf_co_task_t** ptask, uintptr_t funcptr, const char* fmt, uintptr_t rdx, uintptr_t rcx, uintptr_t r8, uintptr_t r9, uintptr_t* rsp,
+		double xmm0, double xmm1, double xmm2, double xmm3, double xmm4, double xmm5, double xmm6, double xmm7)
 {
 	scf_co_task_t* task = calloc(1, sizeof(scf_co_task_t));
 	if (!task)
 		return -ENOMEM;
 
-	task->stack_data = calloc(4, sizeof(uintptr_t));
+	const char* p;
+
+	int i = 0;
+	int j = 0;
+
+	scf_logi("fmt: %s\n", fmt);
+
+	for (p = fmt; *p; p++) {
+
+		if ('d'== *p) // 'd' in format string for 'long', 'f' for 'double'
+			i++;
+		else if ('f' == *p)
+			j++;
+	}
+
+	if (j > 0)
+		task->n_floats = 1;
+	else
+		task->n_floats = 0;
+
+	scf_logi("n_floats: %d\n", task->n_floats);
+
+	i -= 4; // rdx, rcx, r8, r9 not in stack, xmm0-xmm7 too.
+	j -= 8;
+
+	if (i < 0)
+		i = 0;
+
+	if (j < 0)
+		j = 0;
+
+	int n = 6 + 8 + i + j;
+	int k;
+
+	if (n % 2 == 0)
+		n++;
+
+	task->stack_data = calloc(n, sizeof(uintptr_t));
 	if (!task->stack_data) {
 		free(task);
 		return -ENOMEM;
 	}
 
-	task->stack_len = 4 * sizeof(uintptr_t);
+	scf_logi("int: %d, float: %d, n: %d\n", i, j, n);
 
-	uintptr_t* stack = task->stack_data;
-	stack[0] = rdi;
-	stack[1] = rsi;
-	stack[2] = rdx;
-	stack[3] = rcx;
+	task->stack_len = n * sizeof(uintptr_t);
 
-	scf_loge("rdi: %ld, stack[0]: %ld\n", rdi, stack[0]);
+	task->stack_data[0]  = rdx;
+	task->stack_data[1]  = rcx;
+	task->stack_data[2]  = r8;
+	task->stack_data[3]  = r9;
+
+	task->stack_data[6]  = *(uint64_t*)&xmm0;
+	task->stack_data[7]  = *(uint64_t*)&xmm1;
+	task->stack_data[8]  = *(uint64_t*)&xmm2;
+	task->stack_data[9]  = *(uint64_t*)&xmm3;
+	task->stack_data[10] = *(uint64_t*)&xmm4;
+	task->stack_data[11] = *(uint64_t*)&xmm5;
+	task->stack_data[12] = *(uint64_t*)&xmm6;
+	task->stack_data[13] = *(uint64_t*)&xmm7;
+
+	i = 0;
+	j = 0;
+	k = 0;
+	n = 14;
+	for (p = fmt; *p; p++) {
+
+		if ('d'== *p) {
+
+			if (4 == i || 5 == i)
+				task->stack_data[i] = rsp[k++];
+			else if (i >= 6)
+				task->stack_data[n++] = rsp[k++];
+			i++;
+
+		} else if ('f' == *p) {
+			if (j >= 8)
+				task->stack_data[n++] = rsp[k++];
+			j++;
+		}
+	}
+
+	i = 0;
+	j = 0;
+	for (p = fmt; *p; p++) {
+
+		if ('d'== *p) {
+			scf_logi("d, task->stack[%d]: %#lx\n", i, task->stack_data[i]);
+			i++;
+		} else if ('f' == *p) {
+			if (j >= 8) {
+				scf_logi("f, task->stack[%d]: %lg\n", i, *(double*)&task->stack_data[i]);
+				i++;
+			}
+			j++;
+		}
+	}
+
+	scf_logi("-----------\n");
+	for (i = 0; i < task->stack_len / sizeof(uintptr_t); i++)
+		scf_logi("task->stack[%d]: %#lx\n", i, task->stack_data[i]);
 
 	task->stack_capacity = task->stack_len;
 
-	task->rip = func_ptr;
+	task->rip = funcptr;
 
 	*ptask = task;
 	return 0;
@@ -85,17 +172,6 @@ static int _co_timer_cmp(scf_rbtree_node_t* node0, void* data)
 	return 0;
 }
 
-static int _co_timer_cmp_task(scf_rbtree_node_t* node0, void* data)
-{
-	scf_co_task_t* task0 = (scf_co_task_t*)node0;
-	scf_co_task_t* task1 = (scf_co_task_t*)data;
-
-	if (task0->time < task1->time)
-		return -1;
-	else if (task0->time > task1->time)
-		return 1;
-}
-
 void scf_co_task_free(scf_co_task_t* task)
 {
 	if (task->stack_data)
@@ -104,7 +180,7 @@ void scf_co_task_free(scf_co_task_t* task)
 	free(task);
 }
 
-int scf_co_thread_add_task(scf_co_thread_t* thread, scf_co_task_t* task)
+void scf_co_thread_add_task(scf_co_thread_t* thread, scf_co_task_t* task)
 {
 	task->time = scf_gettime();
 
@@ -114,14 +190,14 @@ int scf_co_thread_add_task(scf_co_thread_t* thread, scf_co_task_t* task)
 
 	task->thread = thread;
 
-	thread->nb_tasks++;
-	return 0;
+	thread->n_tasks++;
 }
 
-int scf_async(uintptr_t funcptr, uintptr_t rdi, uintptr_t rsi, uintptr_t rdx)
+int __scf_async(uintptr_t funcptr, const char* fmt, uintptr_t rdx, uintptr_t rcx, uintptr_t r8, uintptr_t r9, uintptr_t* rsp,
+		double xmm0, double xmm1, double xmm2, double xmm3, double xmm4, double xmm5, double xmm6, double xmm7)
 {
-	if (!co_thread) {
-		if (scf_co_thread_open(&co_thread) < 0) {
+	if (!__co_thread) {
+		if (scf_co_thread_open(&__co_thread) < 0) {
 			scf_loge("\n");
 			return -1;
 		}
@@ -129,12 +205,14 @@ int scf_async(uintptr_t funcptr, uintptr_t rdi, uintptr_t rsi, uintptr_t rdx)
 
 	scf_co_task_t* task = NULL;
 
-	if (scf_co_task_alloc(&task, funcptr, rdi, rsi, rdx, 0) < 0) {
+	int ret = scf_co_task_alloc(&task, funcptr, fmt, rdx, rcx, r8, r9, rsp,
+			                     xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7);
+	if (ret < 0) {
 		scf_loge("\n");
-		return -1;
+		return ret;
 	}
 
-	scf_co_thread_add_task(co_thread, task);
+	scf_co_thread_add_task(__co_thread, task);
 	return 0;
 }
 
@@ -142,7 +220,7 @@ int __save_stack(scf_co_task_t* task)
 {
 	task->stack_len = task->rsp0 - task->rsp;
 
-	scf_loge("task: %p, stack_len: %ld, start: %#lx, end: %#lx, task->rip: %#lx\n",
+	scf_logi("task: %p, stack_len: %ld, start: %#lx, end: %#lx, task->rip: %#lx\n",
 			task, task->stack_len, task->rsp, task->rsp0, task->rip);
 
 	if (task->stack_len > task->stack_capacity) {
@@ -162,7 +240,7 @@ int __save_stack(scf_co_task_t* task)
 
 void __async_msleep(int64_t msec)
 {
-	scf_co_thread_t* thread = co_thread;
+	scf_co_thread_t* thread = __co_thread;
 	scf_co_task_t*   task   = thread->current;
 
 	if (task->time > 0)
@@ -256,8 +334,8 @@ static int _co_read_to_bufs(scf_co_task_t* task)
 
 static int _co_add_event(int fd, uint32_t events)
 {
-	scf_co_thread_t*   thread = co_thread;
-	scf_co_task_t*     task   = thread->current;
+	scf_co_thread_t*  thread = __co_thread;
+	scf_co_task_t*    task   = thread->current;
 
 	struct epoll_event ev;
 	ev.events   = events | EPOLLET | EPOLLRDHUP;
@@ -283,8 +361,8 @@ static int _co_add_event(int fd, uint32_t events)
 
 int __async_connect(int fd, const struct sockaddr *addr, socklen_t addrlen, int64_t msec)
 {
-	scf_co_thread_t*   thread = co_thread;
-	scf_co_task_t*     task   = thread->current;
+	scf_co_thread_t*  thread = __co_thread;
+	scf_co_task_t*    task   = thread->current;
 
 	int flags = fcntl(fd, F_GETFL);
 	flags |= O_NONBLOCK;
@@ -335,7 +413,7 @@ int __async_connect(int fd, const struct sockaddr *addr, socklen_t addrlen, int6
 			err = -err;
 		}
 
-		scf_loge("err: %d\n", err);
+		scf_logi("err: %d\n", err);
 	}
 
 	if (epoll_ctl(thread->epfd, EPOLL_CTL_DEL, fd, NULL) < 0) {
@@ -344,7 +422,6 @@ int __async_connect(int fd, const struct sockaddr *addr, socklen_t addrlen, int6
 	}
 
 	if (task->time > 0) {
-		scf_loge("\n");
 		scf_rbtree_delete(&thread->timers, &task->timer);
 		task->time = 0;
 	}
@@ -354,8 +431,8 @@ int __async_connect(int fd, const struct sockaddr *addr, socklen_t addrlen, int6
 
 int __async_read(int fd, void* buf, size_t count, int64_t msec)
 {
-	scf_co_thread_t*   thread = co_thread;
-	scf_co_task_t*     task   = thread->current;
+	scf_co_thread_t*  thread = __co_thread;
+	scf_co_task_t*    task   = thread->current;
 
 	int ret = _co_add_event(fd, EPOLLIN);
 	if (ret < 0) {
@@ -402,8 +479,8 @@ int __async_read(int fd, void* buf, size_t count, int64_t msec)
 
 int __async_write(int fd, void* buf, size_t count)
 {
-	scf_co_thread_t*   thread = co_thread;
-	scf_co_task_t*     task   = thread->current;
+	scf_co_thread_t*  thread = __co_thread;
+	scf_co_task_t*    task   = thread->current;
 
 	int ret = _co_add_event(fd, EPOLLOUT);
 	if (ret < 0) {
@@ -438,13 +515,13 @@ int __async_write(int fd, void* buf, size_t count)
 
 void __async_exit()
 {
-	if (co_thread)
-		co_thread->exit_flag = 1;
+	if (__co_thread)
+		__co_thread->exit_flag = 1;
 }
 
 int __async_loop()
 {
-	return scf_co_thread_run(co_thread);
+	return scf_co_thread_run(__co_thread);
 }
 
 #define SCF_CO_TASK_DELETE(task) \
@@ -455,7 +532,7 @@ int __async_loop()
 		} \
 		\
 		scf_list_del(&task->list); \
-		thread->nb_tasks--; \
+		thread->n_tasks--; \
 		\
 		scf_co_task_free(task); \
 		task = NULL; \
@@ -466,18 +543,32 @@ int scf_co_thread_run(scf_co_thread_t* thread)
 	if (!thread)
 		return -EINVAL;
 
+	int n_tasks = thread->n_tasks + 1;
+
+	struct epoll_event* events = malloc(n_tasks * sizeof(struct epoll_event));
+	if (!events)
+		return -ENOMEM;
+
 	while (!thread->exit_flag) {
 
-		assert(thread->nb_tasks >= 0);
+		assert(thread->n_tasks >= 0);
 
-		if (0 == thread->nb_tasks)
+		if (0 == thread->n_tasks)
 			break;
 
-		struct epoll_event* events = calloc(thread->nb_tasks + 1, sizeof(struct epoll_event));
-		if (!events)
-			return -ENOMEM;
+		if (n_tasks < thread->n_tasks + 1) {
+			n_tasks = thread->n_tasks + 1;
 
-		int ret = epoll_wait(thread->epfd, events, thread->nb_tasks + 1, 300);
+			void* p = realloc(events, n_tasks * sizeof(struct epoll_event));
+			if (!p) {
+				free(events);
+				return -ENOMEM;
+			}
+
+			events = p;
+		}
+
+		int ret = epoll_wait(thread->epfd, events, n_tasks, 10);
 		if (ret < 0) {
 			scf_loge("errno: %d\n", errno);
 
@@ -495,8 +586,13 @@ int scf_co_thread_run(scf_co_thread_t* thread)
 
 			int ret2 = __scf_co_task_run(task);
 
-			if (ret2 < 0 || SCF_CO_OK == ret2) {
+			if (ret2 < 0) {
 				scf_loge("ret2: %d, thread: %p, task: %p\n", ret2, thread, task);
+
+				SCF_CO_TASK_DELETE(task);
+
+			} else if (SCF_CO_OK == ret2) {
+				scf_logi("ret2: %d, thread: %p, task: %p\n", ret2, thread, task);
 
 				SCF_CO_TASK_DELETE(task);
 			}
@@ -504,33 +600,33 @@ int scf_co_thread_run(scf_co_thread_t* thread)
 
 		while (1) {
 			scf_co_task_t* task = (scf_co_task_t*) scf_rbtree_min(&thread->timers, thread->timers.root);
-			if (!task) {
-				scf_loge("\n");
+			if (!task)
 				break;
-			}
 
-			if (task->time > scf_gettime()) {
+			if (task->time > scf_gettime())
 				break;
-			}
 
 			scf_rbtree_delete(&thread->timers, &task->timer);
 			task->time = 0;
 
 			int ret2 = __scf_co_task_run(task);
 
-			if (ret2 < 0 || SCF_CO_OK == ret2) {
+			if (ret2 < 0) {
 				scf_loge("ret2: %d, thread: %p, task: %p\n", ret2, thread, task);
+
+				SCF_CO_TASK_DELETE(task);
+
+			} else if (SCF_CO_OK == ret2) {
+				scf_logi("ret2: %d, thread: %p, task: %p\n", ret2, thread, task);
 
 				SCF_CO_TASK_DELETE(task);
 			}
 		}
 
-		free(events);
-		events = NULL;
 	}
 
-	scf_loge("async exit\n");
+	scf_logi("async exit\n");
 
+	free(events);
 	return 0;
 }
-

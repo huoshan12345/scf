@@ -256,9 +256,9 @@ static int _arm32_elf_add_dynamic(elf_native_t* arm32, elf_section_t** ps)
 	}
 	s->data_len  = nb_tags * sizeof(Elf32_Dyn);
 
-	scf_logw("nb_tags: %d\n", nb_tags);
+	scf_logd("nb_tags: %d\n", nb_tags);
 
-	s->index     = 1;
+	s->index = 1;
 
 	s->sh.sh_type   = SHT_PROGBITS;
 	s->sh.sh_flags  = SHF_ALLOC | SHF_WRITE;
@@ -464,7 +464,7 @@ int __arm32_elf_add_dyn (elf_native_t* arm32, const char* sysroot)
 
 		s->index = arm32->sections->size + 1 + sizeof(sh_names) / sizeof(sh_names[0]);
 
-		scf_logw("s: %s, link: %d, info: %d\n", s->name->data, s->sh.sh_link, s->sh.sh_info);
+		scf_logd("s: %s, link: %d, info: %d\n", s->name->data, s->sh.sh_link, s->sh.sh_info);
 
 		if (s->sh.sh_link > 0) {
 			assert(s->sh.sh_link - 1 < arm32->sections->size);
@@ -509,7 +509,7 @@ int __arm32_elf_add_dyn (elf_native_t* arm32, const char* sysroot)
 
 		syms[i + 1].st_name = str->len;
 
-		scf_loge("i: %d, st_value: %#x\n", i, syms[i + 1].st_value);
+		scf_logd("i: %d, st_value: %#x\n", i, syms[i + 1].st_value);
 
 		scf_string_cat_cstr_len(str, xsym->name->data, xsym->name->len + 1);
 	}
@@ -550,7 +550,7 @@ int __arm32_elf_add_dyn (elf_native_t* arm32, const char* sysroot)
 		dyns[i].d_tag = DT_NEEDED;
 		dyns[i].d_un.d_val = str->len;
 
-		scf_logw("i: %d, %s, %s\n", i, needed->data, needed->data + prefix);
+		scf_logi("i: %d, %s, %s\n", i, needed->data, needed->data + prefix);
 
 		scf_string_cat_cstr_len(str, needed->data + prefix, needed->len - prefix + 1);
 	}
@@ -631,7 +631,7 @@ int __arm32_elf_add_dyn (elf_native_t* arm32, const char* sysroot)
 	for (i = 0; i < arm32->sections->size; i++) {
 		s  =        arm32->sections->data[i];
 
-		scf_loge("i: %d, s: %s, index: %d\n", i, s->name->data, s->index);
+		scf_logd("i: %d, s: %s, index: %d\n", i, s->name->data, s->index);
 
 		if (s->link) {
 			scf_logd("link: %s, index: %d\n", s->link->name->data, s->link->index);
@@ -660,7 +660,7 @@ int __arm32_elf_add_dyn (elf_native_t* arm32, const char* sysroot)
 		sym =        arm32->symbols->data[i];
 
 		if (sym->section) {
-			scf_logw("sym: %s, index: %d->%d\n", sym->name->data, sym->sym.st_shndx, sym->section->index);
+			scf_logd("sym: %s, index: %d->%d\n", sym->name->data, sym->sym.st_shndx, sym->section->index);
 			sym->sym.st_shndx = sym->section->index;
 		}
 	}
@@ -680,8 +680,8 @@ int __arm32_elf_post_dyn(elf_native_t* arm32, uint64_t rx_base, uint64_t rw_base
 	arm32->interp->sh.sh_addr   = rx_base + arm32->interp->offset;
 	arm32->plt->sh.sh_addr      = rx_base + arm32->plt->offset;
 
-	scf_loge("rw_base: %#lx, offset: %#lx\n", rw_base, arm32->got_plt->offset);
-	scf_loge("got_addr: %#x\n", arm32->got_plt->sh.sh_addr);
+	scf_logi("rw_base: %#lx, offset: %#lx\n", rw_base, arm32->got_plt->offset);
+	scf_logi("got_addr: %#x\n", arm32->got_plt->sh.sh_addr);
 
 	Elf32_Rela* r;
 	Elf32_Rela* rela_plt = (Elf32_Rela*)arm32->rela_plt->data;
@@ -701,7 +701,7 @@ int __arm32_elf_post_dyn(elf_native_t* arm32, uint64_t rx_base, uint64_t rw_base
 	got_plt   += 4;
 	got_addr  +=16;
 
-	scf_loge("got_addr: %#lx, plt_addr: %#lx, offset: %d, %#x\n", got_addr, plt_addr, offset, offset);
+	scf_logi("got_addr: %#lx, plt_addr: %#lx, offset: %d, %#x\n", got_addr, plt_addr, offset, offset);
 
 	plt[4]    = offset - 16;
 
@@ -718,9 +718,9 @@ int __arm32_elf_post_dyn(elf_native_t* arm32, uint64_t rx_base, uint64_t rw_base
 
 		offset = got_addr - plt_addr - 8; // 'pc = current + 8'
 
-		scf_loge("i: %d, got_addr: %#lx, plt_addr: %#lx, offset: %d, %#x\n", i, got_addr, plt_addr, offset, offset);
+		scf_logd("i: %d, got_addr: %#lx, plt_addr: %#lx, offset: %d, %#x\n", i, got_addr, plt_addr, offset, offset);
 
-		scf_logw("got_plt[%d]: %#x\n", i, *got_plt);
+		scf_logd("got_plt[%d]: %#x\n", i, *got_plt);
 
 		if (offset > 0xfffffff) {
 			scf_loge("\n");

@@ -556,9 +556,12 @@ int __x64_elf_add_dyn(elf_native_t* x64, const char* sysroot)
 		dyns[i].d_tag = DT_NEEDED;
 		dyns[i].d_un.d_val = str->len;
 
-		scf_logd("i: %d, %s, %s\n", i, needed->data, needed->data + prefix);
+		scf_logi("i: %d, %s, %s\n", i, needed->data, needed->data + prefix);
 
-		scf_string_cat_cstr_len(str, needed->data + prefix, needed->len - prefix + 1);
+		if (!strncmp(needed->data, sysroot, strlen(sysroot)))
+			scf_string_cat_cstr_len(str, needed->data + prefix, needed->len - prefix + 1);
+		else
+			scf_string_cat_cstr_len(str, needed->data, needed->len + 1);
 	}
 
 	dyns[i].d_tag     = DT_STRTAB;

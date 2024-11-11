@@ -189,6 +189,7 @@ int main(int argc, char* argv[])
 			return -1;
 		}
 
+		scf_logi("fname: %s\n", fname);
 		if (scf_vector_add(vec, fname) < 0)
 			return -ENOMEM;
 	}
@@ -233,25 +234,25 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-#define MAIN_ADD_FILES(_objs, _sofiles) \
+#define MAIN_ADD_FILES(_objs, _sofiles, _arch) \
 	do { \
-		int ret = add_sys_files(objs, sysroot, arch, _objs, sizeof(_objs) / sizeof(_objs[0])); \
+		int ret = add_sys_files(objs, sysroot, _arch, _objs, sizeof(_objs) / sizeof(_objs[0])); \
 		if (ret < 0) \
 		    return ret; \
 		\
-		ret = add_sys_files(sofiles, sysroot, arch, _sofiles, sizeof(_sofiles) / sizeof(_sofiles[0])); \
+		ret = add_sys_files(sofiles, sysroot, _arch, _sofiles, sizeof(_sofiles) / sizeof(_sofiles[0])); \
 		if (ret < 0) \
 		    return ret; \
 	} while (0)
 
 
 	if (!strcmp(arch, "arm64") || !strcmp(arch, "naja"))
-		MAIN_ADD_FILES(__arm64_objs, __arm64_sofiles);
+		MAIN_ADD_FILES(__arm64_objs, __arm64_sofiles, "arm64");
 
 	else if (!strcmp(arch, "arm32"))
-		MAIN_ADD_FILES(__arm32_objs, __arm32_sofiles);
+		MAIN_ADD_FILES(__arm32_objs, __arm32_sofiles, "arm32");
 	else
-		MAIN_ADD_FILES(__objs, __sofiles);
+		MAIN_ADD_FILES(__objs, __sofiles, "x64");
 
 
 	if (scf_vector_add(objs, obj) < 0) {

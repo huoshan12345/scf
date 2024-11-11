@@ -1091,7 +1091,7 @@ int	_scf_x64_select_inst(scf_native_t* ctx)
 				return ret;
 		}
 	}
-#if 1
+#if 0
 	if (x64_optimize_peephole(ctx, f) < 0) {
 		scf_loge("\n");
 		return -1;
