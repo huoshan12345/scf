@@ -2041,6 +2041,7 @@ static int _semantic_pointer_add(scf_ast_t* ast, scf_node_t* parent, scf_node_t*
 	scf_variable_t* v = _scf_operand_get(pointer);
 	scf_type_t*     t = NULL;
 	scf_node_t*     add;
+	scf_node_t*     neg;
 
 	int ret = scf_ast_find_type_type(&t, ast, v->type);
 	if (ret < 0)
@@ -2084,9 +2085,45 @@ static int _semantic_pointer_add(scf_ast_t* ast, scf_node_t* parent, scf_node_t*
 	parent->nodes[1] = NULL;
 	parent->nb_nodes = 1;
 
+	if (SCF_OP_SUB == parent->type) {
+		neg = scf_node_alloc(parent->w, SCF_OP_NEG, NULL);
+		if (!neg) {
+			ret = -ENOMEM;
+			goto error;
+		}
+
+		v = _scf_operand_get(index);
+
+		ret = scf_ast_find_type_type(&t, ast, v->type);
+		if (ret < 0)
+			goto error;
+
+		r = SCF_VAR_ALLOC_BY_TYPE(parent->w, t, v->const_flag, 0, NULL);
+		if (!r) {
+			scf_node_free(neg);
+			goto error;
+		}
+		r->local_flag = 1;
+		r->tmp_flag   = 1;
+
+		neg->result = r;
+		r = NULL;
+
+		ret = scf_node_add_child(neg, index);
+		if (ret < 0) {
+			scf_node_free(neg);
+			goto error;
+		}
+
+		add->nodes[1] = neg;
+		neg->parent   = add;
+	}
+
+	ret = 0;
+error:
 	parent->op   = scf_find_base_operator_by_type(SCF_OP_ADDRESS_OF);
 	parent->type = SCF_OP_ADDRESS_OF;
-	return 0;
+	return ret;
 }
 
 static int _semantic_pointer_add_assign(scf_ast_t* ast, scf_node_t* parent, scf_node_t* pointer, scf_node_t* index)
@@ -2101,7 +2138,10 @@ static int _semantic_pointer_add_assign(scf_ast_t* ast, scf_node_t* parent, scf_
 	if (ret < 0)
 		return ret;
 
-	add = scf_node_alloc(parent->w, SCF_OP_ADD, NULL);
+	if (SCF_OP_ADD_ASSIGN == parent->type)
+		add = scf_node_alloc(parent->w, SCF_OP_ADD, NULL);
+	else
+		add = scf_node_alloc(parent->w, SCF_OP_SUB, NULL);
 	if (!add)
 		return -ENOMEM;
 
@@ -2211,7 +2251,7 @@ static int _scf_op_semantic_binary_assign(scf_ast_t* ast, scf_node_t** nodes, in
 					scf_loge("var calculated with a pointer should be a interger\n");
 					return -EINVAL;
 				} else {
-					t  = scf_block_find_type_type(ast->current_block, SCF_VAR_UINTPTR);
+					t  = scf_block_find_type_type(ast->current_block, SCF_VAR_INTPTR);
 
 					v2 = SCF_VAR_ALLOC_BY_TYPE(v1->w, t, v1->const_flag, 0, NULL);
 
@@ -2321,7 +2361,7 @@ static int _scf_op_semantic_binary(scf_ast_t* ast, scf_node_t** nodes, int nb_no
 					scf_loge("var calculated with a pointer should be a interger\n");
 					return -EINVAL;
 				} else {
-					t  = scf_block_find_type_type(ast->current_block, SCF_VAR_UINTPTR);
+					t  = scf_block_find_type_type(ast->current_block, SCF_VAR_INTPTR);
 
 					v2 = SCF_VAR_ALLOC_BY_TYPE(v1->w, t, v1->const_flag, 0, NULL);
 
@@ -2364,7 +2404,7 @@ static int _scf_op_semantic_binary(scf_ast_t* ast, scf_node_t** nodes, int nb_no
 						return -1;
 					}
 
-					t  = scf_block_find_type_type(ast->current_block, SCF_VAR_UINTPTR);
+					t  = scf_block_find_type_type(ast->current_block, SCF_VAR_INTPTR);
 
 					v2 = SCF_VAR_ALLOC_BY_TYPE(v0->w, t, v0->const_flag, 0, NULL);
 

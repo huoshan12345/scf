@@ -444,25 +444,14 @@ static int _expr_action_rp_cast(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	scf_node_add_child(node_cast, node_var);
 
 	// '(' lp action pushed a expr before
-	scf_expr_t* parent0 = scf_stack_pop(md->lp_exprs);
-	scf_expr_t* parent1 = scf_stack_pop(md->lp_exprs);
+	scf_expr_t* e = scf_stack_pop(md->lp_exprs);
 
-	scf_logd("type cast 0: d->expr: %p, d->expr->parent: %p, 0: %p, 1: %p\n",
-			d->expr, d->expr->parent, parent0, parent1);
+	scf_logd("type cast: d->expr: %p, d->expr->parent: %p, e: %p\n", d->expr, d->expr->parent, e);
 
-	assert(parent0);
+	assert(e);
 
-	if (parent1) {
-		scf_expr_free(parent0);
-		parent0 = NULL;
-
-		scf_expr_add_node(parent1, node_cast);
-		d->expr = parent1;
-
-	} else {
-		scf_expr_add_node(parent0, node_cast);
-		d->expr = parent0;
-	}
+	scf_expr_add_node(e, node_cast);
+	d->expr = e;
 
 	scf_stack_pop(d->current_identities);
 	free(id);
