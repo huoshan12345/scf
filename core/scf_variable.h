@@ -4,6 +4,11 @@
 #include"scf_core_types.h"
 #include"scf_lex_word.h"
 
+typedef struct {
+	scf_expr_t*         vla; // variable length array
+	int                 num; // const    length array
+} scf_dimention_t;
+
 struct scf_variable_s {
 
 	int					refs; // reference count
@@ -14,7 +19,7 @@ struct scf_variable_s {
 	int					nb_pointers; // Multiple pointer count
 	scf_function_t*     func_ptr;
 
-	int*				dimentions; // var array every dimention size
+	scf_dimention_t*    dimentions;    // number of every dimention
 	int					nb_dimentions; // total dimentions
 	int                 dim_index;
 	int					capacity;
@@ -53,12 +58,9 @@ struct scf_variable_s {
 	uint32_t            global_flag :1;
 	uint32_t            member_flag :1;
 
+	uint32_t            vla_flag    :1;
 	uint32_t            arg_flag    :1;
 	uint32_t            auto_gc_flag:1;
-
-	uint32_t            array_flag  :1;
-	uint32_t            input_flag  :1;
-	uint32_t            output_flag :1;
 };
 
 struct scf_index_s
@@ -86,7 +88,7 @@ void 			scf_variable_free(scf_variable_t* var);
 
 void 			scf_variable_print(scf_variable_t* var);
 
-void 			scf_variable_add_array_dimention(scf_variable_t* var, int dimention_size);
+void 			scf_variable_add_array_dimention(scf_variable_t* array, int num, scf_expr_t* vla);
 
 void 			scf_variable_set_array_member(scf_variable_t* array, int index, scf_variable_t* member);
 void 			scf_variable_get_array_member(scf_variable_t* array, int index, scf_variable_t* member);
@@ -109,7 +111,7 @@ static inline int scf_variable_const(scf_variable_t* v)
 		return v->const_literal_flag;
 
 	if (v->nb_pointers + v->nb_dimentions > 0)
-		return v->const_literal_flag;
+		return v->const_literal_flag && !v->vla_flag;
 
 	return v->const_flag && 0 == v->nb_pointers && 0 == v->nb_dimentions;
 }

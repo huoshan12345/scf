@@ -43,13 +43,13 @@ static int _eda_make_insts_for_list(scf_native_t* ctx, scf_list_t* h, int bb_off
 
 		scf_3ac_code_t* c = scf_list_data(l, scf_3ac_code_t, list);
 
-		eda_inst_handler_t* h = scf_eda_find_inst_handler(c->op->type);
+		eda_inst_handler_pt h = scf_eda_find_inst_handler(c->op->type);
 		if (!h) {
 			scf_loge("3ac operator '%s' not supported\n", c->op->name);
 			return -EINVAL;
 		}
 
-		ret = h->func(ctx, c);
+		ret = h(ctx, c);
 		if (ret < 0) {
 			scf_3ac_code_print(c, NULL);
 			scf_loge("3ac op '%s' make inst failed\n", c->op->name);

@@ -112,20 +112,20 @@ static int _union_calculate_size(scf_dfa_t* dfa, scf_type_t* s)
 
 			for (j = 0; j < v->nb_dimentions; j++) {
 
-				if (v->dimentions[j] < 0) {
+				if (v->dimentions[j].num < 0) {
 					scf_loge("number of %d-dimention for array '%s' is less than 0, number: %d, file: %s, line: %d\n",
-							j, v->w->text->data, v->dimentions[j], v->w->file->data, v->w->line);
+							j, v->w->text->data, v->dimentions[j].num, v->w->file->data, v->w->line);
 					return SCF_DFA_ERROR;
 				}
 
-				if (0 == v->dimentions[j] && j < v->nb_dimentions - 1) {
+				if (0 == v->dimentions[j].num && j < v->nb_dimentions - 1) {
 
 					scf_loge("only the number of array's last dimention can be 0, array '%s', dimention: %d, file: %s, line: %d\n",
 							v->w->text->data, j, v->w->file->data, v->w->line);
 					return SCF_DFA_ERROR;
 				}
 
-				v->capacity *= v->dimentions[j];
+				v->capacity *= v->dimentions[j].num;
 			}
 
 			size = v->size * v->capacity;

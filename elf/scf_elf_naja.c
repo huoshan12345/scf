@@ -60,7 +60,7 @@ static int _naja_elf_link_cs(elf_native_t* naja, elf_section_t* s, elf_section_t
 
 			case R_AARCH64_ADR_PREL_PG_HI21:
 
-				offset >>= 15;
+				offset >>= 14;
 				offset  &= 0x1fffff;
 
 				*(uint32_t*)(s->data + rela->r_offset) |= offset;
@@ -68,7 +68,7 @@ static int _naja_elf_link_cs(elf_native_t* naja, elf_section_t* s, elf_section_t
 
 			case R_AARCH64_ADD_ABS_LO12_NC:
 
-				*(uint32_t*)(s->data + rela->r_offset) |= (sym->sym.st_value & 0x7fff) << 5;
+				*(uint32_t*)(s->data + rela->r_offset) |= (sym->sym.st_value & 0x3fff) << 5;
 				break;
 
 			default:

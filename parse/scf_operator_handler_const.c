@@ -367,6 +367,13 @@ static int _scf_op_const_default(scf_ast_t* ast, scf_node_t** nodes, int nb_node
 	return 0;
 }
 
+static int _scf_op_const_vla_alloc(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
+{
+	assert(4 == nb_nodes);
+
+	return 0;
+}
+
 static int _scf_op_const_for(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
 {
 	assert(4 == nb_nodes);
@@ -987,6 +994,8 @@ scf_operator_handler_pt  const_operator_handlers[SCF_N_OPS] =
 	[SCF_OP_SWITCH     ]  =   _scf_op_const_switch,
 	[SCF_OP_CASE       ]  =   _scf_op_const_case,
 	[SCF_OP_DEFAULT    ]  =   _scf_op_const_default,
+
+	[SCF_OP_VLA_ALLOC  ]  =   _scf_op_const_vla_alloc,
 };
 
 scf_operator_handler_pt  scf_find_const_operator_handler(const int type)

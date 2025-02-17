@@ -125,6 +125,7 @@ typedef struct {
 
 	void*     ops;
 	char*     cpk;
+	char*     va_curve;
 } ScfEdata;
 
 typedef struct {
@@ -140,6 +141,18 @@ SCF_PACK_INFO_VAR(ScfLine, y0),
 SCF_PACK_INFO_VAR(ScfLine, x1),
 SCF_PACK_INFO_VAR(ScfLine, y1),
 SCF_PACK_END(ScfLine)
+
+typedef struct {
+	SCF_PACK_DEF_VAR(double, v);
+	SCF_PACK_DEF_VAR(double, a);
+	SCF_PACK_DEF_VAR(double, hfe);
+} ScfEcurve;
+
+SCF_PACK_TYPE(ScfEcurve)
+SCF_PACK_INFO_VAR(ScfEcurve, v),
+SCF_PACK_INFO_VAR(ScfEcurve, a),
+SCF_PACK_INFO_VAR(ScfEcurve, hfe),
+SCF_PACK_END(ScfEcurve)
 
 typedef struct scf_eops_s        ScfEops;
 typedef struct scf_epin_s        ScfEpin;
@@ -280,6 +293,8 @@ struct scf_ecomponent_s
 	SCF_PACK_DEF_VAR(uint64_t, model);
 	SCF_PACK_DEF_OBJS(ScfEpin, pins);
 
+	SCF_PACK_DEF_OBJS(ScfEcurve, curves);
+
 	SCF_PACK_DEF_OBJ(ScfEfunction, pf);
 	SCF_PACK_DEF_OBJ(ScfEfunction, f);
 	SCF_PACK_DEF_OBJ(ScfEops,      ops);
@@ -309,7 +324,8 @@ SCF_PACK_TYPE(ScfEcomponent)
 SCF_PACK_INFO_VAR(ScfEcomponent, id),
 SCF_PACK_INFO_VAR(ScfEcomponent, type),
 SCF_PACK_INFO_VAR(ScfEcomponent, model),
-SCF_PACK_INFO_OBJS(ScfEcomponent, pins, ScfEpin),
+SCF_PACK_INFO_OBJS(ScfEcomponent, pins,   ScfEpin),
+SCF_PACK_INFO_OBJS(ScfEcomponent, curves, ScfEcurve),
 
 SCF_PACK_INFO_VAR(ScfEcomponent, v),
 SCF_PACK_INFO_VAR(ScfEcomponent, a),
@@ -380,9 +396,10 @@ ScfEpin*       scf_epin__alloc();
 int            scf_epin__add_component(ScfEpin* pin, uint64_t cid, uint64_t pid);
 int            scf_epin__del_component(ScfEpin* pin, uint64_t cid, uint64_t pid);
 
-ScfEcomponent* scf_ecomponent__alloc  (uint64_t type);
+ScfEcomponent* scf_ecomponent__alloc(uint64_t type);
 int            scf_ecomponent__add_pin(ScfEcomponent* c, ScfEpin* pin);
 int            scf_ecomponent__del_pin(ScfEcomponent* c, ScfEpin* pin);
+int            scf_ecomponent__add_curve(ScfEcomponent* c, ScfEcurve* curve);
 ScfEdata*      scf_ecomponent__find_data(const uint64_t type, const uint64_t model);
 
 ScfEfunction*  scf_efunction__alloc        (const   char* name);

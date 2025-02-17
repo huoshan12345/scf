@@ -18,19 +18,19 @@ static int __reshape_index(dfa_index_t** out, scf_variable_t* array, dfa_index_t
 	int j;
 	for (j = array->nb_dimentions - 1; j >= 0; j--) {
 
-		if (array->dimentions[j] <= 0) {
+		if (array->dimentions[j].num <= 0) {
 			scf_logw("array's %d-dimention size not set, file: %s, line: %d\n", j, array->w->file->data, array->w->line);
 
 			free(p);
 			return -1;
 		}
 
-		p[j].i = i % array->dimentions[j];
-		i      = i / array->dimentions[j];
+		p[j].i = i % array->dimentions[j].num;
+		i      = i / array->dimentions[j].num;
 	}
 
 	for (j = 0; j < array->nb_dimentions; j++)
-		scf_logi("\033[32m dim: %d, size: %d, index: %ld\033[0m\n", j, array->dimentions[j], p[j].i);
+		scf_logi("\033[32m dim: %d, size: %d, index: %ld\033[0m\n", j, array->dimentions[j].num, p[j].i);
 
 	*out = p;
 	return 0;
@@ -64,9 +64,9 @@ static int __array_member_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t
 
 		intptr_t k = index[i].i;
 
-		if (k >= array->dimentions[i]) {
+		if (k >= array->dimentions[i].num) {
 			scf_loge("index [%ld] out of size [%d], in dim: %d, file: %s, line: %d\n",
-					k, array->dimentions[i], i, w->file->data, w->line);
+					k, array->dimentions[i].num, i, w->file->data, w->line);
 
 			if (n < array->nb_dimentions) {
 				free(index);
@@ -243,9 +243,9 @@ int scf_array_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* v, scf_vec
 	for (i = 0; i < v->nb_dimentions; i++) {
 		assert(v->dimentions);
 
-		scf_logi("dim[%d]: %d\n", i, v->dimentions[i]);
+		scf_logi("dim[%d]: %d\n", i, v->dimentions[i].num);
 
-		if (v->dimentions[i] < 0) {
+		if (v->dimentions[i].num < 0) {
 
 			if (unset > 0) {
 				scf_loge("array '%s' should only unset 1-dimention size, file: %s, line: %d\n",
@@ -256,7 +256,7 @@ int scf_array_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* v, scf_vec
 			unset++;
 			unset_dim = i;
 		} else
-			capacity *= v->dimentions[i];
+			capacity *= v->dimentions[i].num;
 	}
 
 	if (unset) {
@@ -274,12 +274,12 @@ int scf_array_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* v, scf_vec
 		if (-1 == unset_max) {
 			unset_max = init_exprs->size / capacity;
 
-			v->dimentions[unset_dim] = unset_max;
+			v->dimentions[unset_dim].num = unset_max;
 
 			scf_logw("don't set %d-dimention size of array '%s', use '%d' as calculated, file: %s, line: %d\n",
 					unset_dim, v->w->text->data, unset_max, w->file->data, w->line);
 		} else
-			v->dimentions[unset_dim] = unset_max + 1;
+			v->dimentions[unset_dim].num = unset_max + 1;
 	}
 
 	for (i = 0; i < init_exprs->size; i++) {
@@ -302,13 +302,13 @@ int scf_array_init(scf_ast_t* ast, scf_lex_word_t* w, scf_variable_t* v, scf_vec
 
 			for (j = v->nb_dimentions - 1; j >= 0; j--) {
 
-				ie->index[j].i = index % v->dimentions[j];
-				index          = index / v->dimentions[j];
+				ie->index[j].i = index % v->dimentions[j].num;
+				index          = index / v->dimentions[j].num;
 			}
 		}
 
 		for (j = 0; j < v->nb_dimentions; j++)
-			scf_logi("\033[32mi: %d, dim: %d, size: %d, index: %ld\033[0m\n", i, j, v->dimentions[j], ie->index[j].i);
+			scf_logi("\033[32mi: %d, dim: %d, size: %d, index: %ld\033[0m\n", i, j, v->dimentions[j].num, ie->index[j].i);
 	}
 
 	for (i = 0; i < init_exprs->size; i++) {

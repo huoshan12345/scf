@@ -216,10 +216,8 @@ int scf_parse_file(scf_parse_t* parse, const char* path)
 		assert(!d->expr);
 
 		ret = scf_dfa_parse_word(parse->dfa, w, d);
-		if (ret < 0) {
-			scf_loge("dfa parse failed\n");
+		if (ret < 0)
 			break;
-		}
 	}
 
 	fclose(parse->lex->fp);

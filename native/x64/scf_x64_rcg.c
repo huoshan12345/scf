@@ -920,6 +920,24 @@ static int _x64_rcg_or_assign_handler(scf_native_t* ctx, scf_3ac_code_t* c, scf_
 	return _x64_rcg_make(c, g, dst->dag_node, NULL, NULL);
 }
 
+static int _x64_rcg_vla_alloc_handler(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g)
+{
+	int ret = _x64_rcg_make2(c, NULL, NULL, NULL);
+	if (ret < 0)
+		return ret;
+
+	return _x64_rcg_make(c, g, NULL, NULL, NULL);
+}
+
+static int _x64_rcg_vla_free_handler(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g)
+{
+	int ret = _x64_rcg_make2(c, NULL, NULL, NULL);
+	if (ret < 0)
+		return ret;
+
+	return _x64_rcg_make(c, g, NULL, NULL, NULL);
+}
+
 static int _x64_rcg_return_handler(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g)
 {
 	int i;
@@ -1284,6 +1302,9 @@ static x64_rcg_handler_pt  x64_rcg_handlers[SCF_N_3AC_OPS] =
 
 	[SCF_OP_AND_ASSIGN  ]  =  _x64_rcg_and_assign_handler,
 	[SCF_OP_OR_ASSIGN   ]  =  _x64_rcg_or_assign_handler,
+
+	[SCF_OP_VLA_ALLOC   ]  =  _x64_rcg_vla_alloc_handler,
+	[SCF_OP_VLA_FREE    ]  =  _x64_rcg_vla_free_handler,
 
 	[SCF_OP_RETURN      ]  =  _x64_rcg_return_handler,
 

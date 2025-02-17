@@ -1065,6 +1065,15 @@ static int _scf_op_while(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void*
 	return 0;
 }
 
+static int _scf_op_vla_alloc(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
+{
+	assert(4 == nb_nodes);
+
+	scf_handler_data_t* d = data;
+
+	return _scf_3ac_code_N(d->_3ac_list_head, SCF_OP_VLA_ALLOC, nodes[0], nodes + 1, 3);
+}
+
 static int _scf_op_default(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
 {
 	return 0;
@@ -2454,6 +2463,8 @@ scf_operator_handler_pt  __operator_handlers[SCF_N_3AC_OPS] =
 	[SCF_OP_SWITCH ]      = _scf_op_switch,
 	[SCF_OP_CASE   ]      = _scf_op_case,
 	[SCF_OP_DEFAULT]      = _scf_op_default,
+
+	[SCF_OP_VLA_ALLOC]    = _scf_op_vla_alloc,
 };
 
 scf_operator_handler_pt  scf_find_3ac_operator_handler(const int type)

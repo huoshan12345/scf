@@ -38,6 +38,7 @@ CFILES += ../native/risc/scf_risc_rcg.c
 CFILES += ../native/risc/scf_risc_reg.c
 CFILES += ../native/risc/scf_risc_reg_arm64.c
 CFILES += ../native/risc/scf_risc_reg_arm32.c
+CFILES += ../native/risc/scf_risc_reg_naja.c
 CFILES += ../native/risc/scf_arm64.c
 CFILES += ../native/risc/scf_arm32.c
 CFILES += ../native/risc/scf_naja.c
@@ -114,6 +115,7 @@ CFILES += ../core/scf_optimizer_dominators.c
 CFILES += ../core/scf_optimizer_basic_block.c
 CFILES += ../core/scf_optimizer_const_teq.c
 CFILES += ../core/scf_optimizer_loop.c
+CFILES += ../core/scf_optimizer_vla.c
 CFILES += ../core/scf_optimizer_group.c
 CFILES += ../core/scf_optimizer_generate_loads_saves.c
 

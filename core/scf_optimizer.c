@@ -23,6 +23,7 @@ extern scf_optimizer_t   scf_optimizer_basic_block;
 extern scf_optimizer_t   scf_optimizer_const_teq;
 
 extern scf_optimizer_t   scf_optimizer_loop;
+extern scf_optimizer_t   scf_optimizer_vla;
 extern scf_optimizer_t   scf_optimizer_group;
 extern scf_optimizer_t   scf_optimizer_generate_loads_saves;
 
@@ -52,6 +53,7 @@ static scf_optimizer_t*  scf_optimizers[] =
 
 	&scf_optimizer_dominators,
 	&scf_optimizer_loop,
+	&scf_optimizer_vla,
 	&scf_optimizer_group,
 
 	&scf_optimizer_generate_loads_saves,

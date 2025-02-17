@@ -10,9 +10,9 @@
 #define NAJA_PRINTF
 #endif
 
-#define NAJA_REG_FP   29
-#define NAJA_REG_LR   30
-#define NAJA_REG_SP   31
+#define NAJA_REG_FP   28
+#define NAJA_REG_LR   29
+#define NAJA_REG_SP   30
 
 typedef struct scf_vm_s       scf_vm_t;
 typedef struct scf_vm_ops_s   scf_vm_ops_t;
@@ -81,28 +81,6 @@ typedef struct {
 
 } scf_vm_naja_t;
 
-#define NAJA_ADD        0
-#define NAJA_SUB        1
-#define NAJA_MUL        2
-#define NAJA_DIV        3
-#define NAJA_LDR_DISP   4
-#define NAJA_STR_DISP   5
-#define NAJA_AND        6
-#define NAJA_OR         7
-#define NAJA_JMP_DISP   8
-#define NAJA_CMP        9
-#define NAJA_JMP_REG   10
-#define NAJA_SETCC     11
-#define NAJA_LDR_SIB   12
-#define NAJA_STR_SIB   13
-#define NAJA_TEQ       14
-#define NAJA_MOV       15
-
-#define NAJA_CALL_DISP 24
-#define NAJA_CALL_REG  26
-#define NAJA_ADRP      42
-#define NAJA_RET       56
-
 typedef int (*naja_opcode_pt)(scf_vm_t* vm, uint32_t inst);
 
 int scf_vm_open (scf_vm_t** pvm, const char* arch);
@@ -116,4 +94,3 @@ int naja_vm_close(scf_vm_t* vm);
 int naja_vm_init(scf_vm_t* vm, const char* path, const char* sys);
 
 #endif
-

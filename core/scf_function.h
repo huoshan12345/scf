@@ -59,8 +59,9 @@ struct scf_function_s {
 	uint32_t          inline_flag:1;
 	uint32_t          member_flag:1;
 
-	uint32_t          vargs_flag :1;
-	uint32_t          void_flag  :1;
+	uint32_t          vargs_flag:1;
+	uint32_t          void_flag :1;
+	uint32_t          vla_flag  :1;
 };
 
 scf_function_t*	scf_function_alloc(scf_lex_word_t* w);

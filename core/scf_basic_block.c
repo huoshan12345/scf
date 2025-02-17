@@ -1403,3 +1403,22 @@ void scf_basic_block_add_code(scf_basic_block_t* bb, scf_list_t* h)
 		c->basic_block = bb;
 	}
 }
+
+scf_bb_group_t* scf_basic_block_find_min_loop(scf_basic_block_t* bb, scf_vector_t* loops)
+{
+	scf_bb_group_t* loop;
+	int i;
+
+	for (i = 0; i < loops->size; i++) {
+		loop      = loops->data[i];
+
+		if (scf_vector_find(loop->body, bb)) {
+
+			if (!loop->loop_childs || loop->loop_childs->size <= 0)
+				return loop;
+
+			return scf_basic_block_find_min_loop(bb, loop->loop_childs);
+		}
+	}
+	return NULL;
+}

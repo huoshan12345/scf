@@ -157,33 +157,33 @@ static ScfEops __not_ops =
 
 static ScfEdata  component_datas[] =
 {
-	{SCF_EDA_None,       0,                   0, 0, 0,    0,   0,   0, 0, NULL, NULL},
-	{SCF_EDA_Battery,    0, SCF_EDA_Battery_POS, 0, 0, 1e-9, 1e9,   0, 0, NULL, NULL},
+	{SCF_EDA_None,       0,                   0, 0, 0,    0,   0,   0, 0, NULL, NULL, NULL},
+	{SCF_EDA_Battery,    0, SCF_EDA_Battery_POS, 0, 0, 1e-9, 1e9,   0, 0, NULL, NULL, NULL},
 
-	{SCF_EDA_Resistor,   0,                   0, 0, 0,  1e4,   0,   0, 0, NULL, NULL},
-	{SCF_EDA_Capacitor,  0,                   0, 0, 0,   10, 0.1,   0, 0, NULL, NULL},
-	{SCF_EDA_Inductor,   0,                   0, 0, 0,   10,   0, 1e3, 0, NULL, NULL},
+	{SCF_EDA_Resistor,   0,                   0, 0, 0,  1e4,   0,   0, 0, NULL, NULL, NULL},
+	{SCF_EDA_Capacitor,  0,                   0, 0, 0,   10, 0.1,   0, 0, NULL, NULL, NULL},
+	{SCF_EDA_Inductor,   0,                   0, 0, 0,   10,   0, 1e3, 0, NULL, NULL, NULL},
 
-	{SCF_EDA_Diode,      0,                   0, 0, 0,    0,   0,   0, 0, &__diode_ops, NULL},
-	{SCF_EDA_NPN,        0,                   0, 0, 0,    0,   0,   0, 0, &__npn_ops,   NULL},
-	{SCF_EDA_PNP,        0,                   0, 0, 0,    0,   0,   0, 0, &__pnp_ops,   NULL},
+	{SCF_EDA_Diode,      0,                   0, 0, 0,    0,   0,   0, 0, &__diode_ops, NULL, NULL},
+	{SCF_EDA_NPN,        0,                   0, 0, 0,    0,   0,   0, 0, &__npn_ops,   NULL, "./cpk/9013.txt"},
+	{SCF_EDA_PNP,        0,                   0, 0, 0,    0,   0,   0, 0, &__pnp_ops,   NULL, NULL},
 
-	{SCF_EDA_NAND,       0,                   0, 0, 0,    0,   0,   0, 0, &__nand_ops,  "./cpk/nand.cpk"},
-	{SCF_EDA_NOR,        0,                   0, 0, 0,    0,   0,   0, 0, &__nor_ops,   "./cpk/nor.cpk"},
-	{SCF_EDA_NOT,        0,                   0, 0, 0,    0,   0,   0, 0, &__not_ops,   "./cpk/not.cpk"},
+	{SCF_EDA_NAND,       0,                   0, 0, 0,    0,   0,   0, 0, &__nand_ops,  "./cpk/nand.cpk", NULL},
+	{SCF_EDA_NOR,        0,                   0, 0, 0,    0,   0,   0, 0, &__nor_ops,   "./cpk/nor.cpk", NULL},
+	{SCF_EDA_NOT,        0,                   0, 0, 0,    0,   0,   0, 0, &__not_ops,   "./cpk/not.cpk", NULL},
 };
 
 static ScfEdata  pin_datas[] =
 {
-	{SCF_EDA_None,       0,                   0, 0, 0,    0,   0,   0,   0, NULL, NULL},
+	{SCF_EDA_None,       0,                   0, 0, 0,    0,   0,   0,   0, NULL, NULL, NULL},
 
-	{SCF_EDA_Diode,      0,   SCF_EDA_Diode_NEG, 0, 0,  750,   0,   0,   0, NULL, NULL},
+	{SCF_EDA_Diode,      0,   SCF_EDA_Diode_NEG, 0, 0,  750,   0,   0,   0, NULL, NULL, NULL},
 
-	{SCF_EDA_NPN,        0,       SCF_EDA_NPN_B, 0, 0,  750,   0,   0,   0, NULL, NULL},
-	{SCF_EDA_NPN,        0,       SCF_EDA_NPN_C, 0, 0,    3,   0,   0, 250, NULL, NULL},
+	{SCF_EDA_NPN,        0,       SCF_EDA_NPN_B, 0, 0,  750,   0,   0,   0, NULL, NULL, NULL},
+	{SCF_EDA_NPN,        0,       SCF_EDA_NPN_C, 0, 0,    3,   0,   0, 250, NULL, NULL, NULL},
 
-	{SCF_EDA_PNP,        0,       SCF_EDA_PNP_B, 0, 0,  750,   0,   0,   0, NULL, NULL},
-	{SCF_EDA_PNP,        0,       SCF_EDA_PNP_C, 0, 0,    3,   0,   0, 250, NULL, NULL},
+	{SCF_EDA_PNP,        0,       SCF_EDA_PNP_B, 0, 0,  750,   0,   0,   0, NULL, NULL, NULL},
+	{SCF_EDA_PNP,        0,       SCF_EDA_PNP_C, 0, 0,    3,   0,   0, 250, NULL, NULL, NULL},
 };
 
 static ScfEdata* _pin_find_data(const uint64_t type, const uint64_t model, const uint64_t pid)
@@ -524,7 +524,7 @@ ScfEcomponent* scf_ecomponent__alloc(uint64_t type)
 		pin->id     = i;
 		pin->ic_lid = -1;
 
-		scf_loge("pin %p, id: %ld, ic_lid: %ld\n", pin, pin->id, pin->ic_lid);
+		scf_logd("pin %p, id: %ld, ic_lid: %ld\n", pin, pin->id, pin->ic_lid);
 
 		if (scf_ecomponent__add_pin(c, pin) < 0) {
 			ScfEcomponent_free(c);
@@ -544,6 +544,20 @@ ScfEcomponent* scf_ecomponent__alloc(uint64_t type)
 	}
 
 	return c;
+}
+
+int scf_ecomponent__add_curve(ScfEcomponent* c, ScfEcurve* curve)
+{
+	if (!c || !curve)
+		return -EINVAL;
+
+	void* p = realloc(c->curves, sizeof(ScfEcurve*) * (c->n_curves + 1));
+	if (!p)
+		return -ENOMEM;
+
+	c->curves = p;
+	c->curves[c->n_curves++] = curve;
+	return 0;
 }
 
 int scf_ecomponent__add_pin(ScfEcomponent* c, ScfEpin* pin)

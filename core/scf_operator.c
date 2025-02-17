@@ -80,6 +80,9 @@ static scf_operator_t	base_operators[] =
 	{"switch",     NULL,  SCF_OP_SWITCH,       15, -1,  SCF_OP_ASSOCIATIVITY_LEFT},
 	{"case",       NULL,  SCF_OP_CASE,         15, -1,  SCF_OP_ASSOCIATIVITY_LEFT},
 	{"default",    NULL,  SCF_OP_DEFAULT,      15, -1,  SCF_OP_ASSOCIATIVITY_LEFT},
+
+	{"vla_alloc",  NULL,  SCF_OP_VLA_ALLOC,    15, -1,  SCF_OP_ASSOCIATIVITY_LEFT},
+	{"vla_free",   NULL,  SCF_OP_VLA_FREE,     15, -1,  SCF_OP_ASSOCIATIVITY_LEFT},
 };
 
 scf_operator_t* scf_find_base_operator(const char* name, const int nb_operands)
