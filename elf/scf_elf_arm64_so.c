@@ -881,4 +881,3 @@ int __arm64_elf_write_dynamic(scf_elf_context_t* elf, uint64_t rw_base, uint64_t
 	fwrite(&ph_dynamic,  sizeof(Elf64_Phdr),  1, elf->fp);
 	return 0;
 }
-

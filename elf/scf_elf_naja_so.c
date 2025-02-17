@@ -2,23 +2,23 @@
 #include"scf_elf_link.h"
 
 static uint32_t naja_plt_lazy[8] = {
-	// str  x16, x30, [sp, #-16]!
-	(5    << 26) | (16 << 21) | (1 << 20) | (3 << 17) | (((-1) & 0xfff) << 5) | 0x1f,
-	(5    << 26) | (30 << 21) | (1 << 20) | (3 << 17) | (((-1) & 0xfff) << 5) | 0x1f,
+	// str  x16, lr, [sp, #-16]!
+	(7    << 26) | (16 << 21) | (3 << 19) | 0x1e,
+	(7    << 26) | (29 << 21) | (3 << 19) | 0x1e,
 	(0x2a << 26) | (16 << 21),                  // adrp  x16, 0
-	(0    << 26) | (16 << 21) | (1 << 20) | 16, // add   x16,  x16, #0
+	(0    << 26) | (16 << 21) | (3 << 19) | 16, // add   x16,  x16, #0
 
-	(4    << 26) | (17 << 21) | (3 << 17) | 16, // ldr   x17, [x16, #0]
-	(0xa  << 26) | (17 << 21),                  // jmp  *x17
-	(0xf  << 26),                               // nop, mov r0, r0
-	(0xf  << 26),                               // nop, mov r0, r0
+	(4    << 26) | (17 << 21) | (3 << 19) | 16, // ldr   x17, [x16, #0]
+	(0xb  << 26) | (17 << 21),                  // jmp  *x17
+	(0xf  << 26) | (1  << 16),                  // nop, mov r0, r0
+	(0xf  << 26) | (1  << 16),                  // nop, mov r0, r0
 };
 
 static uint32_t naja_plt[4] = {
 	(0x2a << 26) | (16 << 21),                  // adrp  x16, 0
-	(0    << 26) | (16 << 21) | (1 << 20) | 16, // add   x16,  x16, #0
-	(4    << 26) | (17 << 21) | (3 << 17) | 16, // ldr   x17, [x16, #0]
-	(0xa  << 26) | (17 << 21),                  // jmp  *x17
+	(0    << 26) | (16 << 21) | (3 << 19) | 16, // add   x16,  x16, #0
+	(4    << 26) | (17 << 21) | (3 << 19) | 16, // ldr   x17, [x16, #0]
+	(0xb  << 26) | (17 << 21),                  // jmp  *x17
 };
 
 
@@ -693,8 +693,8 @@ int __naja_elf_post_dyn(elf_native_t* naja, uint64_t rx_base, uint64_t rw_base, 
 
 	scf_logi("got_addr: %#lx, plt_addr: %#lx, offset: %d, %#x\n", got_addr, plt_addr, offset, offset);
 
-	plt[2] |=  (offset >> 15) & 0x1fffff;
-	plt[3] |=  (got_addr & 0x7fff) << 5;
+	plt[2] |=  (offset >> 14) & 0x1fffff;
+	plt[3] |=  (got_addr & 0x3fff) << 5;
 
 	got_addr += 8;
 	plt_addr += sizeof(naja_plt_lazy);
@@ -712,8 +712,8 @@ int __naja_elf_post_dyn(elf_native_t* naja, uint64_t rx_base, uint64_t rw_base, 
 
 		scf_logi("i: %d, got_addr: %#lx, plt_addr: %#lx, offset: %d, %#x\n", i, got_addr, plt_addr, offset, offset);
 
-		plt[0] |= (offset >> 15) & 0x1fffff;
-		plt[1] |= (got_addr & 0x7fff) << 5;
+		plt[0] |= (offset >> 14) & 0x1fffff;
+		plt[1] |= (got_addr & 0x3fff) << 5;
 
 		plt += sizeof(naja_plt) / sizeof(naja_plt[0]);
 		plt_addr += sizeof(naja_plt);
@@ -879,4 +879,3 @@ int __naja_elf_write_dynamic(scf_elf_context_t* elf, uint64_t rw_base, uint64_t 
 	fwrite(&ph_dynamic,  sizeof(Elf64_Phdr),  1, elf->fp);
 	return 0;
 }
-

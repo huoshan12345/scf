@@ -414,7 +414,7 @@ int __auto_gc_ds_for_assign(scf_dn_status_t** ds, scf_dag_node_t** dn, scf_3ac_c
 			base  = c->srcs->data[0];
 			v     = _scf_operand_get(base->node->parent);
 
-			if (!scf_variable_may_malloced(v))
+			if (!v || !scf_variable_may_malloced(v))
 				return 0;
 
 			index = c->srcs->data[1];

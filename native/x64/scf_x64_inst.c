@@ -944,7 +944,6 @@ static int _x64_inst_assign_array_index(scf_native_t* ctx, scf_3ac_code_t* c, in
 		OpCode = x64_find_OpCode(SCF_X64_LEA, 8, 8, SCF_X64_E2G);
 	} else {
 		if (is_float) {
-
 			OpCode_type = x64_float_OpCode_type(OpCode_type, vs->type);
 
 			if (0 == src->dag_node->color) {
@@ -1437,6 +1436,161 @@ static int _x64_inst_div_assign_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 static int _x64_inst_mod_assign_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
 	return _div_mod_assign(ctx, c, 1);
+}
+
+static int _x64_inst_vla_alloc_handler(scf_native_t* ctx, scf_3ac_code_t* c)
+{
+	if (!c->dsts || c->dsts->size != 1)
+		return -EINVAL;
+
+	if (!c->srcs || c->srcs->size != 3)
+		return -EINVAL;
+
+	scf_x64_context_t* x64  = ctx->priv;
+	scf_function_t*    f    = x64->f;
+
+	scf_3ac_operand_t* dst  = c->dsts->data[0];
+	scf_3ac_operand_t* src  = c->srcs->data[0];
+	scf_3ac_operand_t* logf = c->srcs->data[1];
+	scf_3ac_operand_t* msg  = c->srcs->data[2];
+
+	if (!dst || !dst->dag_node)
+		return -EINVAL;
+
+	if (!src || !src->dag_node)
+		return -EINVAL;
+
+	if (!logf || !logf->dag_node)
+		return -EINVAL;
+
+	if (!msg || !msg->dag_node)
+		return -EINVAL;
+
+	scf_instruction_t*  inst = NULL;
+	scf_instruction_t*  jcc  = NULL;
+	scf_register_t*     rs   = NULL;
+	scf_register_t*     rd   = NULL;
+	scf_register_t*     rsp  = x64_find_register("rsp");
+	scf_register_t*     rdi  = x64_find_register("rdi");
+	scf_register_t*     rsi  = x64_find_register("rsi");
+	scf_register_t*     rax  = x64_find_register("rax");
+
+	scf_x64_OpCode_t*   cmp  = x64_find_OpCode(SCF_X64_CMP, 1, 4, SCF_X64_I2E);
+	scf_x64_OpCode_t*   jg   = x64_find_OpCode(SCF_X64_JG , 1, 1, SCF_X64_I);
+	scf_x64_OpCode_t*   lea  = x64_find_OpCode(SCF_X64_LEA, 8, 8, SCF_X64_E2G);
+	scf_x64_OpCode_t*   call = x64_find_OpCode(SCF_X64_CALL,4, 4, SCF_X64_I);
+	scf_x64_OpCode_t*   sub  = x64_find_OpCode(SCF_X64_SUB, 8, 8, SCF_X64_E2G);
+	scf_x64_OpCode_t*   add  = x64_find_OpCode(SCF_X64_ADD, 4, 8, SCF_X64_I2E);
+	scf_x64_OpCode_t*   and  = x64_find_OpCode(SCF_X64_AND, 4, 8, SCF_X64_I2E);
+	scf_x64_OpCode_t*   mov  = x64_find_OpCode(SCF_X64_MOV, 8, 8, SCF_X64_G2E);
+	scf_x64_OpCode_t*   xor  = x64_find_OpCode(SCF_X64_XOR, 8, 8, SCF_X64_G2E);
+
+	if (!c->instructions) {
+		c->instructions = scf_vector_alloc();
+		if (!c->instructions)
+			return -ENOMEM;
+	}
+
+	X64_SELECT_REG_CHECK(&rs, src->dag_node, c, f, 1);
+	X64_SELECT_REG_CHECK(&rd, dst->dag_node, c, f, 0);
+
+	// if src > 0
+	uint32_t imm = 0;
+	inst = x64_make_inst_I2E(cmp, rs, (uint8_t*)&imm, 1);
+	X64_INST_ADD_CHECK(c->instructions, inst);
+
+	jcc = x64_make_inst_I(jg, (uint8_t*)&imm, 1);
+	X64_INST_ADD_CHECK(c->instructions, jcc);
+
+	// process error when src <= 0
+	scf_rela_t* rela = NULL;
+	int i = c->instructions->size;
+
+	inst = x64_make_inst_G2E(mov, rsi, rs);
+	X64_INST_ADD_CHECK(c->instructions, inst);
+
+	inst = x64_make_inst_M2G(&rela, lea, rdi, NULL, msg->dag_node->var);
+	X64_INST_ADD_CHECK(c->instructions, inst);
+	X64_RELA_ADD_CHECK(f->data_relas, rela, c, msg->dag_node->var, NULL);
+
+	inst = x64_make_inst_G2E(xor, rax, rax);
+	X64_INST_ADD_CHECK(c->instructions, inst);
+
+	// call printf() to show msg
+	inst = x64_make_inst_I(call, (uint8_t*)&imm, sizeof(imm));
+	X64_INST_ADD_CHECK(c->instructions, inst);
+
+	rela = calloc(1, sizeof(scf_rela_t));
+	if (!rela)
+		return -ENOMEM;
+	rela->inst_offset = 1;
+	X64_RELA_ADD_CHECK(f->text_relas, rela, c, NULL, logf->dag_node->var->func_ptr);
+
+	inst = x64_make_inst_G2E(xor, rax, rax);
+	X64_INST_ADD_CHECK(c->instructions, inst);
+
+	inst = x64_make_inst_G2P(mov, rax, 0, rax);
+	X64_INST_ADD_CHECK(c->instructions, inst);
+
+	for ( ; i < c->instructions->size; i++) {
+		inst  = c->instructions->data[i];
+		jcc->code[1] += inst->len;
+	}
+
+	// alloc VLA
+	imm  = 0xf;
+	inst = x64_make_inst_I2E(add, rs, (uint8_t*)&imm, sizeof(imm));
+	X64_INST_ADD_CHECK(c->instructions, inst);
+
+	imm  = ~0xf;
+	inst = x64_make_inst_I2E(and, rs, (uint8_t*)&imm, sizeof(imm));
+	X64_INST_ADD_CHECK(c->instructions, inst);
+
+	inst = x64_make_inst_E2G(sub, rsp, rs);
+	X64_INST_ADD_CHECK(c->instructions, inst);
+
+	inst = x64_make_inst_G2E(mov, rd, rsp);
+	X64_INST_ADD_CHECK(c->instructions, inst);
+
+	return x64_save_var(src->dag_node, c, f);
+}
+
+static int _x64_inst_vla_free_handler(scf_native_t* ctx, scf_3ac_code_t* c)
+{
+	if (!c->dsts || c->dsts->size != 1)
+		return -EINVAL;
+
+	if (!c->srcs || c->srcs->size != 3)
+		return -EINVAL;
+
+	scf_x64_context_t* x64  = ctx->priv;
+	scf_function_t*    f    = x64->f;
+	scf_3ac_operand_t* src  = c->srcs->data[0];
+
+	if (!src || !src->dag_node)
+		return -EINVAL;
+
+	scf_instruction_t*  inst = NULL;
+	scf_register_t*     rs   = NULL;
+	scf_register_t*     rsp  = x64_find_register("rsp");
+	scf_x64_OpCode_t*   add  = x64_find_OpCode(SCF_X64_ADD, 8, 8, SCF_X64_E2G);
+	scf_x64_OpCode_t*   xor  = x64_find_OpCode(SCF_X64_XOR, 8, 8, SCF_X64_G2E);
+
+	if (!c->instructions) {
+		c->instructions = scf_vector_alloc();
+		if (!c->instructions)
+			return -ENOMEM;
+	}
+
+	X64_SELECT_REG_CHECK(&rs, src->dag_node, c, f, 1);
+
+	inst = x64_make_inst_E2G(add, rsp, rs);
+	X64_INST_ADD_CHECK(c->instructions, inst);
+
+	inst = x64_make_inst_G2E(xor, rs, rs);
+	X64_INST_ADD_CHECK(c->instructions, inst);
+
+	return x64_save_var(src->dag_node, c, f);
 }
 
 static int _x64_inst_return_handler(scf_native_t* ctx, scf_3ac_code_t* c)
@@ -2271,6 +2425,9 @@ static x64_inst_handler_pt  x64_inst_handlers[] =
 
 	[SCF_OP_AND_ASSIGN  ]  =  _x64_inst_and_assign_handler,
 	[SCF_OP_OR_ASSIGN   ]  =  _x64_inst_or_assign_handler,
+
+	[SCF_OP_VLA_ALLOC   ]  =  _x64_inst_vla_alloc_handler,
+	[SCF_OP_VLA_FREE    ]  =  _x64_inst_vla_free_handler,
 
 	[SCF_OP_RETURN      ]  =  _x64_inst_return_handler,
 	[SCF_OP_GOTO        ]  =  _x64_inst_goto_handler,

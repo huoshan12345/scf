@@ -199,8 +199,7 @@ static int _scf_op_expr_type_cast(scf_ast_t* ast, scf_node_t** nodes, int nb_nod
 		return 0;
 	}
 
-	scf_loge("\n");
-	return -1;
+	return 0;
 }
 
 static int _scf_op_expr_sizeof(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
@@ -283,8 +282,7 @@ static int _scf_op_expr_binary(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes,
 	if (scf_type_is_number(v0->type) && scf_type_is_number(v1->type)) {
 
 		if (!scf_variable_const(v0) || !scf_variable_const(v1)) {
-			scf_loge("\n");
-			return -1;
+			return 0;
 		}
 
 		assert(v0->type == v1->type);
@@ -726,11 +724,6 @@ int scf_expr_calculate(scf_ast_t* ast, scf_expr_t* e, scf_variable_t** pret)
 	}
 
 	v = _scf_operand_get(e->nodes[0]);
-
-	if (!scf_variable_const(v) && SCF_OP_ASSIGN != e->nodes[0]->type) {
-		scf_loge("\n");
-		return -1;
-	}
 
 	if (pret)
 		*pret = scf_variable_ref(v);

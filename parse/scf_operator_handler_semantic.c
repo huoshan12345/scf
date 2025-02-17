@@ -926,7 +926,7 @@ static int _scf_op_semantic_pointer(scf_ast_t* ast, scf_node_t** nodes, int nb_n
 
 	int i;
 	for (i = 0; i < v1->nb_dimentions; i++)
-		scf_variable_add_array_dimention(r, v1->dimentions[i]);
+		scf_variable_add_array_dimention(r, v1->dimentions[i].num, NULL);
 
 	*d->pret = r;
 	return 0;
@@ -973,7 +973,7 @@ static int _scf_op_semantic_array_index(scf_ast_t* ast, scf_node_t** nodes, int 
 	int nb_pointers = 0;
 
 	if (v0->nb_dimentions > 0) {
-		if (v0->dimentions[0] < 0) {
+		if (v0->dimentions[0].num < 0 && !v0->dimentions[0].vla) {
 			scf_loge("\n");
 			return -1;
 		}
@@ -987,23 +987,23 @@ static int _scf_op_semantic_array_index(scf_ast_t* ast, scf_node_t** nodes, int 
 				return -1;
 			}
 
-			if (v1->data.i >= v0->dimentions[0]) {
+			if (v1->data.i >= v0->dimentions[0].num && !v0->dimentions[0].vla) {
 
 				if (!v0->member_flag) {
 					scf_loge("array index '%s' >= size %d, real: %d, file: %s, line: %d\n",
-							v1->w->text->data, v0->dimentions[0], v1->data.i, v1->w->file->data, v1->w->line);
+							v1->w->text->data, v0->dimentions[0].num, v1->data.i, v1->w->file->data, v1->w->line);
 					return -1;
 				}
 
 				scf_logw("array index '%s' >= size %d, real: %d, confirm it for a zero-array end of a struct? file: %s, line: %d\n",
-						v1->w->text->data, v0->dimentions[0], v1->data.i, v1->w->file->data, v1->w->line);
+						v1->w->text->data, v0->dimentions[0].num, v1->data.i, v1->w->file->data, v1->w->line);
 			}
 		}
 	} else if (0 == v0->nb_dimentions && v0->nb_pointers > 0) {
 		nb_pointers = v0->nb_pointers - 1;
 	} else {
-		scf_loge("index out, v0: %s, v0->nb_dimentions: %d, v0->nb_pointers: %d, v0->arg_flag: %d, v0->output_flag: %d\n",
-				v0->w->text->data, v0->nb_dimentions, v0->nb_pointers, v0->arg_flag, v0->output_flag);
+		scf_loge("index out, v0: %s, v0->nb_dimentions: %d, v0->nb_pointers: %d, v0->arg_flag: %d\n",
+				v0->w->text->data, v0->nb_dimentions, v0->nb_pointers, v0->arg_flag);
 		return -1;
 	}
 
@@ -1020,8 +1020,19 @@ static int _scf_op_semantic_array_index(scf_ast_t* ast, scf_node_t** nodes, int 
 	r->member_flag = v0->member_flag;
 
 	int i;
-	for (i = 1; i < v0->nb_dimentions; i++)
-		scf_variable_add_array_dimention(r, v0->dimentions[i]);
+	for (i = 1; i < v0->nb_dimentions; i++) {
+		scf_expr_t* vla = NULL;
+
+		if (v0->dimentions[i].vla) {
+			vla = scf_expr_clone(v0->dimentions[i].vla);
+			if (!vla) {
+				scf_variable_free(r);
+				return -ENOMEM;
+			}
+		}
+
+		scf_variable_add_array_dimention(r, v0->dimentions[i].num, vla);
+	}
 
 	*d->pret = r;
 	return 0;
@@ -1475,6 +1486,14 @@ static int _scf_op_semantic_case(scf_ast_t* ast, scf_node_t** nodes, int nb_node
 
 static int _scf_op_semantic_default(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
 {
+	return 0;
+}
+
+static int _scf_op_semantic_vla_alloc(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
+{
+	assert(4 == nb_nodes);
+
+	scf_logw("\n");
 	return 0;
 }
 
@@ -3202,6 +3221,8 @@ scf_operator_handler_pt  semantic_operator_handlers[SCF_N_OPS] =
 	[SCF_OP_SWITCH     ]  =  _scf_op_semantic_switch,
 	[SCF_OP_CASE       ]  =  _scf_op_semantic_case,
 	[SCF_OP_DEFAULT    ]  =  _scf_op_semantic_default,
+
+	[SCF_OP_VLA_ALLOC  ]  =  _scf_op_semantic_vla_alloc,
 };
 
 scf_operator_handler_pt  scf_find_semantic_operator_handler(const int type)

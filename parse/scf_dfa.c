@@ -405,7 +405,7 @@ static int _scf_dfa_node_parse_word(scf_dfa_t* dfa, scf_dfa_node_t* node, scf_ve
 	} else if (SCF_DFA_CONTINUE == ret) {
 
 	} else {
-		scf_loge("SCF_DFA: %d\n", ret);
+		scf_logd("SCF_DFA: %d\n", ret);
 		return SCF_DFA_ERROR;
 	}
 
@@ -453,6 +453,5 @@ int scf_dfa_parse_word(scf_dfa_t* dfa, void* word, void* data)
 	scf_vector_clear(words, (void (*)(void*) )dfa->ops->free_word);
 	scf_vector_free(words);
 	words = NULL;
-
 	return ret;
 }

@@ -206,8 +206,10 @@ int main(int argc, char* argv[])
 	for (i = 0; i  < srcs->size; i++) {
 		char* file = srcs->data[i];
 
+		assert(file);
+
 		if (scf_parse_file(parse, file) < 0) {
-			scf_loge("\n");
+			scf_loge("parse file '%s' failed\n", file);
 			return -1;
 		}
 	}

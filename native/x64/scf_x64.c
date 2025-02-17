@@ -261,6 +261,13 @@ static int _x64_function_finish(scf_function_t* f)
 		if (err < 0)
 			return err;
 	} else {
+		if (f->vla_flag) {
+			inst = x64_make_inst_G2E(mov, rsp, rbp);
+			X64_INST_ADD_CHECK(end->instructions, inst);
+			end->inst_bytes += inst->len;
+			bb ->code_bytes += inst->len;
+		}
+
 		inst = x64_make_inst_G(pop, rbp);
 		X64_INST_ADD_CHECK(end->instructions, inst);
 		end->inst_bytes += inst->len;
@@ -269,6 +276,12 @@ static int _x64_function_finish(scf_function_t* f)
 		inst = x64_make_inst_G(push, rbp);
 		X64_INST_ADD_CHECK(f->init_code->instructions, inst);
 		f->init_code_bytes  = inst->len;
+
+		if (f->vla_flag) {
+			inst = x64_make_inst_G2E(mov, rbp, rsp);
+			X64_INST_ADD_CHECK(f->init_code->instructions, inst);
+			f->init_code_bytes += inst->len;
+		}
 	}
 
 	err = x64_push_callee_regs(f->init_code, f);

@@ -10,6 +10,7 @@ typedef struct scf_index_s      scf_index_t;
 typedef struct scf_label_s		scf_label_t;
 
 typedef struct scf_node_s       scf_node_t;
+typedef struct scf_node_s       scf_expr_t;
 typedef struct scf_operator_s	scf_operator_t;
 
 typedef struct scf_block_s      scf_block_t;
@@ -93,6 +94,9 @@ enum scf_core_types
 
 	SCF_OP_POINTER,     // -> struct member
 	SCF_OP_DOT,			// . dot
+
+	SCF_OP_VLA_ALLOC,   // variable length array, VLA
+	SCF_OP_VLA_FREE,
 
 	SCF_OP_VAR_ARGS,    // ... variable args
 

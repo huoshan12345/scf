@@ -10,12 +10,9 @@ typedef struct {
 
 } scf_eda_context_t;
 
-typedef struct {
-	int 	type;
-	int		(*func)(scf_native_t* ctx, scf_3ac_code_t* c);
-} eda_inst_handler_t;
+typedef int	(*eda_inst_handler_pt)(scf_native_t* ctx, scf_3ac_code_t* c);
 
-eda_inst_handler_t* scf_eda_find_inst_handler(const int op_type);
+eda_inst_handler_pt  scf_eda_find_inst_handler(const int op_type);
 
 int scf_eda_open  (scf_native_t* ctx, const char* arch);
 int scf_eda_close (scf_native_t* ctx);

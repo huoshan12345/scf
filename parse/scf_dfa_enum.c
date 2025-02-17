@@ -183,6 +183,11 @@ static int _enum_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 			return SCF_DFA_ERROR;
 		}
 
+		if (!scf_variable_const(r) && SCF_OP_ASSIGN != d->expr->nodes[0]->type) {
+			scf_loge("enum var must be inited by constant, file: %s, line: %d\n", w->file->data, w->line);
+			return -1;
+		}
+
 		md->current_v->data.i64 = r->data.i64;
 
 		scf_variable_free(r);
@@ -222,6 +227,11 @@ static int _enum_action_rb(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 		if (scf_expr_calculate(parse->ast, d->expr, &r) < 0) {
 			scf_loge("scf_expr_calculate\n");
 			return SCF_DFA_ERROR;
+		}
+
+		if (!scf_variable_const(r) && SCF_OP_ASSIGN != d->expr->nodes[0]->type) {
+			scf_loge("enum var must be inited by constant, file: %s, line: %d\n", w->file->data, w->line);
+			return -1;
 		}
 
 		md->current_v->data.i64 = r->data.i64;

@@ -1,10 +1,11 @@
 #include"scf_risc.h"
 
-#define SCF_RISC_REG_FP 29
-#define SCF_RISC_REG_LR 30
-#define SCF_RISC_REG_SP 31
+#define SCF_RISC_REG_FP   28
+#define SCF_RISC_REG_LR   29
+#define SCF_RISC_REG_SP   30
+#define SCF_RISC_REG_NULL 31
 
-scf_register_t	arm64_registers[] = {
+scf_register_t	naja_registers[] = {
 
 	{0, 4, "w0",    RISC_COLOR(0, 0, 0xf),  NULL, 0, 0},
 	{0, 8, "x0",    RISC_COLOR(0, 0, 0xff), NULL, 0, 0},
@@ -94,16 +95,14 @@ scf_register_t	arm64_registers[] = {
 	{27, 4, "w27",  RISC_COLOR(0, 27, 0xf),  NULL, 0, 0},
 	{27, 8, "x27",  RISC_COLOR(0, 27, 0xff), NULL, 0, 0},
 
+// fp = x28 = bp
 	{28, 4, "w28",  RISC_COLOR(0, 28, 0xf),  NULL, 0, 0},
-	{28, 8, "x28",  RISC_COLOR(0, 28, 0xff), NULL, 0, 0},
-
-// fp = x29 = bp
+	{28, 8, "fp",   RISC_COLOR(0, 28, 0xff), NULL, 0, 0},
+// lr = x29
 	{29, 4, "w29",  RISC_COLOR(0, 29, 0xf),  NULL, 0, 0},
-	{29, 8, "fp",   RISC_COLOR(0, 29, 0xff), NULL, 0, 0},
-// lr = x30
-	{30, 4, "w30",  RISC_COLOR(0, 30, 0xf),  NULL, 0, 0},
-	{30, 8, "lr",   RISC_COLOR(0, 30, 0xff), NULL, 0, 0},
-	{31, 8, "sp",   RISC_COLOR(0, 31, 0xff), NULL, 0, 0},
+	{29, 8, "lr",   RISC_COLOR(0, 29, 0xff), NULL, 0, 0},
+	{30, 8, "sp",   RISC_COLOR(0, 30, 0xff), NULL, 0, 0},
+//	{31, 8, "null", RISC_COLOR(0, 31, 0xff), NULL, 0, 0},
 
 
 	{0, 2, "h0",    RISC_COLOR(1, 0, 0x3),  NULL, 0, 0},
@@ -235,7 +234,7 @@ scf_register_t	arm64_registers[] = {
 	{31, 8, "d31",    RISC_COLOR(1, 31, 0xff), NULL, 0, 0},
 };
 
-static uint32_t arm64_abi_regs[] =
+static uint32_t naja_abi_regs[] =
 {
 	SCF_RISC_REG_X0,
 	SCF_RISC_REG_X1,
@@ -247,7 +246,7 @@ static uint32_t arm64_abi_regs[] =
 	SCF_RISC_REG_X7,
 };
 
-static uint32_t arm64_abi_float_regs[] =
+static uint32_t naja_abi_float_regs[] =
 {
 	SCF_RISC_REG_D0,
 	SCF_RISC_REG_D1,
@@ -259,7 +258,7 @@ static uint32_t arm64_abi_float_regs[] =
 	SCF_RISC_REG_D7,
 };
 
-static uint32_t arm64_abi_ret_regs[] =
+static uint32_t naja_abi_ret_regs[] =
 {
 	SCF_RISC_REG_X0,
 	SCF_RISC_REG_X1,
@@ -267,7 +266,7 @@ static uint32_t arm64_abi_ret_regs[] =
 	SCF_RISC_REG_X3,
 };
 
-static uint32_t arm64_abi_caller_saves[] =
+static uint32_t naja_abi_caller_saves[] =
 {
 	SCF_RISC_REG_X0,
 	SCF_RISC_REG_X1,
@@ -287,7 +286,7 @@ static uint32_t arm64_abi_caller_saves[] =
 	SCF_RISC_REG_X15,
 };
 
-static uint32_t arm64_abi_callee_saves[] =
+static uint32_t naja_abi_callee_saves[] =
 {
 	SCF_RISC_REG_X19,
 	SCF_RISC_REG_X20,
@@ -300,10 +299,9 @@ static uint32_t arm64_abi_callee_saves[] =
 	SCF_RISC_REG_X27,
 	SCF_RISC_REG_X28,
 	SCF_RISC_REG_X29,
-	SCF_RISC_REG_X30,
 };
 
-static int arm64_color_conflict(intptr_t c0, intptr_t c1)
+static int naja_color_conflict(intptr_t c0, intptr_t c1)
 {
 	intptr_t id0 = c0 >> 16;
 	intptr_t id1 = c1 >> 16;
@@ -311,7 +309,7 @@ static int arm64_color_conflict(intptr_t c0, intptr_t c1)
 	return id0 == id1 && (c0 & c1 & 0xffff);
 }
 
-static int arm64_variable_size(scf_variable_t* v)
+static int naja_variable_size(scf_variable_t* v)
 {
 	if (v->nb_dimentions > 0)
 		return 8;
@@ -322,12 +320,12 @@ static int arm64_variable_size(scf_variable_t* v)
 	return v->size < 4 ? 4 : v->size;
 }
 
-scf_register_t* arm64_find_register(const char* name)
+scf_register_t* naja_find_register(const char* name)
 {
 	int i;
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		scf_register_t*	r = &(arm64_registers[i]);
+		scf_register_t*	r = &(naja_registers[i]);
 
 		if (!strcmp(r->name, name))
 			return r;
@@ -335,12 +333,12 @@ scf_register_t* arm64_find_register(const char* name)
 	return NULL;
 }
 
-scf_register_t* arm64_find_register_type_id_bytes(uint32_t type, uint32_t id, int bytes)
+scf_register_t* naja_find_register_type_id_bytes(uint32_t type, uint32_t id, int bytes)
 {
 	int i;
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		scf_register_t*	r = &(arm64_registers[i]);
+		scf_register_t*	r = &(naja_registers[i]);
 
 		if (RISC_COLOR_TYPE(r->color) == type && r->id == id && r->bytes == bytes)
 			return r;
@@ -348,12 +346,12 @@ scf_register_t* arm64_find_register_type_id_bytes(uint32_t type, uint32_t id, in
 	return NULL;
 }
 
-scf_register_t* arm64_find_register_color(intptr_t color)
+scf_register_t* naja_find_register_color(intptr_t color)
 {
 	int i;
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		scf_register_t*	r = &(arm64_registers[i]);
+		scf_register_t*	r = &(naja_registers[i]);
 
 		if (r->color == color)
 			return r;
@@ -361,29 +359,29 @@ scf_register_t* arm64_find_register_color(intptr_t color)
 	return NULL;
 }
 
-scf_register_t* arm64_find_register_color_bytes(intptr_t color, int bytes)
+scf_register_t* naja_find_register_color_bytes(intptr_t color, int bytes)
 {
 	int i;
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		scf_register_t*	r = &(arm64_registers[i]);
+		scf_register_t*	r = &(naja_registers[i]);
 
-		if (arm64_color_conflict(r->color, color) && r->bytes == bytes)
+		if (naja_color_conflict(r->color, color) && r->bytes == bytes)
 			return r;
 	}
 	return NULL;
 }
 
-scf_vector_t* arm64_register_colors()
+scf_vector_t* naja_register_colors()
 {
 	scf_vector_t* colors = scf_vector_alloc();
 	if (!colors)
 		return NULL;
 
 	int i;
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		scf_register_t*	r = &(arm64_registers[i]);
+		scf_register_t*	r = &(naja_registers[i]);
 
 		if (SCF_RISC_REG_SP == r->id
 				|| SCF_RISC_REG_FP == r->id
@@ -411,14 +409,14 @@ scf_vector_t* arm64_register_colors()
 	return colors;
 }
 
-int arm64_reg_cached_vars(scf_register_t* r)
+int naja_reg_cached_vars(scf_register_t* r)
 {
 	int nb_vars = 0;
 	int i;
 
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		scf_register_t*	r2 = &(arm64_registers[i]);
+		scf_register_t*	r2 = &(naja_registers[i]);
 
 		if (SCF_RISC_REG_SP == r2->id
          || SCF_RISC_REG_FP == r2->id
@@ -427,7 +425,7 @@ int arm64_reg_cached_vars(scf_register_t* r)
 		 || SCF_RISC_REG_X17 == r2->id)
 			continue;
 
-		if (!arm64_color_conflict(r->color, r2->color))
+		if (!naja_color_conflict(r->color, r2->color))
 			continue;
 
 		nb_vars += r2->dag_nodes->size;
@@ -436,12 +434,12 @@ int arm64_reg_cached_vars(scf_register_t* r)
 	return nb_vars;
 }
 
-int arm64_registers_init()
+int naja_registers_init()
 {
 	int i;
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		scf_register_t*	r = &(arm64_registers[i]);
+		scf_register_t*	r = &(naja_registers[i]);
 
 		if (SCF_RISC_REG_SP == r->id
          || SCF_RISC_REG_FP == r->id
@@ -462,12 +460,12 @@ int arm64_registers_init()
 	return 0;
 }
 
-void arm64_registers_clear()
+void naja_registers_clear()
 {
 	int i;
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		scf_register_t*	r = &(arm64_registers[i]);
+		scf_register_t*	r = &(naja_registers[i]);
 
 		if (SCF_RISC_REG_SP == r->id
          || SCF_RISC_REG_FP == r->id
@@ -495,7 +493,7 @@ static scf_register_t* risc_reg_cached_min_vars(scf_register_t** regs, int nb_re
 	for (i = 0; i < nb_regs; i++) {
 		scf_register_t*	r = regs[i];
 
-		int nb_vars = arm64_reg_cached_vars(r);
+		int nb_vars = naja_reg_cached_vars(r);
 
 		if (!r_min) {
 			r_min = r;
@@ -512,14 +510,14 @@ static scf_register_t* risc_reg_cached_min_vars(scf_register_t** regs, int nb_re
 	return r_min;
 }
 
-int arm64_caller_save_regs(scf_3ac_code_t* c, scf_function_t* f, uint32_t* regs, int nb_regs, int stack_size, scf_register_t** saved_regs)
+int naja_caller_save_regs(scf_3ac_code_t* c, scf_function_t* f, uint32_t* regs, int nb_regs, int stack_size, scf_register_t** saved_regs)
 {
 	int i;
 	int j;
 	scf_register_t* r;
 	scf_register_t* r2;
 	scf_instruction_t*    inst;
-	scf_register_t* sp   = arm64_find_register("sp");
+	scf_register_t* sp   = naja_find_register("sp");
 
 	uint32_t opcode;
 
@@ -528,10 +526,10 @@ int arm64_caller_save_regs(scf_3ac_code_t* c, scf_function_t* f, uint32_t* regs,
 	int k    = 0;
 
 	for (j = 0; j < nb_regs; j++) {
-		r2 = arm64_find_register_type_id_bytes(0, regs[j], 8);
+		r2 = naja_find_register_type_id_bytes(0, regs[j], 8);
 
-		for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
-			r  = &(arm64_registers[i]);
+		for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
+			r  = &(naja_registers[i]);
 
 			if (SCF_RISC_REG_SP == r->id
              || SCF_RISC_REG_FP == r->id
@@ -543,11 +541,11 @@ int arm64_caller_save_regs(scf_3ac_code_t* c, scf_function_t* f, uint32_t* regs,
 			if (0 == r->dag_nodes->size)
 				continue;
 
-			if (arm64_color_conflict(r2->color, r->color))
+			if (naja_color_conflict(r2->color, r->color))
 				break;
 		}
 
-		if (i == sizeof(arm64_registers) / sizeof(arm64_registers[0]))
+		if (i == sizeof(naja_registers) / sizeof(naja_registers[0]))
 			continue;
 
 		if (stack_size > 0) {
@@ -590,12 +588,12 @@ int arm64_caller_save_regs(scf_3ac_code_t* c, scf_function_t* f, uint32_t* regs,
 	return size;
 }
 
-int arm64_pop_regs(scf_3ac_code_t* c, scf_function_t* f, scf_register_t** regs, int nb_regs, scf_register_t** updated_regs, int nb_updated)
+int naja_pop_regs(scf_3ac_code_t* c, scf_function_t* f, scf_register_t** regs, int nb_regs, scf_register_t** updated_regs, int nb_updated)
 {
 	int i;
 	int j;
 
-	scf_register_t* sp = arm64_find_register("sp");
+	scf_register_t* sp = naja_find_register("sp");
 	scf_register_t* r;
 	scf_register_t* r2;
 	scf_instruction_t*    inst;
@@ -603,8 +601,8 @@ int arm64_pop_regs(scf_3ac_code_t* c, scf_function_t* f, scf_register_t** regs, 
 	for (j = nb_regs - 1; j >= 0; j--) {
 		r2 = regs[j];
 
-		for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
-			r  = &(arm64_registers[i]);
+		for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
+			r  = &(naja_registers[i]);
 
 			if (SCF_RISC_REG_SP == r->id
              || SCF_RISC_REG_FP == r->id
@@ -616,18 +614,18 @@ int arm64_pop_regs(scf_3ac_code_t* c, scf_function_t* f, scf_register_t** regs, 
 			if (0 == r->dag_nodes->size)
 				continue;
 
-			if (arm64_color_conflict(r2->color, r->color))
+			if (naja_color_conflict(r2->color, r->color))
 				break;
 		}
 
-		if (i == sizeof(arm64_registers) / sizeof(arm64_registers[0]))
+		if (i == sizeof(naja_registers) / sizeof(naja_registers[0]))
 			continue;
 
 		for (i = 0; i < nb_updated; i++) {
 
 			r  = updated_regs[i];
 
-			if (arm64_color_conflict(r2->color, r->color))
+			if (naja_color_conflict(r2->color, r->color))
 				break;
 		}
 
@@ -642,12 +640,12 @@ int arm64_pop_regs(scf_3ac_code_t* c, scf_function_t* f, scf_register_t** regs, 
 	return 0;
 }
 
-int arm64_registers_reset()
+int naja_registers_reset()
 {
 	int i;
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		scf_register_t*	r = &(arm64_registers[i]);
+		scf_register_t*	r = &(naja_registers[i]);
 
 		if (SCF_RISC_REG_SP == r->id
 				|| SCF_RISC_REG_FP == r->id
@@ -683,13 +681,13 @@ int arm64_registers_reset()
 }
 
 
-int arm64_overflow_reg(scf_register_t* r, scf_3ac_code_t* c, scf_function_t* f)
+int naja_overflow_reg(scf_register_t* r, scf_3ac_code_t* c, scf_function_t* f)
 {
 	int i;
 
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		scf_register_t*	r2 = &(arm64_registers[i]);
+		scf_register_t*	r2 = &(naja_registers[i]);
 
 		if (SCF_RISC_REG_SP == r2->id
 				|| SCF_RISC_REG_FP == r2->id
@@ -698,7 +696,7 @@ int arm64_overflow_reg(scf_register_t* r, scf_3ac_code_t* c, scf_function_t* f)
 				|| SCF_RISC_REG_X17 == r2->id)
 			continue;
 
-		if (!arm64_color_conflict(r->color, r2->color))
+		if (!naja_color_conflict(r->color, r2->color))
 			continue;
 
 		int ret = risc_save_reg(r2, c, f);
@@ -712,7 +710,7 @@ int arm64_overflow_reg(scf_register_t* r, scf_3ac_code_t* c, scf_function_t* f)
 	return 0;
 }
 
-int arm64_overflow_reg2(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c, scf_function_t* f)
+int naja_overflow_reg2(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c, scf_function_t* f)
 {
 	scf_register_t*	r2;
 	scf_dag_node_t* dn2;
@@ -720,9 +718,9 @@ int arm64_overflow_reg2(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c
 	int i;
 	int j;
 
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		r2 = &(arm64_registers[i]);
+		r2 = &(naja_registers[i]);
 
 		if (SCF_RISC_REG_SP == r2->id
 				|| SCF_RISC_REG_FP == r2->id
@@ -731,7 +729,7 @@ int arm64_overflow_reg2(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c
 				|| SCF_RISC_REG_X17 == r2->id)
 			continue;
 
-		if (!arm64_color_conflict(r->color, r2->color))
+		if (!naja_color_conflict(r->color, r2->color))
 			continue;
 
 		for (j  = 0; j < r2->dag_nodes->size; ) {
@@ -752,7 +750,7 @@ int arm64_overflow_reg2(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c
 	return 0;
 }
 
-int arm64_overflow_reg3(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c, scf_function_t* f)
+int naja_overflow_reg3(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c, scf_function_t* f)
 {
 	scf_register_t*	r2;
 	scf_dn_status_t*    ds2;
@@ -762,9 +760,9 @@ int arm64_overflow_reg3(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c
 	int j;
 	int ret;
 
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		r2 = &(arm64_registers[i]);
+		r2 = &(naja_registers[i]);
 
 		if (SCF_RISC_REG_SP == r2->id
 				|| SCF_RISC_REG_FP == r2->id
@@ -773,7 +771,7 @@ int arm64_overflow_reg3(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c
 				|| SCF_RISC_REG_X17 == r2->id)
 			continue;
 
-		if (!arm64_color_conflict(r->color, r2->color))
+		if (!naja_color_conflict(r->color, r2->color))
 			continue;
 
 		for (j  = 0; j < r2->dag_nodes->size; ) {
@@ -817,7 +815,7 @@ int arm64_overflow_reg3(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c
 	return 0;
 }
 
-int arm64_reg_used(scf_register_t* r, scf_dag_node_t* dn)
+int naja_reg_used(scf_register_t* r, scf_dag_node_t* dn)
 {
 	scf_register_t*	r2;
 	scf_dag_node_t*     dn2;
@@ -825,9 +823,9 @@ int arm64_reg_used(scf_register_t* r, scf_dag_node_t* dn)
 	int i;
 	int j;
 
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		r2 = &(arm64_registers[i]);
+		r2 = &(naja_registers[i]);
 
 		if (SCF_RISC_REG_SP == r2->id
 				|| SCF_RISC_REG_FP == r2->id
@@ -836,7 +834,7 @@ int arm64_reg_used(scf_register_t* r, scf_dag_node_t* dn)
 				|| SCF_RISC_REG_X17 == r2->id)
 			continue;
 
-		if (!arm64_color_conflict(r->color, r2->color))
+		if (!naja_color_conflict(r->color, r2->color))
 			continue;
 
 		for (j  = 0; j < r2->dag_nodes->size; j++) {
@@ -849,12 +847,12 @@ int arm64_reg_used(scf_register_t* r, scf_dag_node_t* dn)
 	return 0;
 }
 
-scf_register_t* arm64_select_overflowed_reg(scf_dag_node_t* dn, scf_3ac_code_t* c, int is_float)
+scf_register_t* naja_select_overflowed_reg(scf_dag_node_t* dn, scf_3ac_code_t* c, int is_float)
 {
 	scf_vector_t*       neighbors = NULL;
 	scf_graph_node_t*   gn        = NULL;
 
-	scf_register_t* free_regs[sizeof(arm64_registers) / sizeof(arm64_registers[0])];
+	scf_register_t* free_regs[sizeof(naja_registers) / sizeof(naja_registers[0])];
 
 	int nb_free_regs = 0;
 	int bytes        = 8;
@@ -866,7 +864,7 @@ scf_register_t* arm64_select_overflowed_reg(scf_dag_node_t* dn, scf_3ac_code_t* 
 
 	if (dn) {
 		is_float =   scf_variable_float(dn->var);
-		bytes    = arm64_variable_size (dn->var);
+		bytes    = naja_variable_size (dn->var);
 	}
 
 	ret = risc_rcg_find_node(&gn, c->rcg, dn, NULL);
@@ -875,9 +873,9 @@ scf_register_t* arm64_select_overflowed_reg(scf_dag_node_t* dn, scf_3ac_code_t* 
 	else
 		neighbors = gn->neighbors;
 
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		scf_register_t*	r = &(arm64_registers[i]);
+		scf_register_t*	r = &(naja_registers[i]);
 
 		if (SCF_RISC_REG_SP == r->id
 				|| SCF_RISC_REG_FP == r->id
@@ -898,12 +896,12 @@ scf_register_t* arm64_select_overflowed_reg(scf_dag_node_t* dn, scf_3ac_code_t* 
 				if (rn->dag_node->color <= 0)
 					continue;
 
-				if (arm64_color_conflict(r->color, rn->dag_node->color))
+				if (naja_color_conflict(r->color, rn->dag_node->color))
 					break;
 			} else {
 				assert(rn->reg);
 
-				if (arm64_color_conflict(r->color, rn->reg->color))
+				if (naja_color_conflict(r->color, rn->reg->color))
 					break;
 			}
 		}
@@ -915,9 +913,9 @@ scf_register_t* arm64_select_overflowed_reg(scf_dag_node_t* dn, scf_3ac_code_t* 
 	if (nb_free_regs > 0)
 		return risc_reg_cached_min_vars(free_regs, nb_free_regs);
 
-	for (i = 0; i < sizeof(arm64_registers) / sizeof(arm64_registers[0]); i++) {
+	for (i = 0; i < sizeof(naja_registers) / sizeof(naja_registers[0]); i++) {
 
-		scf_register_t*	r = &(arm64_registers[i]);
+		scf_register_t*	r = &(naja_registers[i]);
 
 		if (SCF_RISC_REG_SP == r->id
 				|| SCF_RISC_REG_FP == r->id
@@ -936,7 +934,7 @@ scf_register_t* arm64_select_overflowed_reg(scf_dag_node_t* dn, scf_3ac_code_t* 
 				dst =        c->dsts->data[j];
 
 				if (dst->dag_node && dst->dag_node->color > 0 
-						&& arm64_color_conflict(r->color, dst->dag_node->color))
+						&& naja_color_conflict(r->color, dst->dag_node->color))
 					break;
 			}
 
@@ -951,7 +949,7 @@ scf_register_t* arm64_select_overflowed_reg(scf_dag_node_t* dn, scf_3ac_code_t* 
 				src =        c->srcs->data[j];
 
 				if (src->dag_node && src->dag_node->color > 0
-						&& arm64_color_conflict(r->color, src->dag_node->color))
+						&& naja_color_conflict(r->color, src->dag_node->color))
 					break;
 			}
 
@@ -965,7 +963,7 @@ scf_register_t* arm64_select_overflowed_reg(scf_dag_node_t* dn, scf_3ac_code_t* 
 	return NULL;
 }
 
-static void arm64_argv_rabi(scf_function_t* f)
+static void naja_argv_rabi(scf_function_t* f)
 {
 	scf_variable_t* v;
 
@@ -1013,7 +1011,7 @@ static void arm64_argv_rabi(scf_function_t* f)
 	}
 }
 
-void arm64_call_rabi(scf_3ac_code_t* c, scf_function_t* f, int* p_nints, int* p_nfloats, int* p_ndoubles)
+void naja_call_rabi(scf_3ac_code_t* c, scf_function_t* f, int* p_nints, int* p_nfloats, int* p_ndoubles)
 {
 	scf_3ac_operand_t* src = NULL;
 	scf_dag_node_t*    dn  = NULL;
@@ -1051,7 +1049,7 @@ void arm64_call_rabi(scf_3ac_code_t* c, scf_function_t* f, int* p_nints, int* p_
 		*p_nfloats = nfloats;
 }
 
-int arm64_push_callee_regs(scf_3ac_code_t* c, scf_function_t* f)
+int naja_push_callee_regs(scf_3ac_code_t* c, scf_function_t* f)
 {
 	scf_instruction_t* inst;
 	scf_register_t*    r;
@@ -1077,7 +1075,7 @@ int arm64_push_callee_regs(scf_3ac_code_t* c, scf_function_t* f)
 	return 0;
 }
 
-int arm64_pop_callee_regs(scf_3ac_code_t* c, scf_function_t* f)
+int naja_pop_callee_regs(scf_3ac_code_t* c, scf_function_t* f)
 {
 	scf_instruction_t* inst;
 	scf_register_t*    r;
@@ -1101,56 +1099,56 @@ int arm64_pop_callee_regs(scf_3ac_code_t* c, scf_function_t* f)
 	return 0;
 }
 
-#define RISC_ABI_NB              (sizeof(arm64_abi_regs)        / sizeof(arm64_abi_regs[0]))
+#define RISC_ABI_NB              (sizeof(naja_abi_regs)        / sizeof(naja_abi_regs[0]))
 #define RISC_ABI_RET_NB          (sizeof(risc_abi_ret_regs)     / sizeof(risc_abi_ret_regs[0]))
 #define RISC_ABI_CALLER_SAVES_NB (sizeof(risc_abi_caller_saves) / sizeof(risc_abi_caller_saves[0]))
 #define RISC_ABI_CALLEE_SAVES_NB (sizeof(risc_abi_callee_saves) / sizeof(risc_abi_callee_saves[0]))
 
-scf_regs_ops_t  regs_ops_arm64 =
+scf_regs_ops_t  regs_ops_naja =
 {
-	.name                        = "arm64",
+	.name                        = "naja",
 
-	.abi_regs                    = arm64_abi_regs,
-	.abi_float_regs              = arm64_abi_float_regs,
-	.abi_ret_regs                = arm64_abi_ret_regs,
-	.abi_caller_saves            = arm64_abi_caller_saves,
-	.abi_callee_saves            = arm64_abi_callee_saves,
+	.abi_regs                    = naja_abi_regs,
+	.abi_float_regs              = naja_abi_float_regs,
+	.abi_ret_regs                = naja_abi_ret_regs,
+	.abi_caller_saves            = naja_abi_caller_saves,
+	.abi_callee_saves            = naja_abi_callee_saves,
 
-	.ABI_NB                      = sizeof(arm64_abi_regs)         / sizeof(uint32_t),
-	.ABI_RET_NB                  = sizeof(arm64_abi_ret_regs)     / sizeof(uint32_t),
-	.ABI_CALLER_SAVES_NB         = sizeof(arm64_abi_caller_saves) / sizeof(uint32_t),
-	.ABI_CALLEE_SAVES_NB         = sizeof(arm64_abi_callee_saves) / sizeof(uint32_t),
+	.ABI_NB                      = sizeof(naja_abi_regs)         / sizeof(uint32_t),
+	.ABI_RET_NB                  = sizeof(naja_abi_ret_regs)     / sizeof(uint32_t),
+	.ABI_CALLER_SAVES_NB         = sizeof(naja_abi_caller_saves) / sizeof(uint32_t),
+	.ABI_CALLEE_SAVES_NB         = sizeof(naja_abi_callee_saves) / sizeof(uint32_t),
 
 	.MAX_BYTES                   = 8,
 
-	.registers_init              = arm64_registers_init,
-	.registers_reset             = arm64_registers_reset,
-	.registers_clear             = arm64_registers_clear,
-	.register_colors             = arm64_register_colors,
+	.registers_init              = naja_registers_init,
+	.registers_reset             = naja_registers_reset,
+	.registers_clear             = naja_registers_clear,
+	.register_colors             = naja_register_colors,
 
-	.color_conflict              = arm64_color_conflict,
+	.color_conflict              = naja_color_conflict,
 
-	.argv_rabi                   = arm64_argv_rabi,
-	.call_rabi                   = arm64_call_rabi,
+	.argv_rabi                   = naja_argv_rabi,
+	.call_rabi                   = naja_call_rabi,
 
-	.reg_used                    = arm64_reg_used,
-	.reg_cached_vars             = arm64_reg_cached_vars,
+	.reg_used                    = naja_reg_used,
+	.reg_cached_vars             = naja_reg_cached_vars,
 
-	.variable_size               = arm64_variable_size,
+	.variable_size               = naja_variable_size,
 
-	.caller_save_regs            = arm64_caller_save_regs,
-	.pop_regs                    = arm64_pop_regs,
+	.caller_save_regs            = naja_caller_save_regs,
+	.pop_regs                    = naja_pop_regs,
 
-	.find_register               = arm64_find_register,
-	.find_register_color         = arm64_find_register_color,
-	.find_register_color_bytes   = arm64_find_register_color_bytes,
-	.find_register_type_id_bytes = arm64_find_register_type_id_bytes,
+	.find_register               = naja_find_register,
+	.find_register_color         = naja_find_register_color,
+	.find_register_color_bytes   = naja_find_register_color_bytes,
+	.find_register_type_id_bytes = naja_find_register_type_id_bytes,
 
-	.select_overflowed_reg       = arm64_select_overflowed_reg,
-	.overflow_reg                = arm64_overflow_reg,
-	.overflow_reg2               = arm64_overflow_reg2,
-	.overflow_reg3               = arm64_overflow_reg3,
+	.select_overflowed_reg       = naja_select_overflowed_reg,
+	.overflow_reg                = naja_overflow_reg,
+	.overflow_reg2               = naja_overflow_reg2,
+	.overflow_reg3               = naja_overflow_reg3,
 
-	.push_callee_regs            = arm64_push_callee_regs,
-	.pop_callee_regs             = arm64_pop_callee_regs,
+	.push_callee_regs            = naja_push_callee_regs,
+	.pop_callee_regs             = naja_pop_callee_regs,
 };

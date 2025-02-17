@@ -54,7 +54,7 @@ int scf_member_offset(scf_member_t* m)
 		int capacity = 1;
 
 		for (j = dim; j  < base->nb_dimentions; j++)
-			capacity    *= base->dimentions[j];
+			capacity    *= base->dimentions[j].num;
 
 		capacity *= base->size;
 		offset   += capacity * idx->index;
@@ -295,15 +295,17 @@ void scf_variable_free(scf_variable_t* v)
 	}
 }
 
-void scf_variable_add_array_dimention(scf_variable_t* v, int dimention_size)
+void scf_variable_add_array_dimention(scf_variable_t* array, int num, scf_expr_t* vla)
 {
-	assert(v);
+	assert(array);
 
-	void* p = realloc(v->dimentions, sizeof(int) * (v->nb_dimentions + 1));
+	void* p = realloc(array->dimentions, sizeof(scf_dimention_t) * (array->nb_dimentions + 1));
 	assert(p);
 
-	v->dimentions = p;
-	v->dimentions[v->nb_dimentions++] = dimention_size;
+	array->dimentions = p;
+	array->dimentions[array->nb_dimentions].num = num;
+	array->dimentions[array->nb_dimentions].vla = vla;
+	array->nb_dimentions++;
 }
 
 void scf_variable_get_array_member(scf_variable_t* array, int index, scf_variable_t* member)
@@ -363,7 +365,7 @@ int scf_variable_same_type(scf_variable_t* v0, scf_variable_t* v1)
 
 		int i;
 		for (i = 0; i < v0->nb_dimentions; i++) {
-			if (v0->dimentions[i] != v1->dimentions[i])
+			if (v0->dimentions[i].num != v1->dimentions[i].num)
 				return 0;
 		}
 
@@ -461,16 +463,20 @@ int scf_variable_size(scf_variable_t* v)
 
 	assert(v->nb_dimentions > 0);
 
+	if (v->vla_flag)
+		return sizeof(void*);
+
 	int capacity = 1;
 	int j;
 
 	for (j = 0; j < v->nb_dimentions; j++) {
-		if (v->dimentions[j] < 0) {
+
+		if (v->dimentions[j].num < 0) {
 			scf_loge("\n");
 			return -EINVAL;
 		}
 
-		capacity *= v->dimentions[j];
+		capacity *= v->dimentions[j].num;
 	}
 	v->capacity = capacity;
 

@@ -92,7 +92,7 @@ scf_string_t* scf_variable_type_name(scf_ast_t* ast, scf_variable_t* v)
 
 	for (i = 0; i < v->nb_dimentions; i++) {
 		char str[256];
-		snprintf(str, sizeof(str) - 1, "[%d]", v->dimentions[i]);
+		snprintf(str, sizeof(str) - 1, "[%d]", v->dimentions[i].num);
 
 		scf_string_cat_cstr(s, str);
 	}

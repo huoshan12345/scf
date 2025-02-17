@@ -85,6 +85,7 @@ struct scf_basic_block_s
 	uint32_t        jmp_flag    :1;
 	uint32_t        jcc_flag    :1;
 	uint32_t        ret_flag    :1;
+	uint32_t        vla_flag    :1;
 	uint32_t        end_flag    :1;
 	uint32_t        varg_flag   :1;
 	uint32_t        jmp_dst_flag:1;
@@ -100,6 +101,8 @@ struct scf_basic_block_s
 	uint32_t        group_flag  :1;
 	uint32_t        visit_flag  :1;
 	uint32_t        native_flag :1;
+
+	scf_basic_block_t*  vla_free;
 };
 
 typedef int       (*scf_basic_block_bfs_pt)(scf_basic_block_t* bb, void* data, scf_vector_t* queue);
@@ -136,6 +139,8 @@ int                 scf_basic_block_inited_by3ac(scf_basic_block_t* bb);
 
 void                scf_basic_block_mov_code(scf_basic_block_t* to, scf_list_t* start, scf_basic_block_t* from);
 void                scf_basic_block_add_code(scf_basic_block_t* bb, scf_list_t* h);
+
+scf_bb_group_t*     scf_basic_block_find_min_loop(scf_basic_block_t* bb, scf_vector_t* loops);
 
 static inline void scf_basic_block_visit_flag(scf_list_t* h, int visit_flag)
 {

@@ -352,6 +352,12 @@ static int _scf_dag_op_return(scf_list_t* h, scf_dag_node_t* parent, scf_dag_nod
 	return _scf_3ac_code_N(h, SCF_OP_RETURN, NULL, nodes, nb_nodes);
 }
 
+static int _scf_dag_op_vla_alloc(scf_list_t* h, scf_dag_node_t* parent, scf_dag_node_t** nodes, int nb_nodes)
+{
+	assert(4 == nb_nodes);
+	return _scf_3ac_code_N(h, SCF_OP_VLA_ALLOC, nodes[0], nodes + 1, 3);
+}
+
 static int _scf_dag_op_cmp(scf_list_t* h, scf_dag_node_t* parent, scf_dag_node_t** nodes, int nb_nodes)
 {
 	assert(2 == nb_nodes);
@@ -421,6 +427,7 @@ scf_dag_operator_t	dag_operators[] =
 	{SCF_OP_GT,             SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_gt},
 	{SCF_OP_LT,             SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_lt},
 
+	{SCF_OP_VLA_ALLOC,      SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_vla_alloc},
 	{SCF_OP_RETURN,         SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_return},
 	{SCF_OP_3AC_CMP,        SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_cmp},
 	{SCF_OP_3AC_TEQ,        SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_teq},

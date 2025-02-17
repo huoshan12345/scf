@@ -1154,7 +1154,7 @@ int x64_array_index_reg(x64_sib_t* sib, scf_dag_node_t* base, scf_dag_node_t* in
 
 	int32_t disp = 0;
 
-	if (vb->nb_pointers > 0 && 0 == vb->nb_dimentions) {
+	if ((vb->nb_pointers > 0 && 0 == vb->nb_dimentions) || vb->vla_flag) {
 
 		ret = x64_select_reg(&rb, base, c, f, 1);
 		if (ret < 0) {

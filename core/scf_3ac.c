@@ -60,6 +60,9 @@ static scf_3ac_operator_t _3ac_operators[] = {
 	{SCF_OP_VA_ARG,         "va_arg"},
 	{SCF_OP_VA_END,         "va_end"},
 
+	{SCF_OP_VLA_ALLOC,      "vla_alloc"},
+	{SCF_OP_VLA_FREE,       "vla_free"},
+
 	{SCF_OP_RETURN,			 "return"},
 	{SCF_OP_GOTO,			 "jmp"},
 
@@ -707,6 +710,34 @@ int scf_3ac_code_to_dag(scf_3ac_code_t* c, scf_list_t* dag)
 			if (ret < 0)
 				return ret;
 		}
+
+	} else if (SCF_OP_VLA_ALLOC == c->op->type) {
+
+		dst = c->dsts->data[0];
+		ret = scf_dag_get_node(dag, dst->node, &dst->dag_node);
+		if (ret < 0)
+			return ret;
+
+		scf_dag_node_t* alloc = scf_dag_node_alloc(c->op->type, NULL, NULL);
+		if (!alloc)
+			return -ENOMEM;
+		scf_list_add_tail(dag, &alloc->list);
+
+		ret = scf_dag_node_add_child(alloc, dst->dag_node);
+		if (ret < 0)
+			return ret;
+
+		for (i  = 0; i < c->srcs->size; i++) {
+			src =        c->srcs->data[i];
+
+			ret = scf_dag_get_node(dag, src->node, &src->dag_node);
+			if (ret < 0)
+				return ret;
+
+			ret = scf_dag_node_add_child(alloc, src->dag_node);
+			if (ret < 0)
+				return ret;
+		}
 	} else if (SCF_OP_3AC_CMP == c->op->type
 			|| SCF_OP_3AC_TEQ == c->op->type) {
 
@@ -801,9 +832,9 @@ int scf_3ac_code_to_dag(scf_3ac_code_t* c, scf_list_t* dag)
 	} else if (SCF_OP_RETURN == c->op->type) {
 
 		if (c->srcs) {
-			scf_dag_node_t* dn_return = scf_dag_node_alloc(c->op->type, NULL, NULL);
+			scf_dag_node_t* dn = scf_dag_node_alloc(c->op->type, NULL, NULL);
 
-			scf_list_add_tail(dag, &dn_return->list);
+			scf_list_add_tail(dag, &dn->list);
 
 			for (i  = 0; i < c->srcs->size; i++) {
 				src =        c->srcs->data[i];
@@ -812,7 +843,7 @@ int scf_3ac_code_to_dag(scf_3ac_code_t* c, scf_list_t* dag)
 				if (ret < 0)
 					return ret;
 
-				ret = scf_dag_node_add_child(dn_return, src->dag_node);
+				ret = scf_dag_node_add_child(dn, src->dag_node);
 				if (ret < 0)
 					return ret;
 			}
@@ -1548,7 +1579,11 @@ static int _3ac_split_basic_blocks(scf_list_t* h, scf_function_t* f)
 			else if (SCF_OP_RETURN == c->op->type)
 				bb->ret_flag = 1;
 
-			else if (SCF_OP_VA_START == c->op->type
+			else if (SCF_OP_VLA_ALLOC == c->op->type) {
+				bb->vla_flag = 1;
+				f ->vla_flag = 1;
+
+			} else if (SCF_OP_VA_START == c->op->type
 					|| SCF_OP_VA_ARG == c->op->type
 					|| SCF_OP_VA_END == c->op->type)
 				bb->varg_flag = 1;

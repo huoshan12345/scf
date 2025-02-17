@@ -1147,12 +1147,12 @@ int scf_risc_select_inst(scf_native_t* ctx, scf_function_t* f)
 	return 0;
 }
 
-scf_native_ops_t	native_ops_risc = {
-	.name            = "arm64",
+scf_native_ops_t	native_ops_risc =
+{
+	.name            = "risc",
 
 	.open            = scf_risc_open,
 	.close           = scf_risc_close,
 
 	.select_inst     = scf_risc_select_inst,
 };
-
