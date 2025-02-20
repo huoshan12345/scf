@@ -761,6 +761,15 @@ static int _x64_rcg_bit_or_handler(scf_native_t* ctx, scf_3ac_code_t* c, scf_gra
 	return _x64_rcg_make(c, g, dst->dag_node, NULL, NULL);
 }
 
+static int _x64_rcg_dump_handler(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g)
+{
+	int ret = _x64_rcg_make2(c, NULL, NULL, NULL);
+	if (ret < 0)
+		return ret;
+
+	return _x64_rcg_make(c, g, NULL, NULL, NULL);
+}
+
 static int _x64_rcg_cmp_handler(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g)
 {
 	int ret = _x64_rcg_make2(c, NULL, NULL, NULL);
@@ -1310,6 +1319,7 @@ static x64_rcg_handler_pt  x64_rcg_handlers[SCF_N_3AC_OPS] =
 
 	[SCF_OP_3AC_CMP     ]  =  _x64_rcg_cmp_handler,
 	[SCF_OP_3AC_TEQ     ]  =  _x64_rcg_teq_handler,
+	[SCF_OP_3AC_DUMP    ]  =  _x64_rcg_dump_handler,
 
 	[SCF_OP_3AC_SETZ    ]  =  _x64_rcg_setz_handler,
 	[SCF_OP_3AC_SETNZ   ]  =  _x64_rcg_setnz_handler,

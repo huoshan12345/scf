@@ -217,11 +217,8 @@ static int _x64_function_finish(scf_function_t* f)
 	l   = scf_list_tail(&bb->code_list_head);
 	end = scf_list_data(l, scf_3ac_code_t, list);
 
-	int err = x64_pop_callee_regs(end, f);
-	if (err < 0)
-		return err;
+	if (f->bp_used_flag || f->vla_flag) {
 
-	if (f->bp_used_flag) {
 		inst = x64_make_inst_G2E(mov, rsp, rbp);
 		X64_INST_ADD_CHECK(end->instructions, inst);
 		end->inst_bytes += inst->len;
@@ -231,16 +228,29 @@ static int _x64_function_finish(scf_function_t* f)
 		X64_INST_ADD_CHECK(end->instructions, inst);
 		end->inst_bytes += inst->len;
 		bb ->code_bytes += inst->len;
+	}
+
+	int err = x64_pop_callee_regs(end, f);
+	if (err < 0)
+		return err;
+
+	f->init_code_bytes = 0;
+
+	err = x64_push_callee_regs(f->init_code, f);
+	if (err < 0)
+		return err;
+
+	uint32_t local = f->bp_used_flag ? f->local_vars_size : 0;
+
+	if (f->bp_used_flag || f->vla_flag) {
 
 		inst = x64_make_inst_G(push, rbp);
 		X64_INST_ADD_CHECK(f->init_code->instructions, inst);
-		f->init_code_bytes  = inst->len;
+		f->init_code_bytes += inst->len;
 
 		inst = x64_make_inst_G2E(mov, rbp, rsp);
 		X64_INST_ADD_CHECK(f->init_code->instructions, inst);
 		f->init_code_bytes += inst->len;
-
-		uint32_t local = f->local_vars_size;
 
 		if (f->callee_saved_size & 0xf) {
 			if (!(local & 0xf))
@@ -260,33 +270,7 @@ static int _x64_function_finish(scf_function_t* f)
 		int err = _x64_save_rabi(f);
 		if (err < 0)
 			return err;
-	} else {
-		if (f->vla_flag) {
-			inst = x64_make_inst_G2E(mov, rsp, rbp);
-			X64_INST_ADD_CHECK(end->instructions, inst);
-			end->inst_bytes += inst->len;
-			bb ->code_bytes += inst->len;
-		}
-
-		inst = x64_make_inst_G(pop, rbp);
-		X64_INST_ADD_CHECK(end->instructions, inst);
-		end->inst_bytes += inst->len;
-		bb ->code_bytes += inst->len;
-
-		inst = x64_make_inst_G(push, rbp);
-		X64_INST_ADD_CHECK(f->init_code->instructions, inst);
-		f->init_code_bytes  = inst->len;
-
-		if (f->vla_flag) {
-			inst = x64_make_inst_G2E(mov, rbp, rsp);
-			X64_INST_ADD_CHECK(f->init_code->instructions, inst);
-			f->init_code_bytes += inst->len;
-		}
 	}
-
-	err = x64_push_callee_regs(f->init_code, f);
-	if (err < 0)
-		return err;
 
 	inst = x64_make_inst(ret, 8);
 	X64_INST_ADD_CHECK(end->instructions, inst);
@@ -1113,7 +1097,6 @@ int	_scf_x64_select_inst(scf_native_t* ctx)
 	_x64_set_offsets(f);
 
 	_x64_set_offset_for_jmps( ctx, f);
-
 	return 0;
 }
 

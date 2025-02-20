@@ -52,16 +52,35 @@ static void __optimize_assign(scf_dag_node_t* assign)
 	}
 }
 
+static void __optimize_dn_free(scf_dag_node_t* dn)
+{
+	scf_dag_node_t* dn2;
+	int i;
+
+	for (i = 0; i < dn->childs->size; ) {
+		dn2       = dn->childs->data[i];
+
+		assert(0 == scf_vector_del(dn ->childs,  dn2));
+		assert(0 == scf_vector_del(dn2->parents, dn));
+
+		if (0 == dn2->parents->size) {
+			scf_vector_free(dn2->parents);
+			dn2->parents = NULL;
+		}
+	}
+
+	scf_list_del(&dn->list);
+	scf_dag_node_free(dn);
+	dn = NULL;
+}
+
 static int _bb_dag_update(scf_basic_block_t* bb)
 {
 	scf_dag_node_t* dn;
 	scf_dag_node_t* dn_bb;
-	scf_dag_node_t* dn_bb2;
 	scf_dag_node_t* dn_func;
-	scf_dag_node_t* parent;
+	scf_dag_node_t* base;
 	scf_list_t*     l;
-
-	int i;
 
 	while (1) {
 		int updated = 0;
@@ -107,7 +126,6 @@ static int _bb_dag_update(scf_basic_block_t* bb)
 				if (SCF_OP_ADDRESS_OF == dn->type || SCF_OP_DEREFERENCE == dn->type) {
 
 					dn_func = dn->old;
-
 				} else {
 					assert(dn_bb->parents && dn_bb->parents->size > 0);
 
@@ -134,23 +152,7 @@ static int _bb_dag_update(scf_basic_block_t* bb)
 					continue;
 				}
 
-				for (i = 0; i < dn->childs->size; ) {
-					dn_bb     = dn->childs->data[i];
-
-					assert(0 == scf_vector_del(dn->childs,     dn_bb));
-					assert(0 == scf_vector_del(dn_bb->parents, dn));
-
-					if (0 == dn_bb->parents->size) {
-						scf_vector_free(dn_bb->parents);
-						dn_bb->parents = NULL;
-					}
-				}
-
-				assert(0 == dn->childs->size);
-				scf_list_del(&dn->list);
-				scf_dag_node_free(dn);
-				dn = NULL;
-
+				__optimize_dn_free(dn);
 				++updated;
 
 			} else if (SCF_OP_ADD == dn->type || SCF_OP_SUB == dn->type
@@ -170,21 +172,7 @@ static int _bb_dag_update(scf_basic_block_t* bb)
 				 || scf_vector_find(bb->dn_resaves, dn_func))
 					continue;
 
-				for (i = 0; i < dn->childs->size; i++) {
-					dn_bb     = dn->childs->data[i];
-
-					assert(0 == scf_vector_del(dn_bb->parents, dn));
-
-					if (0 == dn_bb->parents->size) {
-						scf_vector_free(dn_bb->parents);
-						dn_bb->parents = NULL;
-					}
-				}
-
-				scf_list_del(&dn->list);
-				scf_dag_node_free(dn);
-				dn = NULL;
-
+				__optimize_dn_free(dn);
 				++updated;
 			}
 		}
@@ -271,6 +259,7 @@ static int _optimize_basic_block(scf_ast_t* ast, scf_function_t* f, scf_vector_t
 		if (bb->jmp_flag
 				|| bb->end_flag
 				|| bb->call_flag
+				|| bb->dump_flag
 				|| bb->varg_flag) {
 			scf_logd("bb: %p, jmp:%d,ret:%d, end: %d, call:%d, varg:%d, dereference_flag: %d\n",
 					bb, bb->jmp_flag, bb->ret_flag, bb->end_flag, bb->call_flag, bb->dereference_flag,

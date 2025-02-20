@@ -105,6 +105,7 @@ static int _optimize_common_expr(scf_ast_t* ast, scf_function_t* f, scf_vector_t
 		if (bb->jmp_flag
 				|| bb->end_flag
 				|| bb->call_flag
+				|| bb->dump_flag
 				|| bb->varg_flag) {
 			scf_logd("bb: %p, jmp:%d,ret:%d, end: %d, call:%d, varg:%d, dereference_flag: %d\n",
 					bb, bb->jmp_flag, bb->ret_flag, bb->end_flag, bb->call_flag, bb->dereference_flag,
@@ -123,7 +124,6 @@ static int _optimize_common_expr(scf_ast_t* ast, scf_function_t* f, scf_vector_t
 			return ret;
 	}
 
-//	scf_basic_block_print_list(bb_list_head);
 	return 0;
 }
 
