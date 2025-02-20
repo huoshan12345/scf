@@ -3,7 +3,7 @@
 #include"scf_basic_block.h"
 #include"scf_3ac.h"
 
-static int _x64_peephole_common(scf_vector_t* std_insts, scf_instruction_t* inst)
+static int _x64_peephole_mov(scf_vector_t* std_insts, scf_instruction_t* inst)
 {
 	scf_3ac_code_t*    c  = inst->c;
 	scf_basic_block_t* bb = c->basic_block;
@@ -24,6 +24,37 @@ static int _x64_peephole_common(scf_vector_t* std_insts, scf_instruction_t* inst
 		scf_instruction_print(inst);
 		printf("\n");
 #endif
+		if (SCF_X64_LEA == std->OpCode->type) {
+
+			if (scf_inst_data_same(&std->dst, &inst->src)
+					&& x64_inst_data_is_reg(&inst->dst)) {
+
+				if (std->src.index)
+					inst2 = x64_make_inst_SIB2G((scf_x64_OpCode_t*)std->OpCode,
+							inst->dst.base,
+							std->src.base, std->src.index, std->src.scale, std->src.disp);
+				else
+					inst2 = x64_make_inst_P2G((scf_x64_OpCode_t*)std->OpCode, inst->dst.base, std->src.base, std->src.disp);
+
+				if (!inst2)
+					return -ENOMEM;
+
+				memcpy(inst->code, inst2->code, inst2->len);
+				inst->len = inst2->len;
+
+				inst->OpCode    = std->OpCode;
+				inst->src.base  = std->src.base;
+				inst->src.index = std->src.index;
+				inst->src.scale = std->src.scale;
+				inst->src.disp  = std->src.disp;
+				inst->src.flag  = std->src.flag;
+
+				free(inst2);
+				inst2 = NULL;
+			}
+			break;
+		}
+
 		if (scf_inst_data_same(&std->dst, &inst->dst)) {
 
 			if (scf_inst_data_same(&std->src, &inst->src)) {
@@ -45,10 +76,30 @@ static int _x64_peephole_common(scf_vector_t* std_insts, scf_instruction_t* inst
 			free(std);
 			std = NULL;
 			continue;
-		} else if (scf_inst_data_same(&std->src, &inst->src)) {
-			continue;
-		} else if (scf_inst_data_same(&std->dst, &inst->src)) {
 
+		} else if (scf_inst_data_same(&std->src, &inst->src)) {
+
+			if (std->src.flag && std->dst.base->bytes == inst->dst.base->bytes) {
+
+				inst2 = x64_make_inst_E2G((scf_x64_OpCode_t*)inst->OpCode, inst->dst.base, std->dst.base);
+				if (!inst2)
+					return -ENOMEM;
+
+				memcpy(inst->code, inst2->code, inst2->len);
+				inst->len = inst2->len;
+
+				inst->src.base  = std->dst.base;
+				inst->src.index = NULL;
+				inst->src.scale = 0;
+				inst->src.disp  = 0;
+				inst->src.flag  = 0;
+
+				free(inst2);
+				inst2 = NULL;
+			}
+			continue;
+
+		} else if (scf_inst_data_same(&std->dst, &inst->src)) {
 			std->nb_used++;
 
 			if (scf_inst_data_same(&std->src, &inst->dst)) {
@@ -162,6 +213,9 @@ static int _x64_peephole_cmp(scf_vector_t* std_insts, scf_instruction_t* inst)
 	for (j  = std_insts->size - 1; j >= 0; j--) {
 		std = std_insts->data[j];
 
+		if (SCF_X64_LEA == std->OpCode->type)
+			break;
+
 		if (inst->src.flag) {
 
 			if (scf_inst_data_same(&inst->src, &std->src))
@@ -230,141 +284,216 @@ check:
 		}
 
 		if (scf_inst_data_same(&inst->src, &std->dst)
-		 || scf_inst_data_same(&inst->dst, &std->dst)) {
-
-			assert(0 == scf_vector_del(std_insts, std));
-		}
+		 || scf_inst_data_same(&inst->dst, &std->dst))
+			std->nb_used++;
 	}
 
 	return 0;
 }
 
-static void _x64_peephole_function(scf_vector_t* tmp_insts, scf_function_t* f, int jmp_back_flag)
+static int _x64_peephole_movx(scf_vector_t* std_insts, scf_instruction_t* inst)
 {
-	scf_register_t* rax = x64_find_register("rax");
-	scf_register_t* rsp = x64_find_register("rsp");
-	scf_register_t* rbp = x64_find_register("rbp");
+	if (!x64_inst_data_is_reg(&inst->src) || !x64_inst_data_is_reg(&inst->dst)) {
+		scf_vector_clear(std_insts, NULL);
+		return 0;
+	}
 
-	scf_register_t* rdi = x64_find_register("rdi");
-	scf_register_t* rsi = x64_find_register("rsi");
-	scf_register_t* rdx = x64_find_register("rdx");
-	scf_register_t* rcx = x64_find_register("rcx");
-	scf_register_t* r8  = x64_find_register("r8");
-	scf_register_t* r9  = x64_find_register("r9");
+	scf_3ac_code_t*    c  = inst->c;
+	scf_basic_block_t* bb = c->basic_block;
+	scf_instruction_t* std;
+	scf_x64_OpCode_t*  OpCode;
+	int j;
 
+	for (j  = std_insts->size - 1; j >= 0; j--) {
+		std = std_insts->data[j];
+
+		if (scf_inst_data_same(&std->dst, &inst->src)) {
+			std->nb_used++;
+
+			if (std->OpCode == inst->OpCode
+					&& scf_inst_data_same(&std->src, &inst->src)
+					&& scf_inst_data_same(&std->dst, &inst->dst)) {
+
+				assert(0 == scf_vector_del(inst->c->instructions, inst));
+
+				free(inst);
+				inst = NULL;
+				return X64_PEEPHOLE_DEL;
+			}
+		}
+	}
+
+	assert(0 == scf_vector_add_unique(std_insts, inst));
+	return 0;
+}
+
+static int x64_inst_is_useful(scf_instruction_t* inst, scf_instruction_t* std)
+{
+	if (scf_inst_data_same(&inst->dst, &std->src))
+		return 1;
+
+	if (x64_inst_data_is_reg(&inst->dst)) {
+
+		scf_register_t* r0 = inst->dst.base;
+		scf_register_t* r1 = std->src.base;
+
+		if (SCF_X64_CALL == std->OpCode->type) {
+
+			if (X64_COLOR_CONFLICT(r0->color,        x64_find_register("rdi")->color)
+					|| X64_COLOR_CONFLICT(r0->color, x64_find_register("rsi")->color)
+					|| X64_COLOR_CONFLICT(r0->color, x64_find_register("rdx")->color)
+					|| X64_COLOR_CONFLICT(r0->color, x64_find_register("rcx")->color)
+					|| X64_COLOR_CONFLICT(r0->color, x64_find_register("r8")->color)
+					|| X64_COLOR_CONFLICT(r0->color, x64_find_register("r9")->color))
+				return 1;
+
+		} else {
+			if (x64_inst_data_is_reg(&std->src)) {
+				if (X64_COLOR_CONFLICT(r0->color, r1->color))
+					return 1;
+			}
+
+			if (std->src.base  == inst->dst.base
+					|| std->src.index == inst->dst.base
+					|| std->dst.index == inst->dst.base
+					|| std->dst.base  == inst->dst.base)
+				return 1;
+		}
+
+	} else if (x64_inst_data_is_local(&inst->dst)) {
+
+		if (scf_inst_data_same(&inst->dst, &std->src))
+			return 1;
+
+		if (x64_find_register("rsp") == inst->dst.base)
+			return 1;
+
+		if (SCF_OP_VA_START == inst->c->op->type
+				|| SCF_OP_VA_ARG == inst->c->op->type
+				|| SCF_OP_VA_END == inst->c->op->type)
+			return 1;
+
+		if (x64_inst_data_is_pointer(&std->dst) || x64_inst_data_is_pointer(&std->src))
+			return 1;
+
+		switch (std->OpCode->type)
+		{
+			case SCF_X64_CMP:
+			case SCF_X64_TEST:
+				if (scf_inst_data_same(&inst->dst, &std->dst))
+					return 1;
+				break;
+
+			case SCF_X64_MOV:
+			case SCF_X64_LEA:
+				if (std->src.base == inst->dst.base) // maybe array member
+					return 1;
+				break;
+			default:
+				break;
+		};
+	}
+	return 0;
+}
+
+static int x64_inst_useful_3ac(scf_instruction_t* inst, scf_3ac_code_t* c)
+{
+	scf_instruction_t* inst2;
+	int j = 0;
+
+	if (inst->c == c) {
+		for ( ; j < c->instructions->size; j++) {
+			inst2 = c->instructions->data[j];
+
+			if (inst2 == inst)
+				break;
+		}
+
+		assert(j < c->instructions->size);
+		++j;
+	}
+
+	if (c->instructions) {
+		for ( ; j < c->instructions->size; j++) {
+			inst2 = c->instructions->data[j];
+
+			if (x64_inst_is_useful(inst, inst2))
+				return 1;
+		}
+	}
+	return 0;
+}
+
+static int x64_inst_useful_bb(scf_instruction_t* inst, scf_basic_block_t* bb)
+{
+	scf_3ac_code_t* c;
+	scf_list_t*     l;
+
+	if (bb == inst->c->basic_block)
+		l  = &inst->c->list;
+	else
+		l = scf_list_head(&bb->code_list_head);
+
+	for ( ; l != scf_list_sentinel(&bb->code_list_head); l = scf_list_next(l)) {
+		c      = scf_list_data(l, scf_3ac_code_t, list);
+
+		if (x64_inst_useful_3ac(inst, c))
+			return 1;
+	}
+
+	return 0;
+}
+
+static int __x64_inst_useful_bb_next(scf_basic_block_t* bb, void* data, scf_vector_t* queue)
+{
+	scf_instruction_t* inst = data;
+	scf_basic_block_t* bb2;
+	int j;
+
+	if (x64_inst_useful_bb(inst, bb))
+		return 1;
+
+	for (j = 0; j < bb->nexts->size; j++) {
+		bb2       = bb->nexts->data[j];
+
+		int ret = scf_vector_add(queue, bb2);
+		if (ret < 0)
+			return ret;
+	}
+
+	return 0;
+}
+
+static int _x64_peephole_function(scf_vector_t* tmp_insts, scf_function_t* f)
+{
 	scf_instruction_t*  inst;
-	scf_instruction_t*  inst2;
 	scf_basic_block_t*  bb;
 	scf_3ac_code_t*     c;
-	scf_list_t*         l;
-
 	int i;
-	int j;
-	int k;
 
 	for (i   = tmp_insts->size - 1; i >= 0; i--) {
 		inst = tmp_insts->data[i];
-
-		scf_register_t* r0;
-		scf_register_t* r1;
-		scf_register_t* r2;
-
-		if (!inst)
-			continue;
 
 		if (SCF_X64_MOV != inst->OpCode->type)
 			continue;
 
 		if (x64_inst_data_is_reg(&inst->dst)) {
 
-			r0 = inst->dst.base;
-
-			for (k = 0; k < X64_ABI_RET_NB; k++) {
-				r2 = x64_find_register_type_id_bytes(0, x64_abi_ret_regs[k], 8);
-
-				if (X64_COLOR_CONFLICT(r2->color, r0->color))
-					break;
-			}
-
-			if (k < X64_ABI_RET_NB)
+			if (x64_reg_is_retval(inst->dst.base))
 				continue;
 
 		} else if (!x64_inst_data_is_local(&inst->dst))
 			continue;
 
-		if (jmp_back_flag)
-			j = 0;
-		else
-			j = i + 1;
-
-		for ( ; j < tmp_insts->size; j++) {
-			inst2 = tmp_insts->data[j];
-
-			if (!inst2 || inst == inst2)
-				continue;
-
-			if (scf_inst_data_same(&inst->dst, &inst2->src))
-				break;
-
-			if (x64_inst_data_is_reg(&inst->dst)) {
-
-				r0 = inst ->dst.base;
-				r1 = inst2->src.base;
-
-				if (SCF_X64_CALL == inst2->OpCode->type) {
-
-					if (X64_COLOR_CONFLICT(r0->color, rdi->color)
-							|| X64_COLOR_CONFLICT(r0->color, rsi->color)
-							|| X64_COLOR_CONFLICT(r0->color, rdx->color)
-							|| X64_COLOR_CONFLICT(r0->color, rcx->color)
-							|| X64_COLOR_CONFLICT(r0->color, r8->color)
-							|| X64_COLOR_CONFLICT(r0->color, r9->color))
-						break;
-
-				} else {
-					if (x64_inst_data_is_reg(&inst2->src)) {
-						if (X64_COLOR_CONFLICT(r0->color, r1->color))
-							break;
-					}
-
-					if (inst2->src.base  == inst->dst.base
-							|| inst2->src.index == inst->dst.base
-							|| inst2->dst.index == inst->dst.base
-							|| inst2->dst.base  == inst->dst.base)
-						break;
-				}
-
-			} else if (x64_inst_data_is_local(&inst->dst)) {
-
-				if (scf_inst_data_same(&inst->dst, &inst2->src))
-					break;
-				else if (rsp == inst->dst.base)
-					break;
-				else if (SCF_OP_VA_START == inst->c->op->type
-						|| SCF_OP_VA_ARG == inst->c->op->type
-						|| SCF_OP_VA_END == inst->c->op->type)
-					break;
-
-				else if (SCF_X64_CMP    == inst2->OpCode->type
-						|| SCF_X64_TEST == inst2->OpCode->type) {
-
-					if (scf_inst_data_same(&inst->dst, &inst2->dst))
-						break;
-
-				} else if (SCF_X64_LEA  == inst2->OpCode->type
-						|| SCF_X64_MOV  == inst2->OpCode->type) {
-
-					if (inst2->src.base == inst->dst.base
-							&& inst2->src.index) // maybe array member
-						break;
-				}
-			}
-		}
-
-		if (j < tmp_insts->size)
-			continue;
-
 		c  = inst->c;
+		bb = c->basic_block;
+
+		int ret = scf_basic_block_search_bfs(bb, __x64_inst_useful_bb_next, inst);
+		if (ret < 0)
+			return ret;
+
+		if (ret > 0)
+			continue;
 
 		assert(0 == scf_vector_del(c->instructions,  inst));
 		assert(0 == scf_vector_del(tmp_insts,        inst));
@@ -376,25 +505,22 @@ static void _x64_peephole_function(scf_vector_t* tmp_insts, scf_function_t* f, i
 		inst = NULL;
 	}
 
-	int nb_locals = 0;
+	int n_locals = 0;
 
 	for (i = 0; i < tmp_insts->size; i++) {
 		inst      = tmp_insts->data[i];
 
-		if (!inst)
-			continue;
-
-		if (x64_inst_data_is_local(&inst->src)
-				|| x64_inst_data_is_local(&inst->dst))
-			nb_locals++;
+		if (x64_inst_data_is_local(&inst->src) || x64_inst_data_is_local(&inst->dst))
+			n_locals++;
 	}
 
-	if (nb_locals > 0)
+	if (n_locals > 0)
 		f->bp_used_flag = 1;
 	else
 		f->bp_used_flag = 0;
 
 	scf_logw("%s(), f->bp_used_flag: %d\n", f->node.w->text->data, f->bp_used_flag);
+	return 0;
 }
 
 int x64_optimize_peephole(scf_native_t* ctx, scf_function_t* f)
@@ -434,10 +560,6 @@ int x64_optimize_peephole(scf_native_t* ctx, scf_function_t* f)
 		if (bb->jmp_flag) {
 			scf_vector_clear(std_insts, NULL);
 
-			ret = scf_vector_add(tmp_insts, NULL);
-			if (ret < 0)
-				goto error;
-
 			l2 = scf_list_head(&bb->code_list_head);
 			c  = scf_list_data(l2, scf_3ac_code_t, list);
 
@@ -451,10 +573,6 @@ int x64_optimize_peephole(scf_native_t* ctx, scf_function_t* f)
 
 		if (bb->jmp_dst_flag) {
 			scf_vector_clear(std_insts, NULL);
-
-			ret = scf_vector_add(tmp_insts, NULL);
-			if (ret < 0)
-				goto error;
 		}
 
 		for (l2 = scf_list_head(&bb->code_list_head); l2 != scf_list_sentinel(&bb->code_list_head);
@@ -473,24 +591,35 @@ int x64_optimize_peephole(scf_native_t* ctx, scf_function_t* f)
 				inst->c = c;
 //				scf_instruction_print(inst);
 
-				if (SCF_X64_CMP == inst->OpCode->type || SCF_X64_TEST == inst->OpCode->type) {
+				ret = 0;
+				switch (inst->OpCode->type) {
 
-					ret = _x64_peephole_cmp(std_insts, inst);
-					if (ret < 0)
-						goto error;
+					case SCF_X64_CMP:
+					case SCF_X64_TEST:
+						ret = _x64_peephole_cmp(std_insts, inst);
+						break;
 
-				} else if (SCF_X64_MOV == inst->OpCode->type) {
+					case SCF_X64_MOV:
+						ret = _x64_peephole_mov(std_insts, inst);
+						break;
 
-					ret = _x64_peephole_common(std_insts, inst);
-					if (ret < 0)
-						goto error;
+					case SCF_X64_LEA:
+						ret = scf_vector_add_unique(std_insts, inst);
+						break;
 
-					if (X64_PEEPHOLE_DEL == ret)
-						continue;
+					case SCF_X64_MOVSS:
+					case SCF_X64_MOVSD:
+						break;
+					default:
+						scf_vector_clear(std_insts, NULL);
+						break;
+				};
 
-				} else {
-					scf_vector_clear(std_insts, NULL);
-				}
+				if (ret < 0)
+					goto error;
+
+				if (X64_PEEPHOLE_DEL == ret)
+					continue;
 
 				ret = scf_vector_add(tmp_insts, inst);
 				if (ret < 0)
@@ -500,38 +629,7 @@ int x64_optimize_peephole(scf_native_t* ctx, scf_function_t* f)
 		}
 	}
 
-	_x64_peephole_function(tmp_insts, f, jmp_back_flag);
-#if 0
-	for (i = 0; i < tmp_insts->size; i++) {
-		inst      = tmp_insts->data[i];
-
-		if (!inst)
-			continue;
-
-		if (SCF_X64_MOV != inst->OpCode->type
-				|| !x64_inst_data_is_local(&inst->src))
-			continue;
-
-		scf_logw("\n");
-		scf_instruction_print(inst);
-
-		for (j = i - 1; j >= 0; j--) {
-			std = tmp_insts->data[j];
-
-			if (!std)
-				break;
-
-			if (scf_inst_data_same(&std->dst, &inst->src)
-					|| scf_inst_data_same(&std->dst, &inst->dst)) {
-				printf("-------\n");
-				scf_instruction_print(std);
-				break;
-			}
-		}
-		printf("\n");
-	}
-#endif
-	ret = 0;
+	ret = _x64_peephole_function(tmp_insts, f);
 error:
 	scf_vector_free(tmp_insts);
 	scf_vector_free(std_insts);

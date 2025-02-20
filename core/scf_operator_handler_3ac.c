@@ -515,8 +515,7 @@ static int _scf_op_break(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void*
 
 	scf_list_add_tail(d->_3ac_list_head, &jmp->list);
 
-	scf_vector_add(d->branch_ops->_breaks, jmp);
-	return 0;
+	return scf_vector_add(d->branch_ops->_breaks, jmp);
 }
 
 static int _scf_op_continue(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
@@ -1070,6 +1069,63 @@ static int _scf_op_vla_alloc(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, v
 	assert(4 == nb_nodes);
 
 	scf_handler_data_t* d = data;
+	scf_variable_t*     v;
+	scf_type_t*         t;
+	scf_node_t*         parent = nodes[0]->parent;
+	scf_node_t*         zero;
+
+	t = scf_block_find_type_type(ast->current_block, SCF_VAR_INT);
+	v = SCF_VAR_ALLOC_BY_TYPE(NULL, t, 1, 0, NULL);
+	if (!v)
+		return -ENOMEM;
+	v->data.u64 = 0;
+	v->const_literal_flag = 1;
+
+	zero = scf_node_alloc(NULL, v->type, v);
+	scf_variable_free(v);
+	v = NULL;
+	if (!zero)
+		return -ENOMEM;
+
+	int ret = scf_node_add_child(parent, zero);
+	if (ret < 0) {
+		scf_node_free(zero);
+		return ret;
+	}
+
+	scf_3ac_operand_t*  dst;
+	scf_3ac_code_t*     cmp;
+	scf_3ac_code_t*     jgt;
+	scf_3ac_code_t*     core;
+	scf_node_t*         srcs[] = {nodes[1], zero};
+
+	cmp = scf_3ac_code_NN(SCF_OP_3AC_CMP, NULL, 0, srcs, 2);
+	if (!cmp)
+		return -ENOMEM;
+
+	jgt = scf_3ac_jmp_code(SCF_OP_3AC_JGT, NULL, NULL);
+	if (!jgt) {
+		scf_3ac_code_free(cmp);
+		return -ENOMEM;
+	}
+
+	core = scf_3ac_code_NN(SCF_OP_3AC_DUMP, NULL, 0, nodes + 1, 3);
+	if (!core) {
+		scf_3ac_code_free(jgt);
+		scf_3ac_code_free(cmp);
+		return -ENOMEM;
+	}
+
+	scf_list_add_tail(d->_3ac_list_head, &cmp->list);
+	scf_list_add_tail(d->_3ac_list_head, &jgt->list);
+	scf_list_add_tail(d->_3ac_list_head, &core->list);
+
+	dst = jgt->dsts->data[0];
+	dst->code = core;
+
+	ret = scf_vector_add(d->branch_ops->_breaks, jgt);
+	if (ret < 0)
+		return ret;
 
 	return _scf_3ac_code_N(d->_3ac_list_head, SCF_OP_VLA_ALLOC, nodes[0], nodes + 1, 3);
 }

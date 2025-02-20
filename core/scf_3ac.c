@@ -95,6 +95,7 @@ static scf_3ac_operator_t _3ac_operators[] = {
 	{SCF_OP_3AC_JB,          "jb"},
 	{SCF_OP_3AC_JBE,         "jbe"},
 
+	{SCF_OP_3AC_DUMP,        "core_dump"},
 	{SCF_OP_3AC_NOP,         "nop"},
 	{SCF_OP_3AC_END,         "end"},
 
@@ -671,7 +672,7 @@ int scf_3ac_code_to_dag(scf_3ac_code_t* c, scf_list_t* dag)
 
 		dn_src = src->dag_node;
 
-		if (dn_src->parents && dn_src->parents->size > 0) {
+		if (dn_src->parents && dn_src->parents->size > 0 && !scf_variable_may_malloced(dn_src->var)) {
 			dn_parent        = dn_src->parents->data[dn_src->parents->size - 1];
 
 			if (SCF_OP_ASSIGN == dn_parent->type) {
@@ -739,7 +740,8 @@ int scf_3ac_code_to_dag(scf_3ac_code_t* c, scf_list_t* dag)
 				return ret;
 		}
 	} else if (SCF_OP_3AC_CMP == c->op->type
-			|| SCF_OP_3AC_TEQ == c->op->type) {
+			|| SCF_OP_3AC_TEQ == c->op->type
+			|| SCF_OP_3AC_DUMP == c->op->type) {
 
 		scf_dag_node_t* dn_cmp = scf_dag_node_alloc(c->op->type, NULL, NULL);
 
@@ -1337,6 +1339,10 @@ static int _3ac_find_basic_block_start(scf_list_t* h)
 			continue;
 		}
 #endif
+		if (SCF_OP_3AC_DUMP == c->op->type) {
+			c->basic_block_start = 1;
+			continue;
+		}
 
 		if (SCF_OP_3AC_END == c->op->type) {
 			c->basic_block_start = 1;
@@ -1527,6 +1533,11 @@ static int _3ac_split_basic_blocks(scf_list_t* h, scf_function_t* f)
 
 			if (SCF_OP_RETURN == c->op->type) {
 				bb->ret_flag = 1;
+				continue;
+			}
+
+			if (SCF_OP_3AC_DUMP == c->op->type) {
+				bb->dump_flag = 1;
 				continue;
 			}
 

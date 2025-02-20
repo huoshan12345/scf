@@ -207,6 +207,7 @@ enum scf_core_types
 	SCF_OP_3AC_RELOAD,   // reload a var from memory, only for 3ac & native
 	SCF_OP_3AC_RESAVE,   // resave a var to memory, only for 3ac & native
 
+	SCF_OP_3AC_DUMP,
 	SCF_OP_3AC_NOP,
 	SCF_OP_3AC_END,
 

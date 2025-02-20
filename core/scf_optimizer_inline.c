@@ -375,7 +375,7 @@ static int _optimize_inline2(scf_ast_t* ast, scf_function_t* f)
 		if (!bb->call_flag)
 			continue;
 
-		int call_flag = 0;
+		int n_calls = 0;
 
 		bb_cur = bb;
 
@@ -393,7 +393,7 @@ static int _optimize_inline2(scf_ast_t* ast, scf_function_t* f)
 			if (SCF_OP_CALL != c->op->type)
 				continue;
 
-			call_flag = 1;
+			n_calls++;
 
 			src = c->srcs->data[0];
 			v   = _scf_operand_get(src->node);
@@ -418,6 +418,8 @@ static int _optimize_inline2(scf_ast_t* ast, scf_function_t* f)
 			bb2 = bb_cur;
 			bb_cur->call_flag = 0;
 
+			n_calls--;
+
 			int ret = _do_inline(ast, c, &bb_cur, f, f2);
 			if (ret < 0)
 				return ret;
@@ -426,8 +428,7 @@ static int _optimize_inline2(scf_ast_t* ast, scf_function_t* f)
 			scf_3ac_code_free(c);
 			c = NULL;
 
-			bb2->call_flag |= call_flag;
-			call_flag       = 0;
+			bb2->call_flag |= n_calls > 0;
 
 			if (bb2->ret_flag) {
 				bb2->ret_flag    = 0;
@@ -436,8 +437,7 @@ static int _optimize_inline2(scf_ast_t* ast, scf_function_t* f)
 #endif
 		}
 
-		bb_cur->call_flag |= call_flag;
-		call_flag = 0;
+		bb_cur->call_flag |= n_calls > 0;
 	}
 
 #if 0

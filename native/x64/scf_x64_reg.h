@@ -162,6 +162,20 @@ int                 x64_array_index_reg(x64_sib_t* sib, scf_dag_node_t* base, sc
 
 void                x64_call_rabi(int* p_nints, int* p_nfloats, scf_3ac_code_t* c);
 
+static inline int   x64_reg_is_retval(scf_register_t* r)
+{
+	scf_register_t* r2;
+	int k;
+
+	for (k = 0; k < X64_ABI_RET_NB; k++) {
+		r2 = x64_find_register_type_id_bytes(0, x64_abi_ret_regs[k], 8);
+
+		if (X64_COLOR_CONFLICT(r2->color, r->color))
+			return 1;
+	}
+
+	return 0;
+}
 
 static inline int   x64_inst_data_is_reg(scf_inst_data_t* id)
 {
@@ -193,6 +207,16 @@ static inline int   x64_inst_data_is_global(scf_inst_data_t* id)
 static inline int   x64_inst_data_is_const(scf_inst_data_t* id)
 {
 	if (!id->flag && id->imm_size > 0)
+		return 1;
+	return 0;
+}
+
+static inline int   x64_inst_data_is_pointer(scf_inst_data_t* id)
+{
+	scf_register_t* rbp = x64_find_register("rbp");
+	scf_register_t* rsp = x64_find_register("rsp");
+
+	if (id->flag && id->base && id->base != rbp && id->base != rsp)
 		return 1;
 	return 0;
 }

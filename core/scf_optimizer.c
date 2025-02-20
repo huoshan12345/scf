@@ -1,6 +1,7 @@
 #include"scf_optimizer.h"
 
 extern scf_optimizer_t   scf_optimizer_inline;
+extern scf_optimizer_t   scf_optimizer_split_call;
 
 extern scf_optimizer_t   scf_optimizer_dag;
 
@@ -30,6 +31,7 @@ extern scf_optimizer_t   scf_optimizer_generate_loads_saves;
 static scf_optimizer_t*  scf_optimizers[] =
 {
 	&scf_optimizer_inline, // global optimizer
+	&scf_optimizer_split_call,
 
 	&scf_optimizer_dag,
 

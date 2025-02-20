@@ -1,4 +1,3 @@
-
 #include "../lib/scf_capi.c"
 
 struct str
@@ -9,7 +8,7 @@ struct str
 
 	int __init(str* this)
 	{
-		this->len      = 0;
+		this->len = 0;
 		this->capacity = 16;
 
 		this->data = scf__auto_malloc(16);
@@ -27,15 +26,14 @@ struct str
 	}
 };
 
-
 int main()
 {
 	str* p0;
 	str* p1;
-	int  i;
 
 	p0 = create str();
+	p1 = p0;
 
-	printf("%s\n", p0->data);
+	printf("%s\n", p1->data);
 	return 0;
 }

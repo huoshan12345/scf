@@ -88,6 +88,7 @@ struct scf_basic_block_s
 	uint32_t        vla_flag    :1;
 	uint32_t        end_flag    :1;
 	uint32_t        varg_flag   :1;
+	uint32_t        dump_flag   :1;
 	uint32_t        jmp_dst_flag:1;
 
 	uint32_t        dereference_flag:1;

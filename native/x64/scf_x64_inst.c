@@ -1438,27 +1438,16 @@ static int _x64_inst_mod_assign_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	return _div_mod_assign(ctx, c, 1);
 }
 
-static int _x64_inst_vla_alloc_handler(scf_native_t* ctx, scf_3ac_code_t* c)
+static int _x64_inst_dump_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
-	if (!c->dsts || c->dsts->size != 1)
-		return -EINVAL;
-
 	if (!c->srcs || c->srcs->size != 3)
 		return -EINVAL;
 
 	scf_x64_context_t* x64  = ctx->priv;
 	scf_function_t*    f    = x64->f;
-
-	scf_3ac_operand_t* dst  = c->dsts->data[0];
 	scf_3ac_operand_t* src  = c->srcs->data[0];
 	scf_3ac_operand_t* logf = c->srcs->data[1];
 	scf_3ac_operand_t* msg  = c->srcs->data[2];
-
-	if (!dst || !dst->dag_node)
-		return -EINVAL;
-
-	if (!src || !src->dag_node)
-		return -EINVAL;
 
 	if (!logf || !logf->dag_node)
 		return -EINVAL;
@@ -1467,23 +1456,16 @@ static int _x64_inst_vla_alloc_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 		return -EINVAL;
 
 	scf_instruction_t*  inst = NULL;
-	scf_instruction_t*  jcc  = NULL;
 	scf_register_t*     rs   = NULL;
 	scf_register_t*     rd   = NULL;
-	scf_register_t*     rsp  = x64_find_register("rsp");
 	scf_register_t*     rdi  = x64_find_register("rdi");
 	scf_register_t*     rsi  = x64_find_register("rsi");
 	scf_register_t*     rax  = x64_find_register("rax");
 
-	scf_x64_OpCode_t*   cmp  = x64_find_OpCode(SCF_X64_CMP, 1, 4, SCF_X64_I2E);
-	scf_x64_OpCode_t*   jg   = x64_find_OpCode(SCF_X64_JG , 1, 1, SCF_X64_I);
 	scf_x64_OpCode_t*   lea  = x64_find_OpCode(SCF_X64_LEA, 8, 8, SCF_X64_E2G);
 	scf_x64_OpCode_t*   call = x64_find_OpCode(SCF_X64_CALL,4, 4, SCF_X64_I);
-	scf_x64_OpCode_t*   sub  = x64_find_OpCode(SCF_X64_SUB, 8, 8, SCF_X64_E2G);
-	scf_x64_OpCode_t*   add  = x64_find_OpCode(SCF_X64_ADD, 4, 8, SCF_X64_I2E);
-	scf_x64_OpCode_t*   and  = x64_find_OpCode(SCF_X64_AND, 4, 8, SCF_X64_I2E);
-	scf_x64_OpCode_t*   mov  = x64_find_OpCode(SCF_X64_MOV, 8, 8, SCF_X64_G2E);
 	scf_x64_OpCode_t*   xor  = x64_find_OpCode(SCF_X64_XOR, 8, 8, SCF_X64_G2E);
+	scf_x64_OpCode_t*   mov  = x64_find_OpCode(SCF_X64_MOV, 8, 8, SCF_X64_G2E);
 
 	if (!c->instructions) {
 		c->instructions = scf_vector_alloc();
@@ -1492,22 +1474,11 @@ static int _x64_inst_vla_alloc_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	}
 
 	X64_SELECT_REG_CHECK(&rs, src->dag_node, c, f, 1);
-	X64_SELECT_REG_CHECK(&rd, dst->dag_node, c, f, 0);
-
-	// if src > 0
-	uint32_t imm = 0;
-	inst = x64_make_inst_I2E(cmp, rs, (uint8_t*)&imm, 1);
-	X64_INST_ADD_CHECK(c->instructions, inst);
-
-	jcc = x64_make_inst_I(jg, (uint8_t*)&imm, 1);
-	X64_INST_ADD_CHECK(c->instructions, jcc);
-
-	// process error when src <= 0
-	scf_rela_t* rela = NULL;
-	int i = c->instructions->size;
 
 	inst = x64_make_inst_G2E(mov, rsi, rs);
 	X64_INST_ADD_CHECK(c->instructions, inst);
+
+	scf_rela_t* rela = NULL;
 
 	inst = x64_make_inst_M2G(&rela, lea, rdi, NULL, msg->dag_node->var);
 	X64_INST_ADD_CHECK(c->instructions, inst);
@@ -1517,6 +1488,7 @@ static int _x64_inst_vla_alloc_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	X64_INST_ADD_CHECK(c->instructions, inst);
 
 	// call printf() to show msg
+	uint32_t imm = 0;
 	inst = x64_make_inst_I(call, (uint8_t*)&imm, sizeof(imm));
 	X64_INST_ADD_CHECK(c->instructions, inst);
 
@@ -1531,14 +1503,47 @@ static int _x64_inst_vla_alloc_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	inst = x64_make_inst_G2P(mov, rax, 0, rax);
 	X64_INST_ADD_CHECK(c->instructions, inst);
+	return 0;
+}
 
-	for ( ; i < c->instructions->size; i++) {
-		inst  = c->instructions->data[i];
-		jcc->code[1] += inst->len;
+static int _x64_inst_vla_alloc_handler(scf_native_t* ctx, scf_3ac_code_t* c)
+{
+	if (!c->dsts || c->dsts->size != 1)
+		return -EINVAL;
+
+	if (!c->srcs || c->srcs->size != 3)
+		return -EINVAL;
+
+	scf_x64_context_t* x64  = ctx->priv;
+	scf_function_t*    f    = x64->f;
+	scf_3ac_operand_t* dst  = c->dsts->data[0];
+	scf_3ac_operand_t* src  = c->srcs->data[0];
+
+	if (!dst || !dst->dag_node)
+		return -EINVAL;
+
+	if (!src || !src->dag_node)
+		return -EINVAL;
+
+	scf_instruction_t*  inst = NULL;
+	scf_register_t*     rs   = NULL;
+	scf_register_t*     rd   = NULL;
+	scf_register_t*     rsp  = x64_find_register("rsp");
+
+	scf_x64_OpCode_t*   add  = x64_find_OpCode(SCF_X64_ADD, 4, 8, SCF_X64_I2E);
+	scf_x64_OpCode_t*   and  = x64_find_OpCode(SCF_X64_AND, 4, 8, SCF_X64_I2E);
+	scf_x64_OpCode_t*   sub  = x64_find_OpCode(SCF_X64_SUB, 8, 8, SCF_X64_E2G);
+	scf_x64_OpCode_t*   mov  = x64_find_OpCode(SCF_X64_MOV, 8, 8, SCF_X64_G2E);
+
+	if (!c->instructions) {
+		c->instructions = scf_vector_alloc();
+		if (!c->instructions)
+			return -ENOMEM;
 	}
 
-	// alloc VLA
-	imm  = 0xf;
+	X64_SELECT_REG_CHECK(&rs, src->dag_node, c, f, 1);
+
+	uint32_t imm  = 0xf;
 	inst = x64_make_inst_I2E(add, rs, (uint8_t*)&imm, sizeof(imm));
 	X64_INST_ADD_CHECK(c->instructions, inst);
 
@@ -1549,10 +1554,15 @@ static int _x64_inst_vla_alloc_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	inst = x64_make_inst_E2G(sub, rsp, rs);
 	X64_INST_ADD_CHECK(c->instructions, inst);
 
+	int ret = x64_save_var(src->dag_node, c, f);
+	if (ret < 0)
+		return ret;
+
+	X64_SELECT_REG_CHECK(&rd, dst->dag_node, c, f, 0);
+
 	inst = x64_make_inst_G2E(mov, rd, rsp);
 	X64_INST_ADD_CHECK(c->instructions, inst);
-
-	return x64_save_var(src->dag_node, c, f);
+	return 0;
 }
 
 static int _x64_inst_vla_free_handler(scf_native_t* ctx, scf_3ac_code_t* c)
@@ -2431,6 +2441,8 @@ static x64_inst_handler_pt  x64_inst_handlers[] =
 
 	[SCF_OP_RETURN      ]  =  _x64_inst_return_handler,
 	[SCF_OP_GOTO        ]  =  _x64_inst_goto_handler,
+
+	[SCF_OP_3AC_DUMP    ]  =  _x64_inst_dump_handler,
 
 	[SCF_OP_3AC_JZ      ]  =  _x64_inst_jz_handler,
 	[SCF_OP_3AC_JNZ     ]  =  _x64_inst_jnz_handler,
