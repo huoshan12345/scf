@@ -4,6 +4,7 @@ static scf_key_word_t  key_words[] =
 {
 	{"if",        SCF_LEX_WORD_KEY_IF},
 	{"else",      SCF_LEX_WORD_KEY_ELSE},
+	{"endif",     SCF_LEX_WORD_KEY_ENDIF},
 
 	{"for",       SCF_LEX_WORD_KEY_FOR},
 	{"while",     SCF_LEX_WORD_KEY_WHILE},
@@ -1422,6 +1423,9 @@ int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 
 		switch (w1->type) {
 			case SCF_LEX_WORD_KEY_INCLUDE:
+			case SCF_LEX_WORD_KEY_IF:
+			case SCF_LEX_WORD_KEY_ELSE:
+			case SCF_LEX_WORD_KEY_ENDIF:
 
 				scf_lex_push_word(lex, w1);
 				*pword = w;

@@ -339,7 +339,7 @@ static int _expr_action_binary_op(scf_dfa_t* dfa, scf_vector_t* words, void* dat
 			return SCF_DFA_ERROR;
 	}
 
-	if (SCF_LEX_WORD_ARROW == w->type) {
+	if (SCF_LEX_WORD_ARROW == w->type || SCF_LEX_WORD_DOT == w->type) {
 		assert(md->current_struct);
 
 		if (!md->parent_block)

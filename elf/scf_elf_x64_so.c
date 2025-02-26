@@ -17,6 +17,16 @@ static uint32_t _x64_elf_hash(const uint8_t* p)
 	return k;
 }
 
+uint32_t elf_new_hash(const char *s)
+{
+	uint32_t h = 5381;
+
+	for (unsigned char c = *s; c != '\0'; c = *++s)
+		h = (h << 5) + h + c;
+
+	return h;
+}
+
 static int _x64_elf_add_interp(elf_native_t* x64, elf_section_t** ps)
 {
 	elf_section_t* s;
@@ -33,8 +43,9 @@ static int _x64_elf_add_interp(elf_native_t* x64, elf_section_t** ps)
 
 	char*  interp = "/lib64/ld-linux-x86-64.so.2";
 	size_t len    = strlen(interp);
+	size_t bytes  = (len + 1 + 7) >> 3 << 3;
 
-	s->data = malloc(len + 1);
+	s->data = malloc(bytes);
 	if (!s->data) {
 		scf_string_free(s->name);
 		free(s);
@@ -42,7 +53,7 @@ static int _x64_elf_add_interp(elf_native_t* x64, elf_section_t** ps)
 	}
 	memcpy(s->data, interp, len);
 	s->data[len] = '\0';
-	s->data_len  = len + 1;
+	s->data_len  = bytes;
 
 	s->index     = 1;
 
@@ -142,6 +153,58 @@ static int _x64_elf_add_gnu_version_r(elf_native_t* x64, elf_section_t** ps)
 	return 0;
 }
 
+static int _x64_elf_add_gnu_hash(elf_native_t* x64, elf_section_t** ps)
+{
+	elf_section_t* s;
+
+	s = calloc(1, sizeof(elf_section_t));
+	if (!s)
+		return -ENOMEM;
+
+	s->name = scf_string_cstr(".gnu.hash");
+	if (!s->name) {
+		free(s);
+		return -ENOMEM;
+	}
+
+#define HASH_BUCKETS 3
+#define HASH_BLOOMS  1
+
+	int n_syms = x64->dynsyms->size;
+
+	if (x64->dyn_relas)
+		n_syms -= x64->dyn_relas->size;
+
+	int len = sizeof(uint32_t) * 4 + sizeof(uint64_t) * HASH_BLOOMS
+		                           + sizeof(uint32_t) * HASH_BUCKETS
+		                           + sizeof(uint32_t) * n_syms;
+
+	s->data = calloc(1, len);
+	if (!s->data) {
+		scf_string_free(s->name);
+		free(s);
+		return -ENOMEM;
+	}
+	s->data_len = len;
+
+	s->index = 1;
+
+	s->sh.sh_type   = SHT_GNU_HASH;
+	s->sh.sh_flags  = SHF_ALLOC;
+	s->sh.sh_addralign = 8;
+
+	int ret = scf_vector_add(x64->sections, s);
+	if (ret < 0) {
+		scf_string_free(s->name);
+		free(s->data);
+		free(s);
+		return -ENOMEM;
+	}
+
+	*ps = s;
+	return 0;
+}
+
 static int _x64_elf_add_dynsym(elf_native_t* x64, elf_section_t** ps)
 {
 	elf_section_t* s;
@@ -216,7 +279,7 @@ static int _x64_elf_add_dynstr(elf_native_t* x64, elf_section_t** ps)
 	return 0;
 }
 
-static int _x64_elf_add_dynamic(elf_native_t* x64, elf_section_t** ps)
+static int _x64_elf_add_dynamic(elf_native_t* x64, elf_section_t** ps, int n_tags)
 {
 	elf_section_t* s;
 
@@ -230,17 +293,19 @@ static int _x64_elf_add_dynamic(elf_native_t* x64, elf_section_t** ps)
 		return -ENOMEM;
 	}
 
-	int nb_tags = x64->dyn_needs->size + 11 + 1;
+	n_tags += 4 + 1; // must have tags: STRTAB, SYMTAB, STRSZ, SYMENT, NULL
+	if (x64->dyn_needs)
+		n_tags += x64->dyn_needs->size;
 
-	s->data = calloc(nb_tags, sizeof(Elf64_Dyn));
+	s->data = calloc(n_tags, sizeof(Elf64_Dyn));
 	if (!s->data) {
 		scf_string_free(s->name);
 		free(s);
 		return -ENOMEM;
 	}
-	s->data_len  = nb_tags * sizeof(Elf64_Dyn);
+	s->data_len = n_tags * sizeof(Elf64_Dyn);
 
-	s->index     = 1;
+	s->index = 1;
 
 	s->sh.sh_type   = SHT_PROGBITS;
 	s->sh.sh_flags  = SHF_ALLOC | SHF_WRITE;
@@ -426,13 +491,11 @@ static int _section_cmp(const void* v0, const void* v1)
 	return 0;
 }
 
-int __x64_elf_add_dyn(elf_native_t* x64, const char* sysroot)
+static void __x64_sym_set_section(elf_native_t* x64)
 {
-	elf_section_t* s;
-	elf_sym_t*     sym;
-	Elf64_Rela*    rela;
-
+	elf_sym_t* sym;
 	int i;
+
 	for (i  = x64->symbols->size - 1; i >= 0; i--) {
 		sym = x64->symbols->data[i];
 
@@ -448,27 +511,17 @@ int __x64_elf_add_dyn(elf_native_t* x64, const char* sysroot)
 				sym->section = x64->sections->data[shndx - 1];
 		}
 	}
+}
 
-	char* sh_names[] = {
-		".interp",
-		".dynsym",
-		".dynstr",
-//		".gnu.version_r",
-		".rela.plt",
-		".plt",
-
-		".text",
-		".rodata",
-
-		".dynamic",
-		".got.plt",
-		".data",
-	};
+static void __x64_section_update_index(elf_native_t* x64, int n)
+{
+	elf_section_t* s;
+	int i;
 
 	for (i = 0; i < x64->sections->size; i++) {
 		s  =        x64->sections->data[i];
 
-		s->index = x64->sections->size + 1 + sizeof(sh_names) / sizeof(sh_names[0]);
+		s->index = x64->sections->size + 1 + n;
 
 		scf_logd("s: %s, link: %d, info: %d\n", s->name->data, s->sh.sh_link, s->sh.sh_info);
 
@@ -484,6 +537,125 @@ int __x64_elf_add_dyn(elf_native_t* x64, const char* sysroot)
 			s->info = x64->sections->data[s->sh.sh_info - 1];
 		}
 	}
+}
+
+static void __x64_section_update_index2(elf_native_t* x64, char** sh_names, int n)
+{
+	elf_section_t* s;
+	int i;
+	int j;
+
+	for (i = 0; i < x64->sections->size; i++) {
+		s  =        x64->sections->data[i];
+
+		for (j = 0; j < n; j++) {
+			if (!strcmp(s->name->data, sh_names[j]))
+				break;
+		}
+
+		if (j < n)
+			s->index = j + 1;
+
+		scf_logd("i: %d, s: %s, index: %d\n", i, s->name->data, s->index);
+	}
+
+	qsort(x64->sections->data, x64->sections->size, sizeof(void*), _section_cmp);
+
+	for (i = n; i < x64->sections->size; i++) {
+		s  =        x64->sections->data[i];
+
+		s->index = i + 1;
+	}
+
+	for (i = 0; i < x64->sections->size; i++) {
+		s  =        x64->sections->data[i];
+
+		scf_logd("i: %d, s: %s, index: %d\n", i, s->name->data, s->index);
+
+		if (s->link) {
+			scf_logd("link: %s, index: %d\n", s->link->name->data, s->link->index);
+			s->sh.sh_link = s->link->index;
+		}
+
+		if (s->info) {
+			scf_logd("info: %s, index: %d\n", s->info->name->data, s->info->index);
+			s->sh.sh_info = s->info->index;
+		}
+	}
+}
+
+static void __x64_sym_set_section2(elf_native_t* x64)
+{
+	elf_sym_t* sym;
+	int i;
+
+	for (i  = 0; i < x64->symbols->size; i++) {
+		sym =        x64->symbols->data[i];
+
+		if (sym->section) {
+			scf_logd("sym: %s, index: %d->%d\n", sym->name->data, sym->sym.st_shndx, sym->section->index);
+			sym->sym.st_shndx = sym->section->index;
+		}
+	}
+}
+
+static int __x64_elf_dyn_needs(elf_native_t* x64, const char* sysroot, scf_string_t* dynstr)
+{
+	scf_string_t* need;
+	Elf64_Dyn*    dyns = (Elf64_Dyn*)x64->dynamic->data;
+
+	int pre = strlen(sysroot);
+	int ret;
+	int i;
+
+	if ('/' != sysroot[pre - 1])
+		pre++;
+
+	pre += strlen("x64/");
+
+	for (i = 0; i < x64->dyn_needs->size; i++) {
+		need      = x64->dyn_needs->data[i];
+
+		dyns[i].d_tag = DT_NEEDED;
+		dyns[i].d_un.d_val = dynstr->len;
+
+		scf_logi("i: %d, %s, %s\n", i, need->data, need->data + pre);
+
+		if (!strncmp(need->data, sysroot, strlen(sysroot)))
+			ret = scf_string_cat_cstr_len(dynstr, need->data + pre, need->len - pre + 1);
+		else
+			ret = scf_string_cat_cstr_len(dynstr, need->data, need->len + 1);
+
+		if (ret < 0)
+			return ret;
+	}
+	return 0;
+}
+
+int __x64_elf_add_dyn(elf_native_t* x64, const char* sysroot)
+{
+	elf_section_t* s;
+	elf_sym_t*     sym;
+
+	static char* sh_names[] = {
+		".interp",
+		".dynsym",
+		".dynstr",
+//		".gnu.version_r",
+		".rela.plt",
+		".plt",
+
+		".text",
+		".rodata",
+
+		".dynamic",
+		".got.plt",
+		".data",
+	};
+
+	__x64_sym_set_section(x64);
+
+	__x64_section_update_index(x64, sizeof(sh_names) / sizeof(sh_names[0]));
 
 	_x64_elf_add_interp(x64, &x64->interp);
 	_x64_elf_add_dynsym(x64, &x64->dynsym);
@@ -494,30 +666,21 @@ int __x64_elf_add_dyn(elf_native_t* x64, const char* sysroot)
 	_x64_elf_add_rela_plt(x64, &x64->rela_plt);
 	_x64_elf_add_plt(x64, &x64->plt);
 
-	_x64_elf_add_dynamic(x64, &x64->dynamic);
+	_x64_elf_add_dynamic(x64, &x64->dynamic, 4);
 	_x64_elf_add_got_plt(x64, &x64->got_plt);
 
 	scf_string_t* str = scf_string_alloc();
 
+	int  i;
 	char c = '\0';
 	scf_string_cat_cstr_len(str, &c, 1);
 
-	Elf64_Sym*    syms    = (Elf64_Sym*   )x64->dynsym->data;
-	Elf64_Sym     sym0    = {0};
-
-	sym0.st_info = ELF64_ST_INFO(STB_LOCAL, STT_NOTYPE);
-	memcpy(&syms[0], &sym0, sizeof(Elf64_Sym));
-
 	for (i = 0; i < x64->dynsyms->size; i++) {
-		elf_sym_t* xsym = x64->dynsyms->data[i];
+		sym       = x64->dynsyms->data[i];
 
-		memcpy(&syms[i + 1], &xsym->sym, sizeof(Elf64_Sym));
+		sym->sym.st_name = str->len;
 
-		syms[i + 1].st_name = str->len;
-
-		scf_logd("i: %d, st_value: %#lx\n", i, syms[i + 1].st_value);
-
-		scf_string_cat_cstr_len(str, xsym->name->data, xsym->name->len + 1);
+		scf_string_cat_cstr_len(str, sym->name->data, sym->name->len + 1);
 	}
 
 #if 0
@@ -541,30 +704,21 @@ int __x64_elf_add_dyn(elf_native_t* x64, const char* sysroot)
 	scf_string_cat_cstr_len(str, "GLIBC_2.4", strlen("GLIBC_2.4") + 1);
 #endif
 
-	Elf64_Dyn* dyns = (Elf64_Dyn*)x64->dynamic->data;
+	__x64_elf_dyn_needs(x64, sysroot, str);
 
-	size_t prefix   = strlen(sysroot);
+	if (str->len & 0x7) {
+		size_t n = 8 - (str->len & 0x7);
 
-	if ('/' != sysroot[prefix - 1])
-		prefix++;
-
-	prefix += strlen("x64/");
-
-	for (i = 0; i < x64->dyn_needs->size; i++) {
-		scf_string_t* needed = x64->dyn_needs->data[i];
-
-		dyns[i].d_tag = DT_NEEDED;
-		dyns[i].d_un.d_val = str->len;
-
-		scf_logi("i: %d, %s, %s\n", i, needed->data, needed->data + prefix);
-
-		if (!strncmp(needed->data, sysroot, strlen(sysroot)))
-			scf_string_cat_cstr_len(str, needed->data + prefix, needed->len - prefix + 1);
-		else
-			scf_string_cat_cstr_len(str, needed->data, needed->len + 1);
+		int ret = scf_string_fill_zero(str, n);
+		if (ret < 0)
+			return ret;
 	}
 
-	dyns[i].d_tag     = DT_STRTAB;
+	Elf64_Dyn* dyns = (Elf64_Dyn*)x64->dynamic->data;
+
+	i = x64->dyn_needs->size;
+
+	dyns[i    ].d_tag = DT_STRTAB;
 	dyns[i + 1].d_tag = DT_SYMTAB;
 	dyns[i + 2].d_tag = DT_STRSZ;
 	dyns[i + 3].d_tag = DT_SYMENT;
@@ -607,70 +761,257 @@ int __x64_elf_add_dyn(elf_native_t* x64, const char* sysroot)
 	x64->gnu_version_r->info = x64->interp;
 #endif
 
-	for (i = 0; i < x64->sections->size; i++) {
-		s  =        x64->sections->data[i];
+	__x64_section_update_index2(x64, sh_names, sizeof(sh_names) / sizeof(sh_names[0]));
 
-		int j;
-		for (j = 0; j < sizeof(sh_names) / sizeof(sh_names[0]); j++) {
-			if (!strcmp(s->name->data, sh_names[j]))
-				break;
-		}
-
-		if (j < sizeof(sh_names) / sizeof(sh_names[0]))
-			s->index = j + 1;
-
-		scf_logd("i: %d, s: %s, index: %d\n", i, s->name->data, s->index);
-	}
-
-	qsort(x64->sections->data, x64->sections->size, sizeof(void*), _section_cmp);
-
-	int j = sizeof(sh_names) / sizeof(sh_names[0]);
-
-	for (i = j; i < x64->sections->size; i++) {
-		s  =        x64->sections->data[i];
-
-		s->index = i + 1;
-	}
-
-	for (i = 0; i < x64->sections->size; i++) {
-		s  =        x64->sections->data[i];
-
-		scf_logd("i: %d, s: %s, index: %d\n", i, s->name->data, s->index);
-
-		if (s->link) {
-			scf_logd("link: %s, index: %d\n", s->link->name->data, s->link->index);
-			s->sh.sh_link = s->link->index;
-		}
-
-		if (s->info) {
-			scf_logd("info: %s, index: %d\n", s->info->name->data, s->info->index);
-			s->sh.sh_info = s->info->index;
-		}
-	}
-
-#if 1
-	for (i  = 0; i < x64->symbols->size; i++) {
-		sym =        x64->symbols->data[i];
-
-		if (sym->section) {
-			scf_logd("sym: %s, index: %d->%d\n", sym->name->data, sym->sym.st_shndx, sym->section->index);
-			sym->sym.st_shndx = sym->section->index;
-		}
-	}
-#endif
+	__x64_sym_set_section2(x64);
 	return 0;
 }
 
-int __x64_elf_post_dyn(elf_native_t* x64, uint64_t rx_base, uint64_t rw_base, elf_section_t* cs)
+static int _sym_hash_n_cmp(const void* v0, const void* v1)
 {
-	uint64_t cs_base   = rx_base + cs->offset;
+	const elf_sym_t* s0 = *(const elf_sym_t**)v0;
+	const elf_sym_t* s1 = *(const elf_sym_t**)v1;
 
-//	x64->gnu_version_r->sh.sh_addr = rx_base + x64->gnu_version_r->offset;
+	if (s0->hash_n < s1->hash_n)
+		return -1;
+	else if (s0->hash_n > s1->hash_n)
+		return 1;
+	return 0;
+}
+
+int __x64_so_add_dyn(elf_native_t* x64, const char* sysroot)
+{
+	elf_section_t* s;
+	elf_sym_t*     sym;
+
+	static char* sh_names[] = {
+		".gnu.hash",
+		".dynsym",
+		".dynstr",
+
+		".text",
+		".rodata",
+
+		".dynamic",
+		".data",
+	};
+
+	static char* sh_names_plt[] = {
+		".gnu.hash",
+		".dynsym",
+		".dynstr",
+		".rela.plt",
+		".plt",
+
+		".text",
+		".rodata",
+
+		".dynamic",
+		".got.plt",
+		".data",
+	};
+
+	__x64_sym_set_section(x64);
+
+	if (x64->dyn_needs) {
+		__x64_section_update_index(x64, sizeof(sh_names_plt) / sizeof(sh_names_plt[0]));
+
+		_x64_elf_add_rela_plt(x64, &x64->rela_plt);
+		_x64_elf_add_plt     (x64, &x64->plt);
+		_x64_elf_add_dynamic (x64, &x64->dynamic, 4);
+		_x64_elf_add_got_plt (x64, &x64->got_plt);
+	} else {
+		__x64_section_update_index(x64, sizeof(sh_names) / sizeof(sh_names[0]));
+
+		_x64_elf_add_dynamic(x64, &x64->dynamic, 1);
+	}
+
+	_x64_elf_add_gnu_hash(x64, &x64->gnu_hash);
+	_x64_elf_add_dynsym  (x64, &x64->dynsym);
+	_x64_elf_add_dynstr  (x64, &x64->dynstr);
+
+	scf_string_t* str = scf_string_alloc();
+
+	char c = '\0';
+	int  j = 0;
+	int  i;
+
+	if (x64->dyn_relas)
+		j = x64->dyn_relas->size;
+
+	scf_string_cat_cstr_len(str, &c, 1);
+
+	for (i = 0; i < x64->dynsyms->size; i++) {
+		sym       = x64->dynsyms->data[i];
+
+		sym->sym.st_name = str->len;
+
+		scf_string_cat_cstr_len(str, sym->name->data, sym->name->len + 1);
+
+		if (i >= j) {
+			sym->hash   = elf_new_hash(sym->name->data);
+			sym->hash_n = sym->hash % HASH_BUCKETS;
+		}
+	}
+
+	qsort(x64->dynsyms->data + j, x64->dynsyms->size - j, sizeof(void*), _sym_hash_n_cmp);
+
+	uint32_t* hash_header  = (uint32_t*)x64->gnu_hash->data;
+	uint64_t* hash_bloom   = (uint64_t*)(hash_header  + 4);
+	uint32_t* hash_buckets = (uint32_t*)(hash_bloom   + HASH_BLOOMS);
+	uint32_t* hash_values  = (uint32_t*)(hash_buckets + HASH_BUCKETS);
+
+	hash_header[0] = HASH_BUCKETS;
+	hash_header[1] = j + 1;
+	hash_header[2] = HASH_BLOOMS;
+	hash_header[3] = 6;
+
+	for (i = j; i < x64->dynsyms->size; i++) {
+		sym       = x64->dynsyms->data[i];
+
+		uint32_t h1 =  sym->hash & 0x3f;
+		uint32_t h2 = (sym->hash >> 6) & 0x3f;
+		uint32_t n  = h1 & (HASH_BLOOMS - 1);
+
+		hash_bloom[n] |= (1ULL << h1) | (1ULL << h2);
+
+		if (hash_buckets[sym->hash_n]) {
+			hash_values [i - j - 1] &= ~0x1;
+			hash_values [i - j]      = sym->hash | 0x1;
+		} else {
+			hash_buckets[sym->hash_n] = i + 1;
+			hash_values [i - j]       = sym->hash | 0x1;
+		}
+	}
+
+	if (x64->dyn_needs) {
+		__x64_elf_dyn_needs(x64, sysroot, str);
+		i = x64->dyn_needs->size;
+	} else
+		i = 0;
+
+	if (str->len & 0x7) {
+		size_t n = 8 - (str->len & 0x7);
+
+		int ret = scf_string_fill_zero(str, n);
+		if (ret < 0)
+			return ret;
+	}
+
+	Elf64_Dyn* dyns = (Elf64_Dyn*)x64->dynamic->data;
+
+	dyns[i    ].d_tag = DT_GNU_HASH;
+	dyns[i + 1].d_tag = DT_STRTAB;
+	dyns[i + 2].d_tag = DT_SYMTAB;
+	dyns[i + 3].d_tag = DT_STRSZ;
+	dyns[i + 4].d_tag = DT_SYMENT;
+
+	dyns[i    ].d_un.d_ptr = (uintptr_t)x64->gnu_hash;
+	dyns[i + 1].d_un.d_ptr = (uintptr_t)x64->dynstr;
+	dyns[i + 2].d_un.d_ptr = (uintptr_t)x64->dynsym;
+	dyns[i + 3].d_un.d_val = str->len;
+	dyns[i + 4].d_un.d_val = sizeof(Elf64_Sym);
+
+	if (x64->dyn_needs) {
+		dyns[i + 5].d_tag = DT_PLTGOT;
+		dyns[i + 6].d_tag = DT_PLTRELSZ;
+		dyns[i + 7].d_tag = DT_PLTREL;
+		dyns[i + 8].d_tag = DT_JMPREL;
+
+		dyns[i + 5].d_un.d_ptr = (uintptr_t)x64->got_plt;
+		dyns[i + 6].d_un.d_ptr = sizeof(Elf64_Rela);
+		dyns[i + 7].d_un.d_ptr = DT_RELA;
+		dyns[i + 8].d_un.d_ptr = (uintptr_t)x64->rela_plt;
+
+		dyns[i + 9].d_tag = DT_NULL;
+		dyns[i + 9].d_un.d_ptr = 0;
+	} else {
+		dyns[i + 5].d_tag = DT_NULL;
+		dyns[i + 5].d_un.d_ptr = 0;
+	}
+
+	x64->dynstr->data     = str->data;
+	x64->dynstr->data_len = str->len;
+
+	str->data = NULL;
+	str->len  = 0;
+	str->capacity = 0;
+	scf_string_free(str);
+	str = NULL;
+
+	x64->gnu_hash->link = x64->dynsym;
+	x64->dynsym  ->link = x64->dynstr;
+
+	if (x64->rela_plt) {
+		x64->rela_plt->link = x64->dynsym;
+		x64->rela_plt->info = x64->got_plt;
+
+		__x64_section_update_index2(x64, sh_names_plt, sizeof(sh_names_plt) / sizeof(sh_names_plt[0]));
+	} else
+		__x64_section_update_index2(x64, sh_names, sizeof(sh_names) / sizeof(sh_names[0]));
+
+	__x64_sym_set_section2(x64);
+	return 0;
+}
+
+static void __x64_dynamic_update(elf_native_t* x64, uint64_t rx_base, uint64_t rw_base)
+{
+	Elf64_Dyn* dtags = (Elf64_Dyn*)x64->dynamic->data;
+	int i;
+
+	for (i = 0; i < x64->dynamic->data_len / sizeof(Elf64_Dyn); i++) {
+
+		elf_section_t* s = (elf_section_t*)dtags[i].d_un.d_ptr;
+
+		switch (dtags[i].d_tag) {
+
+			case DT_GNU_HASH:
+			case DT_SYMTAB:
+			case DT_STRTAB:
+			case DT_JMPREL:
+			case DT_VERSYM:
+				dtags[i].d_un.d_ptr = s->offset + rx_base;
+				s->sh.sh_addr       = s->offset + rx_base;
+				break;
+
+			case DT_PLTGOT:
+				dtags[i].d_un.d_ptr = s->offset + rw_base;
+				s->sh.sh_addr       = s->offset + rw_base;
+				break;
+			default:
+				break;
+		};
+	}
+}
+
+static void __x64_dynsym_update(elf_native_t* x64)
+{
+	Elf64_Sym* syms = (Elf64_Sym*)x64->dynsym->data;
+	Elf64_Sym  sym0 = {0};
+	elf_sym_t* sym;
+	int i;
+
+	sym0.st_info = ELF64_ST_INFO(STB_LOCAL, STT_NOTYPE);
+
+	memcpy(&syms[0], &sym0, sizeof(Elf64_Sym));
+
+	for (i = 0; i < x64->dynsyms->size; i++) {
+		sym       = x64->dynsyms->data[i];
+
+		memcpy(&syms[i + 1], &sym->sym, sizeof(Elf64_Sym));
+	}
+}
+
+static void __x64_plt_link(elf_native_t* x64, uint64_t rx_base, uint64_t rw_base, elf_section_t* cs)
+{
+	uint64_t cs_base = rx_base + cs->offset;
+
+	if (x64->interp)
+		x64->interp->sh.sh_addr = rx_base + x64->interp->offset;
 
 	x64->rela_plt->sh.sh_addr = rx_base + x64->rela_plt->offset;
 	x64->dynamic->sh.sh_addr  = rw_base + x64->dynamic->offset;
 	x64->got_plt->sh.sh_addr  = rw_base + x64->got_plt->offset;
-	x64->interp->sh.sh_addr   = rx_base + x64->interp->offset;
 	x64->plt->sh.sh_addr      = rx_base + x64->plt->offset;
 
 	scf_logd("rw_base: %#lx, offset: %#lx\n", rw_base, x64->got_plt->offset);
@@ -681,9 +1022,9 @@ int __x64_elf_post_dyn(elf_native_t* x64, uint64_t rx_base, uint64_t rw_base, el
 	uint64_t*   got_plt  = (uint64_t*  )x64->got_plt->data;
 	uint8_t*    plt      = (uint8_t*   )x64->plt->data;
 
-	uint64_t   got_addr = x64->got_plt->sh.sh_addr + 8;
-	uint64_t   plt_addr = x64->plt->sh.sh_addr;
-	int32_t    offset   = got_addr - plt_addr - 6;
+	uint64_t    got_addr = x64->got_plt->sh.sh_addr + 8;
+	uint64_t    plt_addr = x64->plt->sh.sh_addr;
+	int32_t     offset   = got_addr - plt_addr - 6;
 
 	got_plt[0] = x64->dynamic->sh.sh_addr;
 	got_plt[1] = 0;
@@ -741,34 +1082,20 @@ int __x64_elf_post_dyn(elf_native_t* x64, uint64_t rx_base, uint64_t rw_base, el
 
 		memcpy(cs->data + r->r_offset, &offset, sizeof(offset));
 	}
+}
 
-	Elf64_Dyn* dtags = (Elf64_Dyn*)x64->dynamic->data;
+void __x64_elf_post_dyn(elf_native_t* x64, uint64_t rx_base, uint64_t rw_base, elf_section_t* cs)
+{
+	x64->dynamic->sh.sh_addr = rw_base + x64->dynamic->offset;
 
-	for (i  = x64->dyn_needs->size; i < x64->dynamic->data_len / sizeof(Elf64_Dyn); i++) {
+	if (x64->gnu_hash)
+		x64->gnu_hash->sh.sh_addr = rx_base + x64->gnu_hash->offset;
 
-		elf_section_t* s = (elf_section_t*)dtags[i].d_un.d_ptr;
+	if (x64->plt)
+		__x64_plt_link(x64, rx_base, rw_base, cs);
 
-		switch (dtags[i].d_tag) {
-
-			case DT_SYMTAB:
-			case DT_STRTAB:
-			case DT_JMPREL:
-			case DT_VERNEED:
-			case DT_VERSYM:
-				dtags[i].d_un.d_ptr = s->offset + rx_base;
-				s->sh.sh_addr       = s->offset + rx_base;
-				break;
-
-			case DT_PLTGOT:
-				dtags[i].d_un.d_ptr = s->offset + rw_base;
-				s->sh.sh_addr       = s->offset + rw_base;
-				break;
-			default:
-				break;
-		};
-	}
-
-	return 0;
+	__x64_dynamic_update(x64, rx_base, rw_base);
+	__x64_dynsym_update (x64);
 }
 
 int __x64_elf_write_phdr(scf_elf_context_t* elf, uint64_t rx_base, uint64_t offset, uint32_t nb_phdrs)
@@ -874,4 +1201,3 @@ int __x64_elf_write_dynamic(scf_elf_context_t* elf, uint64_t rw_base, uint64_t o
 	fwrite(&ph_dynamic,  sizeof(Elf64_Phdr),  1, elf->fp);
 	return 0;
 }
-

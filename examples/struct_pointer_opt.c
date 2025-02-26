@@ -12,6 +12,7 @@ int f()
 	S   s = {&a, &b};
 
 	int** pp = &s->p0;
+	s.p1 = NULL;
 
 	**pp += 3;
 	return a;

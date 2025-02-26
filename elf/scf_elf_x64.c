@@ -254,12 +254,169 @@ static void _x64_elf_process_syms(elf_native_t* x64, uint32_t cs_index)
 	}
 }
 
+static void __x64_sym_set_addr(elf_native_t* x64, elf_section_t* s, uint64_t base)
+{
+	elf_sym_t* sym;
+	int i;
+
+	for (i  = 0; i < x64->symbols->size; i++) {
+		sym =        x64->symbols->data[i];
+
+		uint32_t shndx = sym->sym.st_shndx;
+
+		if (shndx == s->index)
+			sym->sym.st_value += base;
+
+		scf_logd("sym: %s, %#lx, st_shndx: %d\n", sym->name->data, sym->sym.st_value, sym->sym.st_shndx);
+	}
+}
+
+static int __x64_sym_find_addr(elf_native_t* x64, const char* name, uint64_t* addr)
+{
+	elf_sym_t* sym;
+	int i;
+
+	for (i  = 0; i < x64->symbols->size; i++) {
+		sym =        x64->symbols->data[i];
+
+		if (!strcmp(sym->name->data, name)) {
+			*addr = sym->sym.st_value;
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
+static int _x64_elf_process_sections(elf_native_t* x64, uint64_t* section_offset,
+		elf_section_t** cs,
+		elf_section_t** ros,   elf_section_t** ds,
+		elf_section_t** crela, elf_section_t** drela)
+{
+	elf_section_t* s;
+	int i;
+
+	for (i = 0; i < x64->sections->size; i++) {
+		s  =        x64->sections->data[i];
+
+		if (!strcmp(".text", s->name->data)) {
+
+			assert(s->data_len > 0);
+			assert(!*cs);
+			*cs = s;
+
+		} else if (!strcmp(".rodata", s->name->data)) {
+
+			assert(s->data_len >= 0);
+			assert(!*ros);
+			*ros = s;
+
+		} else if (!strcmp(".data", s->name->data)) {
+
+			assert(s->data_len >= 0);
+			assert(!*ds);
+			*ds = s;
+
+		} else if (!strcmp(".rela.text", s->name->data)) {
+
+			assert(!*crela);
+			*crela = s;
+
+		} else if (!strcmp(".rela.data", s->name->data)) {
+
+			assert(!*drela);
+			*drela = s;
+		}
+
+		s->offset        = *section_offset;
+		*section_offset += s->data_len;
+	}
+
+	return 0;
+}
+
+static int _x64_elf_write_section_headers(scf_elf_context_t* elf, int nb_sections, uint64_t section_offset, uint64_t strtab_offset, uint64_t shstrtab_offset)
+{
+	elf_section_t* s;
+	elf_native_t*  x64 = elf->priv;
+	elf_sym_t*     sym;
+	int i;
+
+	for (i = 0; i < x64->sections->size; i++) {
+		s  =        x64->sections->data[i];
+
+		if (SHT_RELA == s->sh.sh_type && 0 == s->sh.sh_link)
+			s->sh.sh_link = nb_sections - 3;
+
+		section_header(&s->sh,
+				shstrtab_offset, s->sh.sh_addr,
+				section_offset,  s->data_len,
+				s->sh.sh_link,   s->sh.sh_info, s->sh.sh_entsize);
+
+		if (SHT_STRTAB != s->sh.sh_type)
+			s->sh.sh_addralign = 8;
+
+		section_offset  += s->data_len;
+		shstrtab_offset += s->name->len + 1;
+
+		fwrite(&s->sh, sizeof(s->sh), 1, elf->fp);
+	}
+
+	// set user's symbols' name
+	int nb_local_syms = 1;
+
+	for (i  = 0; i < x64->symbols->size; i++) {
+		sym =        x64->symbols->data[i];
+
+		if (sym->name) {
+			sym->sym.st_name = strtab_offset;
+			strtab_offset	 += sym->name->len + 1;
+		} else
+			sym->sym.st_name = 0;
+
+		if (STB_LOCAL == ELF64_ST_BIND(sym->sym.st_info))
+			nb_local_syms++;
+	}
+
+	// write symtab section header
+	section_header(&x64->sh_symtab,
+			shstrtab_offset, 0,
+			section_offset, (x64->symbols->size + 1) * sizeof(Elf64_Sym),
+			nb_sections - 2,
+			nb_local_syms, sizeof(Elf64_Sym));
+
+	fwrite(&x64->sh_symtab, sizeof(x64->sh_symtab), 1, elf->fp);
+
+	section_offset  += (x64->symbols->size + 1) * sizeof(Elf64_Sym);
+	shstrtab_offset += strlen(".symtab") + 1;
+
+	// write strtab section header
+	section_header(&x64->sh_strtab,
+			shstrtab_offset, 0,
+			section_offset, strtab_offset,
+			0, 0, 0);
+	fwrite(&x64->sh_strtab, sizeof(x64->sh_strtab), 1, elf->fp);
+
+	section_offset  += strtab_offset;
+	shstrtab_offset += strlen(".strtab") + 1;
+
+	// write shstrtab section header
+	uint64_t shstrtab_len = shstrtab_offset + strlen(".shstrtab") + 1;
+
+	section_header(&x64->sh_shstrtab,
+			shstrtab_offset, 0,
+			section_offset, shstrtab_len,
+			0, 0, 0);
+	fwrite(&x64->sh_shstrtab, sizeof(x64->sh_shstrtab), 1, elf->fp);
+	return 0;
+}
+
 static int _x64_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 {
 	elf_native_t* x64      = elf->priv;
 	int 		  nb_phdrs = 3;
 
-	if (x64->dynsyms && x64->dynsyms->size) {
+	if (x64->dynsyms && x64->dynsyms->size > 0) {
 		__x64_elf_add_dyn(x64, sysroot);
 		nb_phdrs = 6;
 	}
@@ -279,43 +436,10 @@ static int _x64_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 	elf_section_t* drela = NULL;
 	elf_sym_t*     sym;
 
+	int ret;
 	int i;
-	for (i = 0; i < x64->sections->size; i++) {
-		s  =        x64->sections->data[i];
 
-		if (!strcmp(".text", s->name->data)) {
-
-			assert(s->data_len > 0);
-			assert(!cs);
-			cs = s;
-
-		} else if (!strcmp(".rodata", s->name->data)) {
-
-			assert(s->data_len >= 0);
-			assert(!ros);
-			ros = s;
-
-		} else if (!strcmp(".data", s->name->data)) {
-
-			assert(s->data_len >= 0);
-			assert(!ds);
-			ds = s;
-
-		} else if (!strcmp(".rela.text", s->name->data)) {
-
-			assert(!crela);
-			crela = s;
-
-		} else if (!strcmp(".rela.data", s->name->data)) {
-
-			assert(!drela);
-			drela = s;
-		}
-
-		s->offset        = section_offset;
-		section_offset  += s->data_len;
-	}
-	assert(crela);
+	_x64_elf_process_sections(x64, &section_offset, &cs, &ros, &ds, &crela, &drela);
 
 	uint64_t cs_align  = (cs ->offset + cs ->data_len + 0x200000 - 1) >> 21 << 21;
 	uint64_t ro_align  = (ros->offset + ros->data_len + 0x200000 - 1) >> 21 << 21;
@@ -327,28 +451,17 @@ static int _x64_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 	uint64_t cs_base   = cs->offset  + rx_base;
 	uint64_t ro_base   = ros->offset + r_base;
 	uint64_t ds_base   = ds->offset  + rw_base;
-	uint64_t _start    =  0;
+	uint64_t _start    = 0;
 
-	for (i  = 0; i < x64->symbols->size; i++) {
-		sym =        x64->symbols->data[i];
+	__x64_sym_set_addr(x64, cs,  cs_base);
+	__x64_sym_set_addr(x64, ros, ro_base);
+	__x64_sym_set_addr(x64, ds,  ds_base);
 
-		uint32_t shndx = sym->sym.st_shndx;
-
-		if (shndx == cs->index)
-			sym->sym.st_value += cs_base;
-
-		else if (shndx == ros->index)
-			sym->sym.st_value += ro_base;
-
-		else if (shndx == ds->index)
-			sym->sym.st_value += ds_base;
-
-		scf_logd("sym: %s, %#lx, st_shndx: %d\n", sym->name->data, sym->sym.st_value, sym->sym.st_shndx);
+	if (crela) {
+		ret = _x64_elf_link_cs(x64, cs, crela, cs_base);
+		if (ret < 0)
+			return ret;
 	}
-
-	int ret = _x64_elf_link_cs(x64, cs, crela, cs_base);
-	if (ret < 0)
-		return ret;
 
 	if (drela) {
 		ret = _x64_elf_link_ds(x64, ds, drela);
@@ -371,19 +484,9 @@ static int _x64_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 		__x64_elf_post_dyn(x64, rx_base, rw_base, cs);
 	}
 
-	for (i  = 0; i < x64->symbols->size; i++) {
-		sym =        x64->symbols->data[i];
-
-		if (!strcmp(sym->name->data, "_start")) {
-
-			if (0 != _start) {
-				scf_loge("\n");
-				return -EINVAL;
-			}
-
-			_start = sym->sym.st_value;
-			break;
-		}
+	if (__x64_sym_find_addr(x64, "_start", &_start) < 0) {
+		scf_loge("symbol '_start' NOT found when linking\n");
+		return -1;
 	}
 
 	// write elf header
@@ -394,66 +497,9 @@ static int _x64_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 	fwrite(&x64->sh_null, sizeof(x64->sh_null), 1, elf->fp);
 
 	// write user's section header
-	section_offset   = phdr_offset + sizeof(Elf64_Phdr) * nb_phdrs;
+	section_offset = phdr_offset + sizeof(Elf64_Phdr) * nb_phdrs;
 
-	for (i = 0; i < x64->sections->size; i++) {
-		s  =        x64->sections->data[i];
-
-		if (SHT_RELA == s->sh.sh_type && 0 == s->sh.sh_link)
-			s->sh.sh_link = nb_sections - 3;
-
-		section_header(&s->sh, shstrtab_offset, s->sh.sh_addr,
-				section_offset, s->data_len,
-				s->sh.sh_link,  s->sh.sh_info, s->sh.sh_entsize);
-
-		if (SHT_STRTAB != s->sh.sh_type)
-			s->sh.sh_addralign = 8;
-
-		section_offset  += s->data_len;
-		shstrtab_offset += s->name->len + 1;
-
-		fwrite(&s->sh, sizeof(s->sh), 1, elf->fp);
-	}
-
-	// set user's symbols' name
-	int  nb_local_syms = 1;
-
-	for (i  = 0; i < x64->symbols->size; i++) {
-		sym =        x64->symbols->data[i];
-
-		if (sym->name) {
-			sym->sym.st_name = strtab_offset;
-			strtab_offset	 += sym->name->len + 1;
-		} else
-			sym->sym.st_name = 0;
-
-		if (STB_LOCAL == ELF64_ST_BIND(sym->sym.st_info))
-			nb_local_syms++;
-	}
-
-	// write symtab section header
-	section_header(&x64->sh_symtab, shstrtab_offset, 0,
-			section_offset, (x64->symbols->size + 1) * sizeof(Elf64_Sym),
-			nb_sections - 2, nb_local_syms, sizeof(Elf64_Sym));
-
-	fwrite(&x64->sh_symtab, sizeof(x64->sh_symtab), 1, elf->fp);
-
-	section_offset   += (x64->symbols->size + 1) * sizeof(Elf64_Sym);
-	shstrtab_offset  += strlen(".symtab") + 1;
-
-	// write strtab section header
-	section_header(&x64->sh_strtab, shstrtab_offset, 0,
-			section_offset, strtab_offset,
-			0, 0, 0);
-	fwrite(&x64->sh_strtab, sizeof(x64->sh_strtab), 1, elf->fp);
-	section_offset   += strtab_offset;
-	shstrtab_offset  += strlen(".strtab") + 1;
-
-	// write shstrtab section header
-	uint64_t shstrtab_len = shstrtab_offset + strlen(".shstrtab") + 1;
-	section_header(&x64->sh_shstrtab, shstrtab_offset, 0,
-			section_offset, shstrtab_len, 0, 0, 0);
-	fwrite(&x64->sh_shstrtab, sizeof(x64->sh_shstrtab), 1, elf->fp);
+	_x64_elf_write_section_headers(elf, nb_sections, section_offset, strtab_offset, shstrtab_offset);
 
 #if 1
 	if (6 == nb_phdrs) {
@@ -466,9 +512,7 @@ static int _x64_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 	__x64_elf_write_rodata(elf, r_base,  ros->offset, ros->data_len);
 
 	if (6 == nb_phdrs) {
-		__x64_elf_write_data(elf, rw_base, x64->dynamic->offset,
-				x64->dynamic->data_len + x64->got_plt->data_len + ds->data_len);
-
+		__x64_elf_write_data   (elf, rw_base, x64->dynamic->offset, x64->dynamic->data_len + x64->got_plt->data_len + ds->data_len);
 		__x64_elf_write_dynamic(elf, rw_base, x64->dynamic->offset, x64->dynamic->data_len);
 	} else {
 		__x64_elf_write_data(elf, rw_base, ds->offset, ds->data_len);
@@ -482,14 +526,134 @@ static int _x64_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 	return 0;
 }
 
+static int _x64_elf_write_dyn(scf_elf_context_t* elf, const char* sysroot)
+{
+	elf_native_t* x64   = elf->priv;
+	elf_sym_t*    entry = NULL;
+	elf_sym_t*    sym;
+
+	int ret;
+	int i;
+
+	if (!x64->dynsyms) {
+		x64 ->dynsyms = scf_vector_alloc();
+		if (!x64->dynsyms)
+			return -ENOMEM;
+	}
+
+	for (i = 0; i < x64->symbols->size; i++) {
+		sym       = x64->symbols->data[i];
+
+		if (ELF64_ST_INFO(STB_GLOBAL, STT_FUNC) != sym->sym.st_info)
+			continue;
+
+		if (!entry)
+			entry = sym;
+
+		ret = scf_vector_add(x64->dynsyms, sym);
+		if (ret < 0)
+			return ret;
+	}
+
+	__x64_so_add_dyn(x64, sysroot);
+
+	int 		   nb_phdrs        = 4;
+	int 		   nb_sections     = 1 + x64->sections->size + 1 + 1 + 1;
+	uint64_t	   shstrtab_offset = 1;
+	uint64_t	   strtab_offset   = 1;
+	uint64_t	   dynstr_offset   = 1;
+	Elf64_Off      phdr_offset     = sizeof(x64->eh) + sizeof(Elf64_Shdr) * nb_sections;
+	Elf64_Off      section_offset  = phdr_offset     + sizeof(Elf64_Phdr) * nb_phdrs;
+
+	elf_section_t* s;
+	elf_section_t* cs    = NULL;
+	elf_section_t* ros   = NULL;
+	elf_section_t* ds    = NULL;
+	elf_section_t* crela = NULL;
+	elf_section_t* drela = NULL;
+
+	_x64_elf_process_sections(x64, &section_offset, &cs, &ros, &ds, &crela, &drela);
+
+	uint64_t cs_align  = (cs ->offset + cs ->data_len + 0x200000 - 1) >> 21 << 21;
+	uint64_t ro_align  = (ros->offset + ros->data_len + 0x200000 - 1) >> 21 << 21;
+
+	uint64_t rx_base   = 0;
+	uint64_t r_base    = cs_align;
+	uint64_t rw_base   = cs_align + ro_align;
+
+	uint64_t cs_base   = cs->offset  + rx_base;
+	uint64_t ro_base   = ros->offset + r_base;
+	uint64_t ds_base   = ds->offset  + rw_base;
+	uint64_t _start    = 0;
+
+	__x64_sym_set_addr(x64, cs,  cs_base);
+	__x64_sym_set_addr(x64, ros, ro_base);
+	__x64_sym_set_addr(x64, ds,  ds_base);
+
+	if (crela) {
+		ret = _x64_elf_link_cs(x64, cs, crela, cs_base);
+		if (ret < 0)
+			return ret;
+	}
+
+	if (drela) {
+		ret = _x64_elf_link_ds(x64, ds, drela);
+		if (ret < 0)
+			return ret;
+	}
+
+	ret = _x64_elf_link_sections(x64, cs->index, ds->index);
+	if (ret < 0)
+		return ret;
+
+	_x64_elf_process_syms(x64, cs->index);
+
+	cs ->sh.sh_addr = cs_base;
+	ds ->sh.sh_addr = ds_base;
+	ros->sh.sh_addr = ro_base;
+
+	__x64_elf_post_dyn(x64, rx_base, rw_base, cs);
+
+	if (entry)
+		_start = entry->sym.st_value;
+
+	// write elf header
+	elf_header(&x64->eh, ET_DYN, EM_X86_64, _start, phdr_offset, nb_phdrs, nb_sections, nb_sections - 1);
+	fwrite(&x64->eh, sizeof(x64->eh), 1, elf->fp);
+
+	// write null section header
+	fwrite(&x64->sh_null, sizeof(x64->sh_null), 1, elf->fp);
+
+	// write user's section header
+	section_offset = phdr_offset + sizeof(Elf64_Phdr) * nb_phdrs;
+
+	_x64_elf_write_section_headers(elf, nb_sections, section_offset, strtab_offset, shstrtab_offset);
+
+	__x64_elf_write_text  (elf, rx_base, 0,           cs->offset + cs->data_len);
+	__x64_elf_write_rodata(elf, r_base,  ros->offset, ros->data_len);
+
+	if (x64->got_plt)
+		__x64_elf_write_data(elf, rw_base, x64->dynamic->offset, x64->dynamic->data_len + x64->got_plt->data_len + ds->data_len);
+	else
+		__x64_elf_write_data(elf, rw_base, x64->dynamic->offset, x64->dynamic->data_len + ds->data_len);
+
+	__x64_elf_write_dynamic(elf, rw_base, x64->dynamic->offset, x64->dynamic->data_len);
+
+	elf_write_sections(elf);
+	elf_write_symtab  (elf);
+	elf_write_strtab  (elf);
+	elf_write_shstrtab(elf);
+	return 0;
+}
+
 scf_elf_ops_t	elf_ops_x64 =
 {
-	.machine	      = "x64",
+	.machine          = "x64",
 
-	.open		      = elf_open,
-	.close		      = elf_close,
+	.open             = elf_open,
+	.close            = elf_close,
 
-	.add_sym	      = elf_add_sym,
+	.add_sym          = elf_add_sym,
 	.add_section      = elf_add_section,
 
 	.add_rela_section = elf_add_rela_section,
@@ -501,7 +665,7 @@ scf_elf_ops_t	elf_ops_x64 =
 	.read_relas       = elf_read_relas,
 	.read_section     = elf_read_section,
 
-	.write_rel	      = _x64_elf_write_rel,
+	.write_rel        = _x64_elf_write_rel,
+	.write_dyn        = _x64_elf_write_dyn,
 	.write_exec       = _x64_elf_write_exec,
 };
-

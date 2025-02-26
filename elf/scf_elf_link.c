@@ -1036,7 +1036,7 @@ static int link_relas(scf_elf_file_t* exec, char* afiles[], int nb_afiles, char*
 	return 0;
 }
 
-int scf_elf_link(scf_vector_t* objs, scf_vector_t* afiles, scf_vector_t* sofiles, const char* sysroot, const char* arch, const char* out)
+int scf_elf_link(scf_vector_t* objs, scf_vector_t* afiles, scf_vector_t* sofiles, const char* sysroot, const char* arch, const char* out, int dyn_flag)
 {
 	scf_elf_file_t* exec = NULL;
 	scf_elf_file_t* so   = NULL;
@@ -1100,7 +1100,19 @@ int scf_elf_link(scf_vector_t* objs, scf_vector_t* afiles, scf_vector_t* sofiles
 		}
 	}
 
-	size_t   bytes = 0;
+	size_t bytes = exec->debug_abbrev->len
+		         + exec->debug_info->len
+		         + exec->debug_line->len
+		         + exec->debug_str->len;
+
+	bytes &= 0x7;
+	if (bytes) {
+		ret = scf_string_fill_zero(exec->debug_str, 8 - bytes);
+		if (ret < 0)
+			return ret;
+	}
+
+	bytes = 0;
 
 #define ADD_SECTION(sname, flags, align, value) \
 	do { \
@@ -1171,7 +1183,10 @@ int scf_elf_link(scf_vector_t* objs, scf_vector_t* afiles, scf_vector_t* sofiles
 	ADD_RELA_SECTION(debug_info, SCF_ELF_FILE_SHNDX(debug_info));
 	ADD_RELA_SECTION(debug_line, SCF_ELF_FILE_SHNDX(debug_line));
 
-	ret = scf_elf_write_exec(exec->elf, sysroot);
+	if (dyn_flag)
+		ret = scf_elf_write_dyn(exec->elf, sysroot);
+	else
+		ret = scf_elf_write_exec(exec->elf, sysroot);
 	if (ret < 0)
 		return ret;
 

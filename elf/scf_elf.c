@@ -228,8 +228,17 @@ int scf_elf_write_rel(scf_elf_context_t* elf)
 
 int scf_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 {
-	if (elf && elf->ops && elf->ops->write_rel && sysroot)
+	if (elf && elf->ops && elf->ops->write_exec && sysroot)
 		return elf->ops->write_exec(elf, sysroot);
+
+	scf_loge("\n");
+	return -1;
+}
+
+int scf_elf_write_dyn(scf_elf_context_t* elf, const char* sysroot)
+{
+	if (elf && elf->ops && elf->ops->write_dyn && sysroot)
+		return elf->ops->write_dyn(elf, sysroot);
 
 	scf_loge("\n");
 	return -1;

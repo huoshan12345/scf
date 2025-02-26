@@ -71,6 +71,7 @@ struct scf_elf_ops_s
 	int	            (*add_dyn_rela)(scf_elf_context_t* elf, const scf_elf_rela_t* rela);
 
 	int				(*write_rel )(scf_elf_context_t* elf);
+	int				(*write_dyn )(scf_elf_context_t* elf, const char* sysroot);
 	int				(*write_exec)(scf_elf_context_t* elf, const char* sysroot);
 };
 
@@ -105,7 +106,8 @@ int scf_elf_read_syms (scf_elf_context_t* elf, scf_vector_t* syms,  const char* 
 int scf_elf_read_relas(scf_elf_context_t* elf, scf_vector_t* relas, const char* sh_name);
 int scf_elf_read_phdrs(scf_elf_context_t* elf, scf_vector_t* phdrs);
 
-int scf_elf_write_rel( scf_elf_context_t* elf);
+int scf_elf_write_rel (scf_elf_context_t* elf);
+int scf_elf_write_dyn (scf_elf_context_t* elf, const char* sysroot);
 int scf_elf_write_exec(scf_elf_context_t* elf, const char* sysroot);
 
 #endif
