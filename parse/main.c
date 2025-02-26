@@ -40,11 +40,12 @@ static char* __arm32_sofiles[] =
 
 void usage(char* path)
 {
-	fprintf(stderr, "Usage: %s [-c] [-t] [-a arch] [-s sysroot] [-o out] src0 [src1]\n\n", path);
+	fprintf(stderr, "Usage: %s [-c] [-d] [-t] [-a arch] [-s sysroot] [-o out] src0 [src1]\n\n", path);
 	fprintf(stderr, "-c: only compile,  not link\n");
 	fprintf(stderr, "-t: only 3ac code, not compile\n");
 	fprintf(stderr, "-a: select cpu arch (x64, arm64, naja, or eda), default is x64\n");
 	fprintf(stderr, "-s: sysroot dir, default is '../lib'\n");
+	fprintf(stderr, "-d: output dynamic library .so\n");
 }
 
 int add_sys_files(scf_vector_t* vec, const char* sysroot, const char* arch, char* files[], int n_files)
@@ -106,9 +107,9 @@ int main(int argc, char* argv[])
 	char* out     = NULL;
 	int   link    = 1;
 	int   _3ac    = 0;
+	int   dyn     = 0;
 
-	int   i;
-
+	int i;
 	for (i = 1; i < argc; i++) {
 
 		if ('-' == argv[i][0]) {
@@ -121,6 +122,13 @@ int main(int argc, char* argv[])
 			if ('t' == argv[i][1]) {
 				link = 0;
 				_3ac = 1;
+				continue;
+			}
+
+			if ('d' == argv[i][1]) {
+				dyn  = 1;
+				link = 1;
+				_3ac = 0;
 				continue;
 			}
 
@@ -238,11 +246,13 @@ int main(int argc, char* argv[])
 
 #define MAIN_ADD_FILES(_objs, _sofiles, _arch) \
 	do { \
-		int ret = add_sys_files(objs, sysroot, _arch, _objs, sizeof(_objs) / sizeof(_objs[0])); \
-		if (ret < 0) \
-		    return ret; \
+		if (!dyn) { \
+			int ret = add_sys_files(objs, sysroot, _arch, _objs, sizeof(_objs) / sizeof(_objs[0])); \
+			if (ret < 0) \
+				return ret; \
+		} \
 		\
-		ret = add_sys_files(sofiles, sysroot, _arch, _sofiles, sizeof(_sofiles) / sizeof(_sofiles[0])); \
+		int ret = add_sys_files(sofiles, sysroot, _arch, _sofiles, sizeof(_sofiles) / sizeof(_sofiles[0])); \
 		if (ret < 0) \
 		    return ret; \
 	} while (0)
@@ -262,7 +272,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	if (scf_elf_link(objs, afiles, sofiles, sysroot, arch, exec) < 0) {
+	if (scf_elf_link(objs, afiles, sofiles, sysroot, arch, exec, dyn) < 0) {
 		scf_loge("\n");
 		return -1;
 	}

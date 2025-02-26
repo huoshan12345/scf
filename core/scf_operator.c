@@ -8,6 +8,7 @@ static scf_operator_t	base_operators[] =
 	{"(",         NULL,   SCF_OP_CALL,          1, -1,  SCF_OP_ASSOCIATIVITY_LEFT},
 	{"[",         "i",    SCF_OP_ARRAY_INDEX,   1,  2,  SCF_OP_ASSOCIATIVITY_LEFT},
 	{"->",        "p",    SCF_OP_POINTER,       1,  2,  SCF_OP_ASSOCIATIVITY_LEFT},
+	{".",         "p",    SCF_OP_POINTER,       1,  2,  SCF_OP_ASSOCIATIVITY_LEFT},
 
 	{"va_start",  NULL,   SCF_OP_VA_START,      1,  2,  SCF_OP_ASSOCIATIVITY_LEFT},
 	{"va_arg",    NULL,   SCF_OP_VA_ARG,        1,  2,  SCF_OP_ASSOCIATIVITY_LEFT},

@@ -210,9 +210,28 @@ static int _data_action_member(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	dfa_data_t*         d     = data;
 	scf_lex_word_t*     w     = words->data[words->size - 1];
 	init_module_data_t* md    = d->module_datas[dfa_module_init_data.index];
+	scf_variable_t*     v;
+	scf_type_t*         t;
 
 	if (md->current_dim >= md->current_n) {
 		scf_loge("init data not right, file: %s, line: %d\n", w->file->data, w->line);
+		return SCF_DFA_ERROR;
+	}
+
+	assert(d->current_var);
+
+	t = NULL;
+	scf_ast_find_type_type(&t, parse->ast, d->current_var->type);
+	if (!t->scope) {
+		scf_loge("base type '%s' has no member var '%s', file: %s, line: %d\n",
+				t->name->data, w->text->data, w->file->data, w->line);
+		return SCF_DFA_ERROR;
+	}
+
+	v = scf_scope_find_variable(t->scope, w->text->data);
+	if (!v) {
+		scf_loge("member var '%s' NOT found in struct '%s', file: %s, line: %d\n",
+				w->text->data, t->name->data, w->file->data, w->line);
 		return SCF_DFA_ERROR;
 	}
 
@@ -285,9 +304,13 @@ static int _dfa_init_module_init_data(scf_dfa_t* dfa)
 	SCF_DFA_MODULE_NODE(dfa, init_data, lb,     scf_dfa_is_lb,             _data_action_lb);
 	SCF_DFA_MODULE_NODE(dfa, init_data, rb,     scf_dfa_is_rb,             _data_action_rb);
 
+	SCF_DFA_MODULE_NODE(dfa, init_data, ls,     scf_dfa_is_ls,             scf_dfa_action_next);
+	SCF_DFA_MODULE_NODE(dfa, init_data, rs,     scf_dfa_is_rs,             scf_dfa_action_next);
+
 	SCF_DFA_MODULE_NODE(dfa, init_data, dot,    scf_dfa_is_dot,            scf_dfa_action_next);
 	SCF_DFA_MODULE_NODE(dfa, init_data, member, scf_dfa_is_identity,       _data_action_member);
-	SCF_DFA_MODULE_NODE(dfa, init_data, index,  scf_dfa_is_const_integer,  _data_action_index);
+	SCF_DFA_MODULE_NODE(dfa, init_data, index0, scf_dfa_is_const_integer,  _data_action_index);
+	SCF_DFA_MODULE_NODE(dfa, init_data, index1, scf_dfa_is_const_integer,  _data_action_index);
 	SCF_DFA_MODULE_NODE(dfa, init_data, assign, scf_dfa_is_assign,         scf_dfa_action_next);
 
 	scf_parse_t*        parse = dfa->priv;
@@ -312,9 +335,13 @@ static int _dfa_init_syntax_init_data(scf_dfa_t* dfa)
 	SCF_DFA_GET_MODULE_NODE(dfa, init_data, lb,     lb);
 	SCF_DFA_GET_MODULE_NODE(dfa, init_data, rb,     rb);
 
+	SCF_DFA_GET_MODULE_NODE(dfa, init_data, ls,     ls);
+	SCF_DFA_GET_MODULE_NODE(dfa, init_data, rs,     rs);
+
 	SCF_DFA_GET_MODULE_NODE(dfa, init_data, dot,    dot);
 	SCF_DFA_GET_MODULE_NODE(dfa, init_data, member, member);
-	SCF_DFA_GET_MODULE_NODE(dfa, init_data, index,  index);
+	SCF_DFA_GET_MODULE_NODE(dfa, init_data, index0, index0);
+	SCF_DFA_GET_MODULE_NODE(dfa, init_data, index1, index1);
 	SCF_DFA_GET_MODULE_NODE(dfa, init_data, assign, assign);
 
 	SCF_DFA_GET_MODULE_NODE(dfa, expr,      entry,  expr);
@@ -331,7 +358,9 @@ static int _dfa_init_syntax_init_data(scf_dfa_t* dfa)
 
 	// init expr for member of data
 	scf_dfa_node_add_child(lb,        dot);
+	scf_dfa_node_add_child(lb,        ls);
 	scf_dfa_node_add_child(comma,     dot);
+	scf_dfa_node_add_child(comma,     ls);
 
 	scf_dfa_node_add_child(lb,        expr);
 	scf_dfa_node_add_child(expr,      comma);
@@ -339,11 +368,15 @@ static int _dfa_init_syntax_init_data(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(expr,      rb);
 
 	scf_dfa_node_add_child(dot,       member);
+	scf_dfa_node_add_child(dot,       index0);
 	scf_dfa_node_add_child(member,    assign);
+	scf_dfa_node_add_child(index0,    assign);
 	scf_dfa_node_add_child(assign,    expr);
 
-	scf_dfa_node_add_child(dot,       index);
-	scf_dfa_node_add_child(index,     assign);
+	scf_dfa_node_add_child(ls,        index1);
+	scf_dfa_node_add_child(index1,    rs);
+	scf_dfa_node_add_child(rs,        ls);
+	scf_dfa_node_add_child(rs,        assign);
 
 	return 0;
 }

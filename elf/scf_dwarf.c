@@ -332,6 +332,18 @@ int scf_dwarf_debug_encode(scf_dwarf_t* debug)
 	if (ret < 0)
 		return ret;
 
+	size_t n = debug->debug_abbrev->len
+		     + debug->debug_info->len
+		     + debug->debug_line->len
+		     + debug->str->len;
+
+	n &= 0x7;
+	if (n) {
+		ret = scf_string_fill_zero(debug->str, 8 - n);
+		if (ret < 0)
+			return ret;
+	}
+
 	return 0;
 }
 

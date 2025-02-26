@@ -28,6 +28,9 @@ typedef struct {
 
 	scf_string_t*   name;
 
+	uint32_t        hash;
+	uint32_t        hash_n;
+
 	Elf64_Sym       sym;
 
 	int             index;
@@ -55,11 +58,10 @@ typedef struct {
 	scf_vector_t*   dyn_needs;
 	scf_vector_t*   dyn_relas;
 
+	elf_section_t*  gnu_hash;
 	elf_section_t*  interp;
 	elf_section_t*  dynsym;
 	elf_section_t*  dynstr;
-	elf_section_t*  gnu_version;
-	elf_section_t*  gnu_version_r;
 	elf_section_t*  rela_plt;
 	elf_section_t*  plt;
 	elf_section_t*  dynamic;
