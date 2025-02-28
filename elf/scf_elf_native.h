@@ -58,6 +58,8 @@ typedef struct {
 	scf_vector_t*   dyn_needs;
 	scf_vector_t*   dyn_relas;
 
+	int             n_plts;
+
 	elf_section_t*  gnu_hash;
 	elf_section_t*  interp;
 	elf_section_t*  dynsym;

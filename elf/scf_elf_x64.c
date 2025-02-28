@@ -417,6 +417,8 @@ static int _x64_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 	int 		  nb_phdrs = 3;
 
 	if (x64->dynsyms && x64->dynsyms->size > 0) {
+		x64->n_plts   = x64->dynsyms->size;
+
 		__x64_elf_add_dyn(x64, sysroot);
 		nb_phdrs = 6;
 	}
@@ -540,6 +542,8 @@ static int _x64_elf_write_dyn(scf_elf_context_t* elf, const char* sysroot)
 		if (!x64->dynsyms)
 			return -ENOMEM;
 	}
+
+	x64->n_plts = x64->dynsyms->size;
 
 	for (i = 0; i < x64->symbols->size; i++) {
 		sym       = x64->symbols->data[i];
