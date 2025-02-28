@@ -240,6 +240,24 @@ static int _data_action_member(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	return SCF_DFA_NEXT_WORD;
 }
 
+static int _error_action_member(scf_dfa_t* dfa, scf_vector_t* words, void* data)
+{
+	scf_lex_word_t* w = words->data[words->size - 1];
+
+	scf_loge("member '%s' should be an var in struct, file: %s, line: %d\n",
+			w->text->data, w->file->data, w->line);
+	return SCF_DFA_ERROR;
+}
+
+static int _error_action_index(scf_dfa_t* dfa, scf_vector_t* words, void* data)
+{
+	scf_lex_word_t* w = words->data[words->size - 1];
+
+	scf_loge("array index '%s' should be an integer, file: %s, line: %d\n",
+			w->text->data, w->file->data, w->line);
+	return SCF_DFA_ERROR;
+}
+
 static int _data_action_index(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*        parse = dfa->priv;
@@ -309,9 +327,11 @@ static int _dfa_init_module_init_data(scf_dfa_t* dfa)
 
 	SCF_DFA_MODULE_NODE(dfa, init_data, dot,    scf_dfa_is_dot,            scf_dfa_action_next);
 	SCF_DFA_MODULE_NODE(dfa, init_data, member, scf_dfa_is_identity,       _data_action_member);
-	SCF_DFA_MODULE_NODE(dfa, init_data, index0, scf_dfa_is_const_integer,  _data_action_index);
-	SCF_DFA_MODULE_NODE(dfa, init_data, index1, scf_dfa_is_const_integer,  _data_action_index);
+	SCF_DFA_MODULE_NODE(dfa, init_data, index,  scf_dfa_is_const_integer,  _data_action_index);
 	SCF_DFA_MODULE_NODE(dfa, init_data, assign, scf_dfa_is_assign,         scf_dfa_action_next);
+
+	SCF_DFA_MODULE_NODE(dfa, init_data, merr,   scf_dfa_is_entry,          _error_action_member);
+	SCF_DFA_MODULE_NODE(dfa, init_data, ierr,   scf_dfa_is_entry,          _error_action_index);
 
 	scf_parse_t*        parse = dfa->priv;
 	dfa_data_t*         d     = parse->dfa_data;
@@ -340,9 +360,11 @@ static int _dfa_init_syntax_init_data(scf_dfa_t* dfa)
 
 	SCF_DFA_GET_MODULE_NODE(dfa, init_data, dot,    dot);
 	SCF_DFA_GET_MODULE_NODE(dfa, init_data, member, member);
-	SCF_DFA_GET_MODULE_NODE(dfa, init_data, index0, index0);
-	SCF_DFA_GET_MODULE_NODE(dfa, init_data, index1, index1);
+	SCF_DFA_GET_MODULE_NODE(dfa, init_data, index,  index);
 	SCF_DFA_GET_MODULE_NODE(dfa, init_data, assign, assign);
+
+	SCF_DFA_GET_MODULE_NODE(dfa, init_data, merr,   merr);
+	SCF_DFA_GET_MODULE_NODE(dfa, init_data, ierr,   ierr);
 
 	SCF_DFA_GET_MODULE_NODE(dfa, expr,      entry,  expr);
 
@@ -368,16 +390,16 @@ static int _dfa_init_syntax_init_data(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(expr,      rb);
 
 	scf_dfa_node_add_child(dot,       member);
-	scf_dfa_node_add_child(dot,       index0);
 	scf_dfa_node_add_child(member,    assign);
-	scf_dfa_node_add_child(index0,    assign);
 	scf_dfa_node_add_child(assign,    expr);
 
-	scf_dfa_node_add_child(ls,        index1);
-	scf_dfa_node_add_child(index1,    rs);
+	scf_dfa_node_add_child(ls,        index);
+	scf_dfa_node_add_child(index,     rs);
 	scf_dfa_node_add_child(rs,        ls);
 	scf_dfa_node_add_child(rs,        assign);
 
+	scf_dfa_node_add_child(dot,       merr);
+	scf_dfa_node_add_child(ls,        ierr);
 	return 0;
 }
 

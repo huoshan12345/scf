@@ -338,15 +338,15 @@ static int _x64_elf_add_got_plt(elf_native_t* x64, elf_section_t** ps)
 		return -ENOMEM;
 	}
 
-	s->data = calloc(x64->dynsyms->size + 3, sizeof(void*));
+	s->data = calloc(x64->n_plts + 3, sizeof(void*));
 	if (!s->data) {
 		scf_string_free(s->name);
 		free(s);
 		return -ENOMEM;
 	}
-	s->data_len  = (x64->dynsyms->size + 3) * sizeof(void*);
+	s->data_len = (x64->n_plts + 3) * sizeof(void*);
 
-	s->index     = 1;
+	s->index = 1;
 
 	s->sh.sh_type   = SHT_PROGBITS;
 	s->sh.sh_flags  = SHF_ALLOC | SHF_WRITE;
@@ -378,15 +378,15 @@ static int _x64_elf_add_rela_plt(elf_native_t* x64, elf_section_t** ps)
 		return -ENOMEM;
 	}
 
-	s->data = calloc(x64->dynsyms->size, sizeof(Elf64_Rela));
+	s->data = calloc(x64->n_plts, sizeof(Elf64_Rela));
 	if (!s->data) {
 		scf_string_free(s->name);
 		free(s);
 		return -ENOMEM;
 	}
-	s->data_len  = x64->dynsyms->size * sizeof(Elf64_Rela);
+	s->data_len = x64->n_plts * sizeof(Elf64_Rela);
 
-	s->index     = 1;
+	s->index = 1;
 
 	s->sh.sh_type   = SHT_RELA;
 	s->sh.sh_flags  = SHF_ALLOC | SHF_INFO_LINK;
@@ -431,7 +431,7 @@ static int _x64_elf_add_plt(elf_native_t* x64, elf_section_t** ps)
 		0xe9, 0,    0, 0, 0,    // jmp
 	};
 
-	s->data = malloc(sizeof(plt_lazy) + sizeof(plt) * x64->dynsyms->size);
+	s->data = malloc(sizeof(plt_lazy) + sizeof(plt) * x64->n_plts);
 	if (!s->data) {
 		scf_string_free(s->name);
 		free(s);
@@ -443,7 +443,7 @@ static int _x64_elf_add_plt(elf_native_t* x64, elf_section_t** ps)
 
 	int jmp = -32;
 	int i;
-	for (i = 0; i < x64->dynsyms->size; i++) {
+	for (i = 0; i < x64->n_plts; i++) {
 		memcpy(s->data + s->data_len, plt, sizeof(plt));
 
 		s->data[s->data_len + 7    ] = i;
@@ -461,7 +461,7 @@ static int _x64_elf_add_plt(elf_native_t* x64, elf_section_t** ps)
 		s->data_len += sizeof(plt);
 	}
 
-	s->index     = 1;
+	s->index = 1;
 
 	s->sh.sh_type   = SHT_PROGBITS;
 	s->sh.sh_flags  = SHF_ALLOC;
@@ -1048,10 +1048,10 @@ static void __x64_plt_link(elf_native_t* x64, uint64_t rx_base, uint64_t rw_base
 	plt_addr += 16;
 
 	int i;
-	for (i = 0; i < x64->dynsyms->size; i++) {
-		rela_plt[i].r_offset   = got_addr;
-		rela_plt[i].r_addend   = 0;
-		rela_plt[i].r_info     = ELF64_R_INFO(i + 1, R_X86_64_JUMP_SLOT);
+	for (i = 0; i < x64->n_plts; i++) {
+		rela_plt[i].r_offset = got_addr;
+		rela_plt[i].r_addend = 0;
+		rela_plt[i].r_info   = ELF64_R_INFO(i + 1, R_X86_64_JUMP_SLOT);
 
 		scf_logd("got_addr: %#lx\n", got_addr);
 
