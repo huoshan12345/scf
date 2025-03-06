@@ -516,6 +516,8 @@ int x64_save_var2(scf_dag_node_t* dn, scf_register_t* r, scf_3ac_code_t* c, scf_
 	scf_variable_t*     v    = dn->var;
 	scf_rela_t*         rela = NULL;
 	scf_x64_OpCode_t*   mov;
+	scf_x64_OpCode_t*   and;
+	scf_x64_OpCode_t*   shl;
 	scf_instruction_t*  inst;
 
 	int var_size = x64_variable_size(v);
@@ -563,12 +565,13 @@ int x64_save_var2(scf_dag_node_t* dn, scf_register_t* r, scf_3ac_code_t* c, scf_
 
 	if (is_float) {
 		if (SCF_VAR_FLOAT == dn->var->type)
-			mov  = x64_find_OpCode(SCF_X64_MOVSS, r->bytes, r->bytes, SCF_X64_G2E);
+			mov = x64_find_OpCode(SCF_X64_MOVSS, r->bytes, r->bytes, SCF_X64_G2E);
 		else if (SCF_VAR_DOUBLE == dn->var->type)
-			mov  = x64_find_OpCode(SCF_X64_MOVSD, r->bytes, r->bytes, SCF_X64_G2E);
+			mov = x64_find_OpCode(SCF_X64_MOVSD, r->bytes, r->bytes, SCF_X64_G2E);
 	} else {
-		mov  = x64_find_OpCode(SCF_X64_MOV, r->bytes, r->bytes, SCF_X64_G2E);
 		scf_logd("v->size: %d\n", v->size);
+
+		mov = x64_find_OpCode(SCF_X64_MOV, r->bytes, r->bytes, SCF_X64_G2E);
 	}
 
 	inst = x64_make_inst_G2M(&rela, mov, v, NULL, r);
@@ -927,6 +930,8 @@ int x64_load_reg(scf_register_t* r, scf_dag_node_t* dn, scf_3ac_code_t* c, scf_f
 		return 0;
 
 	scf_x64_OpCode_t*   mov;
+	scf_x64_OpCode_t*   shr;
+	scf_x64_OpCode_t*   and;
 	scf_instruction_t*  inst;
 	scf_rela_t*         rela = NULL;
 

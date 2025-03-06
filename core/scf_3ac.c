@@ -117,38 +117,6 @@ static scf_3ac_operator_t _3ac_operators[] = {
 	{SCF_OP_3AC_ASSIGN_ARRAY_INDEX,	    "array_index="},
 	{SCF_OP_3AC_ASSIGN_POINTER,	        "pointer="},
 
-	{SCF_OP_3AC_ADD_ASSIGN_DEREFERENCE,	"dereference+="},
-	{SCF_OP_3AC_ADD_ASSIGN_ARRAY_INDEX,	"array_index+="},
-	{SCF_OP_3AC_ADD_ASSIGN_POINTER,	    "pointer+="},
-
-	{SCF_OP_3AC_SUB_ASSIGN_DEREFERENCE,	"dereference-="},
-	{SCF_OP_3AC_SUB_ASSIGN_ARRAY_INDEX,	"array_index-="},
-	{SCF_OP_3AC_SUB_ASSIGN_POINTER,	    "pointer-="},
-
-	{SCF_OP_3AC_AND_ASSIGN_DEREFERENCE, "dereference&="},
-	{SCF_OP_3AC_AND_ASSIGN_ARRAY_INDEX, "array_index&="},
-	{SCF_OP_3AC_AND_ASSIGN_POINTER,     "pointer&="},
-
-	{SCF_OP_3AC_OR_ASSIGN_DEREFERENCE,  "dereference|="},
-	{SCF_OP_3AC_OR_ASSIGN_ARRAY_INDEX,  "array_index|="},
-	{SCF_OP_3AC_OR_ASSIGN_POINTER,      "pointer|="},
-
-	{SCF_OP_3AC_INC_DEREFERENCE,        "++dereference"},
-	{SCF_OP_3AC_INC_ARRAY_INDEX,        "++array_index"},
-	{SCF_OP_3AC_INC_POINTER,            "++pointer"},
-
-	{SCF_OP_3AC_DEC_DEREFERENCE,        "--dereference"},
-	{SCF_OP_3AC_DEC_ARRAY_INDEX,        "--array_index"},
-	{SCF_OP_3AC_DEC_POINTER,            "--pointer"},
-
-	{SCF_OP_3AC_INC_POST_DEREFERENCE,   "dereference++"},
-	{SCF_OP_3AC_INC_POST_ARRAY_INDEX,   "array_index++"},
-	{SCF_OP_3AC_INC_POST_POINTER,       "pointer++"},
-
-	{SCF_OP_3AC_DEC_POST_DEREFERENCE,   "dereference--"},
-	{SCF_OP_3AC_DEC_POST_ARRAY_INDEX,   "array_index--"},
-	{SCF_OP_3AC_DEC_POST_POINTER,       "pointer--"},
-
 	{SCF_OP_3AC_ADDRESS_OF_ARRAY_INDEX, "&array_index"},
 	{SCF_OP_3AC_ADDRESS_OF_POINTER,     "&pointer"},
 };
@@ -869,8 +837,6 @@ int scf_3ac_code_to_dag(scf_3ac_code_t* c, scf_list_t* dag)
 			switch (c->op->type) {
 				case SCF_OP_ARRAY_INDEX:
 				case SCF_OP_3AC_ADDRESS_OF_ARRAY_INDEX:
-				case SCF_OP_3AC_INC_POST_ARRAY_INDEX:
-				case SCF_OP_3AC_DEC_POST_ARRAY_INDEX:
 				case SCF_OP_VA_START:
 				case SCF_OP_VA_ARG:
 					n_operands0 = 3;

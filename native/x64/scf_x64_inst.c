@@ -1966,18 +1966,6 @@ static int _x64_inst_save_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 static int _x64_inst_##name##_handler(scf_native_t* ctx, scf_3ac_code_t* c) \
 { \
 	return x64_binary_assign(ctx, c, SCF_X64_##op); \
-} \
-static int _x64_inst_##name##_pointer_handler(scf_native_t* ctx, scf_3ac_code_t* c) \
-{ \
-	return x64_binary_assign_pointer(ctx, c, SCF_X64_##op); \
-} \
-static int _x64_inst_##name##_array_index_handler(scf_native_t* ctx, scf_3ac_code_t* c)\
-{\
-	return _x64_inst_assign_array_index(ctx, c, SCF_X64_##op);\
-}\
-static int _x64_inst_##name##_dereference_handler(scf_native_t* ctx, scf_3ac_code_t* c)\
-{\
-	return x64_binary_assign_dereference(ctx, c, SCF_X64_##op);\
 }
 
 X64_INST_BINARY_ASSIGN(assign,     MOV)
@@ -1985,6 +1973,19 @@ X64_INST_BINARY_ASSIGN(add_assign, ADD)
 X64_INST_BINARY_ASSIGN(sub_assign, SUB)
 X64_INST_BINARY_ASSIGN(and_assign, AND)
 X64_INST_BINARY_ASSIGN(or_assign,  OR)
+
+static int _x64_inst_assign_pointer_handler(scf_native_t* ctx, scf_3ac_code_t* c)
+{
+	return x64_assign_pointer(ctx, c);
+}
+static int _x64_inst_assign_array_index_handler(scf_native_t* ctx, scf_3ac_code_t* c)
+{
+	return _x64_inst_assign_array_index(ctx, c, SCF_X64_MOV);
+}
+static int _x64_inst_assign_dereference_handler(scf_native_t* ctx, scf_3ac_code_t* c)
+{
+	return x64_assign_dereference(ctx, c);
+}
 
 #define X64_INST_SHIFT(name, op) \
 static int _x64_inst_##name##_handler(scf_native_t* ctx, scf_3ac_code_t* c) \
@@ -1997,47 +1998,6 @@ static int _x64_inst_##name##_assign_handler(scf_native_t* ctx, scf_3ac_code_t* 
 }
 X64_INST_SHIFT(shl, SHL)
 X64_INST_SHIFT(shr, SHR)
-
-#define X64_INST_UNARY_ASSIGN(name, op) \
-static int _x64_inst_##name##_pointer_handler(scf_native_t* ctx, scf_3ac_code_t* c) \
-{ \
-	return x64_unary_assign_pointer(ctx, c, SCF_X64_##op); \
-} \
-static int _x64_inst_##name##_array_index_handler(scf_native_t* ctx, scf_3ac_code_t* c)\
-{\
-	return x64_unary_assign_array_index(ctx, c, SCF_X64_##op);\
-}\
-static int _x64_inst_##name##_dereference_handler(scf_native_t* ctx, scf_3ac_code_t* c)\
-{\
-	return x64_unary_assign_dereference(ctx, c, SCF_X64_##op);\
-}
-X64_INST_UNARY_ASSIGN(inc, INC)
-X64_INST_UNARY_ASSIGN(dec, DEC)
-
-#define X64_INST_UNARY_POST_ASSIGN(name, op) \
-static int _x64_inst_##name##_pointer_handler(scf_native_t* ctx, scf_3ac_code_t* c) \
-{ \
-	int ret = x64_inst_pointer(ctx, c, 0); \
-	if (ret < 0) \
-		return ret; \
-	return x64_unary_assign_pointer(ctx, c, SCF_X64_##op); \
-} \
-static int _x64_inst_##name##_array_index_handler(scf_native_t* ctx, scf_3ac_code_t* c)\
-{\
-	int ret = _x64_inst_array_index_handler(ctx, c); \
-	if (ret < 0) \
-		return ret; \
-	return x64_unary_assign_array_index(ctx, c, SCF_X64_##op);\
-}\
-static int _x64_inst_##name##_dereference_handler(scf_native_t* ctx, scf_3ac_code_t* c)\
-{\
-	int ret = x64_inst_dereference(ctx, c); \
-	if (ret < 0) \
-		return ret; \
-	return x64_unary_assign_dereference(ctx, c, SCF_X64_##op);\
-}
-X64_INST_UNARY_POST_ASSIGN(inc_post, INC)
-X64_INST_UNARY_POST_ASSIGN(dec_post, DEC)
 
 static int _x64_inst_address_of_array_index_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
@@ -2476,38 +2436,6 @@ static x64_inst_handler_pt  x64_inst_handlers[] =
 	[SCF_OP_3AC_ASSIGN_DEREFERENCE    ]  =  _x64_inst_assign_dereference_handler,
 	[SCF_OP_3AC_ASSIGN_ARRAY_INDEX    ]  =  _x64_inst_assign_array_index_handler,
 	[SCF_OP_3AC_ASSIGN_POINTER        ]  =  _x64_inst_assign_pointer_handler,
-
-	[SCF_OP_3AC_ADD_ASSIGN_DEREFERENCE]  =  _x64_inst_add_assign_dereference_handler,
-	[SCF_OP_3AC_ADD_ASSIGN_ARRAY_INDEX]  =  _x64_inst_add_assign_array_index_handler,
-	[SCF_OP_3AC_ADD_ASSIGN_POINTER    ]  =  _x64_inst_add_assign_pointer_handler,
-
-	[SCF_OP_3AC_SUB_ASSIGN_DEREFERENCE]  =  _x64_inst_sub_assign_dereference_handler,
-	[SCF_OP_3AC_SUB_ASSIGN_ARRAY_INDEX]  =  _x64_inst_sub_assign_array_index_handler,
-	[SCF_OP_3AC_SUB_ASSIGN_POINTER    ]  =  _x64_inst_sub_assign_pointer_handler,
-
-	[SCF_OP_3AC_AND_ASSIGN_DEREFERENCE]  =  _x64_inst_and_assign_dereference_handler,
-	[SCF_OP_3AC_AND_ASSIGN_ARRAY_INDEX]  =  _x64_inst_and_assign_array_index_handler,
-	[SCF_OP_3AC_AND_ASSIGN_POINTER    ]  =  _x64_inst_and_assign_pointer_handler,
-
-	[SCF_OP_3AC_OR_ASSIGN_DEREFERENCE ]  =  _x64_inst_or_assign_dereference_handler,
-	[SCF_OP_3AC_OR_ASSIGN_ARRAY_INDEX ]  =  _x64_inst_or_assign_array_index_handler,
-	[SCF_OP_3AC_OR_ASSIGN_POINTER     ]  =  _x64_inst_or_assign_pointer_handler,
-
-	[SCF_OP_3AC_INC_DEREFERENCE       ]  =  _x64_inst_inc_dereference_handler,
-	[SCF_OP_3AC_INC_ARRAY_INDEX       ]  =  _x64_inst_inc_array_index_handler,
-	[SCF_OP_3AC_INC_POINTER           ]  =  _x64_inst_inc_pointer_handler,
-
-	[SCF_OP_3AC_INC_POST_DEREFERENCE  ]  =  _x64_inst_inc_post_dereference_handler,
-	[SCF_OP_3AC_INC_POST_ARRAY_INDEX  ]  =  _x64_inst_inc_post_array_index_handler,
-	[SCF_OP_3AC_INC_POST_POINTER      ]  =  _x64_inst_inc_post_pointer_handler,
-
-	[SCF_OP_3AC_DEC_DEREFERENCE       ]  =  _x64_inst_dec_dereference_handler,
-	[SCF_OP_3AC_DEC_ARRAY_INDEX       ]  =  _x64_inst_dec_array_index_handler,
-	[SCF_OP_3AC_DEC_POINTER           ]  =  _x64_inst_dec_pointer_handler,
-
-	[SCF_OP_3AC_DEC_POST_DEREFERENCE  ]  =  _x64_inst_dec_post_dereference_handler,
-	[SCF_OP_3AC_DEC_POST_ARRAY_INDEX  ]  =  _x64_inst_dec_post_array_index_handler,
-	[SCF_OP_3AC_DEC_POST_POINTER      ]  =  _x64_inst_dec_post_pointer_handler,
 
 	[SCF_OP_3AC_ADDRESS_OF_ARRAY_INDEX]  =  _x64_inst_address_of_array_index_handler,
 	[SCF_OP_3AC_ADDRESS_OF_POINTER    ]  =  _x64_inst_address_of_pointer_handler,

@@ -93,9 +93,9 @@ typedef struct {
 	scf_register_t* base;
 	scf_register_t* index;
 
-	int32_t             scale;
-	int32_t             disp;
-	int32_t             size;
+	int32_t         scale;
+	int32_t         disp;
+	int32_t         size;
 } x64_sib_t;
 
 static inline int x64_variable_size(scf_variable_t* v)

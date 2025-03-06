@@ -134,34 +134,6 @@ static int _3ac_pointer_alias(scf_dag_node_t* alias, scf_3ac_code_t* c, scf_basi
 		case SCF_OP_3AC_ASSIGN_DEREFERENCE:
 			c->op = scf_3ac_find_operator(SCF_OP_ASSIGN);
 			break;
-
-		case SCF_OP_3AC_ADD_ASSIGN_DEREFERENCE:
-			c->op = scf_3ac_find_operator(SCF_OP_ADD_ASSIGN);
-			break;
-		case SCF_OP_3AC_SUB_ASSIGN_DEREFERENCE:
-			c->op = scf_3ac_find_operator(SCF_OP_SUB_ASSIGN);
-			break;
-
-		case SCF_OP_3AC_AND_ASSIGN_DEREFERENCE:
-			c->op = scf_3ac_find_operator(SCF_OP_AND_ASSIGN);
-			break;
-		case SCF_OP_3AC_OR_ASSIGN_DEREFERENCE:
-			c->op = scf_3ac_find_operator(SCF_OP_OR_ASSIGN);
-			break;
-
-		case SCF_OP_3AC_INC_DEREFERENCE:
-			c->op = scf_3ac_find_operator(SCF_OP_INC);
-			break;
-		case SCF_OP_3AC_DEC_DEREFERENCE:
-			c->op = scf_3ac_find_operator(SCF_OP_DEC);
-			break;
-		case SCF_OP_3AC_INC_POST_DEREFERENCE:
-			c->op = scf_3ac_find_operator(SCF_OP_INC_POST);
-			break;
-		case SCF_OP_3AC_DEC_POST_DEREFERENCE:
-			c->op = scf_3ac_find_operator(SCF_OP_DEC_POST);
-			break;
-
 		default:
 			scf_loge("\n");
 			return -1;

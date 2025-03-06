@@ -1230,38 +1230,6 @@ static risc_rcg_handler_pt  risc_rcg_handlers[SCF_N_3AC_OPS] =
 	[SCF_OP_3AC_ASSIGN_ARRAY_INDEX    ]  =  _risc_rcg_assign_array_index_handler,
 	[SCF_OP_3AC_ASSIGN_POINTER        ]  =  _risc_rcg_assign_pointer_handler,
 
-	[SCF_OP_3AC_ADD_ASSIGN_DEREFERENCE]  =  _risc_rcg_add_assign_dereference_handler,
-	[SCF_OP_3AC_ADD_ASSIGN_ARRAY_INDEX]  =  _risc_rcg_add_assign_array_index_handler,
-	[SCF_OP_3AC_ADD_ASSIGN_POINTER    ]  =  _risc_rcg_add_assign_pointer_handler,
-
-	[SCF_OP_3AC_SUB_ASSIGN_DEREFERENCE]  =  _risc_rcg_sub_assign_dereference_handler,
-	[SCF_OP_3AC_SUB_ASSIGN_ARRAY_INDEX]  =  _risc_rcg_sub_assign_array_index_handler,
-	[SCF_OP_3AC_SUB_ASSIGN_POINTER    ]  =  _risc_rcg_sub_assign_pointer_handler,
-
-	[SCF_OP_3AC_AND_ASSIGN_DEREFERENCE]  =  _risc_rcg_and_assign_dereference_handler,
-	[SCF_OP_3AC_AND_ASSIGN_ARRAY_INDEX]  =  _risc_rcg_and_assign_array_index_handler,
-	[SCF_OP_3AC_AND_ASSIGN_POINTER    ]  =  _risc_rcg_and_assign_pointer_handler,
-
-	[SCF_OP_3AC_OR_ASSIGN_DEREFERENCE ]  =  _risc_rcg_or_assign_dereference_handler,
-	[SCF_OP_3AC_OR_ASSIGN_ARRAY_INDEX ]  =  _risc_rcg_or_assign_array_index_handler,
-	[SCF_OP_3AC_OR_ASSIGN_POINTER     ]  =  _risc_rcg_or_assign_pointer_handler,
-
-	[SCF_OP_3AC_INC_DEREFERENCE       ]  =  _risc_rcg_inc_dereference_handler,
-	[SCF_OP_3AC_INC_ARRAY_INDEX       ]  =  _risc_rcg_inc_array_index_handler,
-	[SCF_OP_3AC_INC_POINTER           ]  =  _risc_rcg_inc_pointer_handler,
-
-	[SCF_OP_3AC_INC_POST_DEREFERENCE  ]  =  _risc_rcg_inc_post_dereference_handler,
-	[SCF_OP_3AC_INC_POST_ARRAY_INDEX  ]  =  _risc_rcg_inc_post_array_index_handler,
-	[SCF_OP_3AC_INC_POST_POINTER      ]  =  _risc_rcg_inc_post_pointer_handler,
-
-	[SCF_OP_3AC_DEC_DEREFERENCE       ]  =  _risc_rcg_dec_dereference_handler,
-	[SCF_OP_3AC_DEC_ARRAY_INDEX       ]  =  _risc_rcg_dec_array_index_handler,
-	[SCF_OP_3AC_DEC_POINTER           ]  =  _risc_rcg_dec_pointer_handler,
-
-	[SCF_OP_3AC_DEC_POST_DEREFERENCE  ]  =  _risc_rcg_dec_post_dereference_handler,
-	[SCF_OP_3AC_DEC_POST_ARRAY_INDEX  ]  =  _risc_rcg_dec_post_array_index_handler,
-	[SCF_OP_3AC_DEC_POST_POINTER      ]  =  _risc_rcg_dec_post_pointer_handler,
-
 	[SCF_OP_3AC_ADDRESS_OF_ARRAY_INDEX]  =  _risc_rcg_address_of_array_index_handler,
 	[SCF_OP_3AC_ADDRESS_OF_POINTER    ]  =  _risc_rcg_address_of_pointer_handler,
 };

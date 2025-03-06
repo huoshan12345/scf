@@ -1001,62 +1001,6 @@ static int _eda_inst_assign_array_index_handler(scf_native_t* ctx, scf_3ac_code_
 	return -EINVAL;
 }
 
-static int _eda_inst_and_assign_array_index_handler(scf_native_t* ctx, scf_3ac_code_t* c)
-{
-	if (!c->srcs || c->srcs->size != 4)
-		return -EINVAL;
-
-	scf_eda_context_t*  eda    = ctx->priv;
-	scf_function_t*     f      = eda->f;
-
-	scf_3ac_operand_t*  base   = c->srcs->data[0];
-	scf_3ac_operand_t*  index  = c->srcs->data[1];
-	scf_3ac_operand_t*  scale  = c->srcs->data[2];
-	scf_3ac_operand_t*  src    = c->srcs->data[3];
-
-	if (!base || !base->dag_node)
-		return -EINVAL;
-
-	if (!index || !index->dag_node)
-		return -EINVAL;
-
-	if (!scale || !scale->dag_node)
-		return -EINVAL;
-
-	if (!src || !src->dag_node)
-		return -EINVAL;
-
-	return -EINVAL;
-}
-
-static int _eda_inst_or_assign_array_index_handler(scf_native_t* ctx, scf_3ac_code_t* c)
-{
-	if (!c->srcs || c->srcs->size != 4)
-		return -EINVAL;
-
-	scf_eda_context_t*  eda    = ctx->priv;
-	scf_function_t*     f      = eda->f;
-
-	scf_3ac_operand_t*  base   = c->srcs->data[0];
-	scf_3ac_operand_t*  index  = c->srcs->data[1];
-	scf_3ac_operand_t*  scale  = c->srcs->data[2];
-	scf_3ac_operand_t*  src    = c->srcs->data[3];
-
-	if (!base || !base->dag_node)
-		return -EINVAL;
-
-	if (!index || !index->dag_node)
-		return -EINVAL;
-
-	if (!scale || !scale->dag_node)
-		return -EINVAL;
-
-	if (!src || !src->dag_node)
-		return -EINVAL;
-
-	return -EINVAL;
-}
-
 static int _eda_inst_array_index_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
 	if (!c->dsts || c->dsts->size != 1)
@@ -1361,9 +1305,7 @@ static eda_inst_handler_pt eda_inst_handlers[] =
 	[SCF_OP_3AC_RESAVE]  =  _eda_inst_save_handler,
 	[SCF_OP_3AC_RELOAD]  =  _eda_inst_reload_handler,
 
-	[SCF_OP_3AC_ASSIGN_ARRAY_INDEX]     = _eda_inst_assign_array_index_handler,
-	[SCF_OP_3AC_AND_ASSIGN_ARRAY_INDEX] = _eda_inst_and_assign_array_index_handler,
-	[SCF_OP_3AC_OR_ASSIGN_ARRAY_INDEX]  = _eda_inst_or_assign_array_index_handler,
+	[SCF_OP_3AC_ASSIGN_ARRAY_INDEX] = _eda_inst_assign_array_index_handler,
 };
 
 eda_inst_handler_pt scf_eda_find_inst_handler(const int op_type)

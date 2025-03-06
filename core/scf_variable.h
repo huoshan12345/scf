@@ -27,6 +27,9 @@ struct scf_variable_s {
 	int					size;
 	int                 data_size;
 
+	int                 bit_offset;
+	int                 bit_size;
+
 	int					offset;
 	int					bp_offset;  // offset based on RBP / EBP register
 	int					sp_offset;  // offset based on RSP / ESP register

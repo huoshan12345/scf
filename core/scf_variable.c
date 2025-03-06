@@ -209,6 +209,9 @@ scf_variable_t*	scf_variable_clone(scf_variable_t* v)
 	v2->data_size = v->data_size;
 	v2->offset    = v->offset;
 
+	v2->bit_offset = v->bit_offset;
+	v2->bit_size   = v->bit_size;
+
 	if (scf_variable_is_struct(v) || scf_variable_is_array(v)) {
 
 		int size = scf_variable_size(v);
