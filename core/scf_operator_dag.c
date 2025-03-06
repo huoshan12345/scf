@@ -313,12 +313,6 @@ static int _scf_dag_op_##name##_dereference(scf_list_t* h, scf_dag_node_t* paren
 	return _scf_3ac_code_N(h, SCF_OP_3AC_##op##_DEREFERENCE, NULL, nodes, nb_nodes); \
 }
 SCF_DAG_ASSIGN_DEREFERENCE(assign,     ASSIGN);
-SCF_DAG_ASSIGN_DEREFERENCE(add_assign, ADD_ASSIGN);
-SCF_DAG_ASSIGN_DEREFERENCE(sub_assign, SUB_ASSIGN);
-SCF_DAG_ASSIGN_DEREFERENCE(and_assign, AND_ASSIGN);
-SCF_DAG_ASSIGN_DEREFERENCE(or_assign,  OR_ASSIGN);
-SCF_DAG_ASSIGN_DEREFERENCE(inc,        INC);
-SCF_DAG_ASSIGN_DEREFERENCE(dec,        DEC);
 
 #define SCF_DAG_ASSIGN_ARRAY_INDEX(name, op) \
 static int _scf_dag_op_##name##_array_index(scf_list_t* h, scf_dag_node_t* parent, scf_dag_node_t** nodes, int nb_nodes) \
@@ -327,12 +321,6 @@ static int _scf_dag_op_##name##_array_index(scf_list_t* h, scf_dag_node_t* paren
 	return _scf_3ac_code_N(h, SCF_OP_3AC_##op##_ARRAY_INDEX, NULL, nodes, nb_nodes); \
 }
 SCF_DAG_ASSIGN_ARRAY_INDEX(assign,     ASSIGN);
-SCF_DAG_ASSIGN_ARRAY_INDEX(add_assign, ADD_ASSIGN);
-SCF_DAG_ASSIGN_ARRAY_INDEX(sub_assign, SUB_ASSIGN);
-SCF_DAG_ASSIGN_ARRAY_INDEX(and_assign, AND_ASSIGN);
-SCF_DAG_ASSIGN_ARRAY_INDEX(or_assign,  OR_ASSIGN);
-SCF_DAG_ASSIGN_ARRAY_INDEX(inc,        INC);
-SCF_DAG_ASSIGN_ARRAY_INDEX(dec,        DEC);
 
 #define SCF_DAG_ASSIGN_POINTER(name, op) \
 static int _scf_dag_op_##name##_pointer(scf_list_t* h, scf_dag_node_t* parent, scf_dag_node_t** nodes, int nb_nodes) \
@@ -340,12 +328,6 @@ static int _scf_dag_op_##name##_pointer(scf_list_t* h, scf_dag_node_t* parent, s
 	return _scf_3ac_code_N(h, SCF_OP_3AC_##op##_POINTER, NULL, nodes, nb_nodes); \
 }
 SCF_DAG_ASSIGN_POINTER(assign,     ASSIGN);
-SCF_DAG_ASSIGN_POINTER(add_assign, ADD_ASSIGN);
-SCF_DAG_ASSIGN_POINTER(sub_assign, SUB_ASSIGN);
-SCF_DAG_ASSIGN_POINTER(and_assign, AND_ASSIGN);
-SCF_DAG_ASSIGN_POINTER(or_assign,  OR_ASSIGN);
-SCF_DAG_ASSIGN_POINTER(inc,        INC);
-SCF_DAG_ASSIGN_POINTER(dec,        DEC);
 
 static int _scf_dag_op_return(scf_list_t* h, scf_dag_node_t* parent, scf_dag_node_t** nodes, int nb_nodes)
 {
@@ -454,28 +436,8 @@ scf_dag_operator_t	dag_operators[] =
 	{SCF_OP_OR_ASSIGN,      SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_or_assign},
 
 	{SCF_OP_3AC_ASSIGN_ARRAY_INDEX,        SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_assign_array_index},
-	{SCF_OP_3AC_ADD_ASSIGN_ARRAY_INDEX,    SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_add_assign_array_index},
-	{SCF_OP_3AC_SUB_ASSIGN_ARRAY_INDEX,    SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_sub_assign_array_index},
-	{SCF_OP_3AC_AND_ASSIGN_ARRAY_INDEX,    SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_and_assign_array_index},
-	{SCF_OP_3AC_OR_ASSIGN_ARRAY_INDEX,     SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_or_assign_array_index},
-	{SCF_OP_3AC_INC_ARRAY_INDEX,           SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_inc_array_index},
-	{SCF_OP_3AC_DEC_ARRAY_INDEX,           SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_dec_array_index},
-
 	{SCF_OP_3AC_ASSIGN_POINTER,            SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_assign_pointer},
-	{SCF_OP_3AC_ADD_ASSIGN_POINTER,        SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_add_assign_pointer},
-	{SCF_OP_3AC_SUB_ASSIGN_POINTER,        SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_sub_assign_pointer},
-	{SCF_OP_3AC_AND_ASSIGN_POINTER,        SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_and_assign_pointer},
-	{SCF_OP_3AC_OR_ASSIGN_POINTER,         SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_or_assign_pointer},
-	{SCF_OP_3AC_INC_POINTER,               SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_inc_pointer},
-	{SCF_OP_3AC_DEC_POINTER,               SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_dec_pointer},
-
 	{SCF_OP_3AC_ASSIGN_DEREFERENCE,        SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_assign_dereference},
-	{SCF_OP_3AC_ADD_ASSIGN_DEREFERENCE,    SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_add_assign_dereference},
-	{SCF_OP_3AC_SUB_ASSIGN_DEREFERENCE,    SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_sub_assign_dereference},
-	{SCF_OP_3AC_AND_ASSIGN_DEREFERENCE,    SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_and_assign_dereference},
-	{SCF_OP_3AC_OR_ASSIGN_DEREFERENCE,     SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_or_assign_dereference},
-	{SCF_OP_3AC_INC_DEREFERENCE,           SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_inc_dereference},
-	{SCF_OP_3AC_DEC_DEREFERENCE,           SCF_OP_ASSOCIATIVITY_RIGHT, _scf_dag_op_dec_dereference},
 };
 
 scf_dag_operator_t* scf_dag_operator_find(int type)
@@ -518,7 +480,7 @@ int	scf_dag_expr_calculate(scf_list_t* h, scf_dag_node_t* node)
 #endif
 	scf_dag_operator_t* op = scf_dag_operator_find(node->type);
 	if (!op) {
-		scf_loge("node->type: %d, %d\n", node->type, SCF_OP_3AC_DEC_POINTER);
+		scf_loge("node->type: %d\n", node->type);
 		if (node->var && node->var->w)
 			scf_loge("node->var: %s\n", node->var->w->text->data);
 		return -1;

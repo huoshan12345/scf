@@ -93,6 +93,7 @@ static int _class_calculate_size(scf_dfa_t* dfa, scf_type_t* s)
 {
 	scf_variable_t* v;
 
+	int bits = 0;
 	int size = 0;
 	int i;
 	int j;
@@ -133,16 +134,55 @@ static int _class_calculate_size(scf_dfa_t* dfa, scf_type_t* s)
 			}
 
 			size = v->offset + v->size * v->capacity;
-		} else
-			size = v->offset + v->size;
+			bits = size << 3;
+		} else {
+			if (v->bit_size > 0) {
+				int align = v->size << 3;
+				int used  = bits & (align - 1);
+				int rest  = align - used;
 
-		scf_logi("class '%s', member: '%s', member_flag: %d, offset: %d, size: %d, v->dim: %d, v->capacity: %d\n",
-				s->name->data, v->w->text->data, v->member_flag, v->offset, v->size, v->nb_dimentions, v->capacity);
+				if (rest < v->bit_size) {
+					bits += rest;
+					used  = 0;
+					rest  = align;
+				}
+
+				v->offset     = (bits >> 3) & ~(v->size - 1);
+				v->bit_offset =  used;
+
+				scf_logd("bits: %d, align: %d, used: %d, rest: %d, v->offset: %d\n", bits, align, used, rest, v->offset);
+
+				bits = (v->offset << 3) + v->bit_offset + v->bit_size;
+			} else
+				bits = (v->offset + v->size) << 3;
+
+			if (size < v->offset + v->size)
+				size = v->offset + v->size;
+		}
+
+		scf_logi("class '%s', member: '%s', member_flag: %d, offset: %d, size: %d, v->dim: %d, v->capacity: %d, bit offset: %d, bit size: %d\n",
+				s->name->data, v->w->text->data, v->member_flag, v->offset, v->size, v->nb_dimentions, v->capacity, v->bit_offset, v->bit_size);
 	}
-	s->size = size;
+
+	switch (size) {
+		case 1:
+			s->size = size;
+			break;
+		case 2:
+			s->size = (size + 1) & ~0x1;
+			break;
+		case 3:
+		case 4:
+			s->size = (size + 3) & ~0x3;
+			break;
+		default:
+			s->size = (size + 7) & ~0x7;
+			break;
+	};
+
 	s->node.define_flag = 1;
 
-	scf_logi("class '%s', size: %d\n", s->name->data, s->size);
+	scf_logi("class '%s', s->size: %d, size: %d\n", s->name->data, s->size, size);
 	return 0;
 }
 

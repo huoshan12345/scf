@@ -584,6 +584,45 @@ static int _var_action_assign(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	return SCF_DFA_NEXT_WORD;
 }
 
+static int _var_action_colon(scf_dfa_t* dfa, scf_vector_t* words, void* data)
+{
+	scf_parse_t*  parse = dfa->priv;
+	dfa_data_t*   d     = data;
+
+	if (_var_add_var(dfa, d) < 0) {
+		scf_loge("add var error\n");
+		return SCF_DFA_ERROR;
+	}
+
+	if (!d->current_var) {
+		scf_loge("\n");
+		return SCF_DFA_ERROR;
+	}
+
+	return SCF_DFA_NEXT_WORD;
+}
+
+static int _var_action_bits(scf_dfa_t* dfa, scf_vector_t* words, void* data)
+{
+	scf_parse_t*    parse = dfa->priv;
+	dfa_data_t*     d     = data;
+	scf_lex_word_t* w     = words->data[words->size - 1];
+
+	if (!d->current_var) {
+		scf_loge("\n");
+		return SCF_DFA_ERROR;
+	}
+
+	if (!d->current_var->member_flag) {
+		scf_loge("bits var '%s' must be a member of struct, file: %s, line: %d\n",
+				d->current_var->w->text->data, d->current_var->w->file->data, d->current_var->w->line);
+		return SCF_DFA_ERROR;
+	}
+
+	d->current_var->bit_size = w->data.u32;
+	return SCF_DFA_NEXT_WORD;
+}
+
 static int _var_action_ls(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 {
 	scf_parse_t*  parse = dfa->priv;
@@ -678,13 +717,16 @@ static int _var_action_rs(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 static int _dfa_init_module_var(scf_dfa_t* dfa)
 {
-	SCF_DFA_MODULE_NODE(dfa, var, comma,     scf_dfa_is_comma,     _var_action_comma);
-	SCF_DFA_MODULE_NODE(dfa, var, semicolon, scf_dfa_is_semicolon, _var_action_semicolon);
+	SCF_DFA_MODULE_NODE(dfa, var, comma,     scf_dfa_is_comma,         _var_action_comma);
+	SCF_DFA_MODULE_NODE(dfa, var, semicolon, scf_dfa_is_semicolon,     _var_action_semicolon);
 
-	SCF_DFA_MODULE_NODE(dfa, var, ls,        scf_dfa_is_ls,        _var_action_ls);
-	SCF_DFA_MODULE_NODE(dfa, var, rs,        scf_dfa_is_rs,        _var_action_rs);
+	SCF_DFA_MODULE_NODE(dfa, var, ls,        scf_dfa_is_ls,            _var_action_ls);
+	SCF_DFA_MODULE_NODE(dfa, var, rs,        scf_dfa_is_rs,            _var_action_rs);
 
-	SCF_DFA_MODULE_NODE(dfa, var, assign,    scf_dfa_is_assign,    _var_action_assign);
+	SCF_DFA_MODULE_NODE(dfa, var, assign,    scf_dfa_is_assign,        _var_action_assign);
+
+	SCF_DFA_MODULE_NODE(dfa, var, colon,     scf_dfa_is_colon,         _var_action_colon);
+	SCF_DFA_MODULE_NODE(dfa, var, bits,      scf_dfa_is_const_integer, _var_action_bits);
 
 	return SCF_DFA_OK;
 }
@@ -698,13 +740,16 @@ static int _dfa_init_syntax_var(scf_dfa_t* dfa)
 	SCF_DFA_GET_MODULE_NODE(dfa, var,    rs,        rs);
 	SCF_DFA_GET_MODULE_NODE(dfa, var,    assign,    assign);
 
+	SCF_DFA_GET_MODULE_NODE(dfa, var,    colon,     colon);
+	SCF_DFA_GET_MODULE_NODE(dfa, var,    bits,      bits);
+
 	SCF_DFA_GET_MODULE_NODE(dfa, type,   star,      star);
 	SCF_DFA_GET_MODULE_NODE(dfa, type,   identity,  identity);
 
 	SCF_DFA_GET_MODULE_NODE(dfa, expr,   entry,     expr);
 
 	SCF_DFA_GET_MODULE_NODE(dfa, init_data, entry,  init_data);
-	SCF_DFA_GET_MODULE_NODE(dfa, init_data, rb,     init_data_rb);
+	SCF_DFA_GET_MODULE_NODE(dfa, init_data, rb,     init_rb);
 
 
 	scf_dfa_node_add_child(identity,  comma);
@@ -720,6 +765,11 @@ static int _dfa_init_syntax_var(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(rs,        comma);
 	scf_dfa_node_add_child(rs,        semicolon);
 
+	// bits
+	scf_dfa_node_add_child(identity,  colon);
+	scf_dfa_node_add_child(colon,     bits);
+	scf_dfa_node_add_child(bits,      semicolon);
+
 	// var init
 	scf_dfa_node_add_child(rs,        assign);
 	scf_dfa_node_add_child(identity,  assign);
@@ -730,9 +780,9 @@ static int _dfa_init_syntax_var(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(expr,      semicolon);
 
 	// struct or array init
-	scf_dfa_node_add_child(assign,       init_data);
-	scf_dfa_node_add_child(init_data_rb, comma);
-	scf_dfa_node_add_child(init_data_rb, semicolon);
+	scf_dfa_node_add_child(assign,    init_data);
+	scf_dfa_node_add_child(init_rb,   comma);
+	scf_dfa_node_add_child(init_rb,   semicolon);
 
 	scf_dfa_node_add_child(identity,  semicolon);
 	return 0;
