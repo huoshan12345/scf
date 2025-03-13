@@ -16,16 +16,20 @@ static int component_pins[SCF_EDA_Components_NB] =
 	SCF_EDA_NAND_NB,
 	SCF_EDA_NOR_NB,
 	SCF_EDA_NOT_NB,
+
+	SCF_EDA_AND_NB,
+	SCF_EDA_OR_NB,
+	SCF_EDA_XOR_NB,
 };
 
-static int __diode_path_off(ScfEpin* p0, ScfEpin* p1)
+static int __diode_path_off(ScfEpin* p0, ScfEpin* p1, int flags)
 {
 	if (SCF_EDA_Diode_NEG == p0->id)
 		return 1;
 	return 0;
 }
 
-static int __npn_path_off(ScfEpin* p0, ScfEpin* p1)
+static int __npn_path_off(ScfEpin* p0, ScfEpin* p1, int flags)
 {
 	if (SCF_EDA_NPN_E == p0->id)
 		return 1;
@@ -35,28 +39,31 @@ static int __npn_path_off(ScfEpin* p0, ScfEpin* p1)
 	return 1;
 }
 
-static int __npn_shared(ScfEpin* p)
+static int __npn_shared(ScfEpin* p, int flags)
 {
 	if (SCF_EDA_NPN_E == p->id)
 		return 1;
 	return 0;
 }
 
-static int __pnp_path_off(ScfEpin* p0, ScfEpin* p1)
+static int __pnp_path_off(ScfEpin* p0, ScfEpin* p1, int flags)
 {
-	if (SCF_EDA_PNP_E == p0->id)
+	if (SCF_EDA_PNP_E != p0->id)
+		return 1;
+
+	if (!p1 || SCF_EDA_PNP_E != p1->id)
 		return 0;
 	return 1;
 }
 
-static int __pnp_shared(ScfEpin* p)
+static int __pnp_shared(ScfEpin* p, int flags)
 {
 	if (SCF_EDA_PNP_E == p->id)
 		return 1;
 	return 0;
 }
 
-static int __nand_path_off(ScfEpin* p0, ScfEpin* p1)
+static int __nand_path_off(ScfEpin* p0, ScfEpin* p1, int flags)
 {
 	if (SCF_EDA_NAND_NEG == p0->id)
 		return 1;
@@ -64,41 +71,45 @@ static int __nand_path_off(ScfEpin* p0, ScfEpin* p1)
 	if (SCF_EDA_NAND_POS == p0->id) {
 		if (p1 && (SCF_EDA_NAND_IN0 == p1->id || SCF_EDA_NAND_IN1 == p1->id))
 			return 1;
+	} else {
+		if (p1) {
+			if (!flags && (SCF_EDA_NAND_IN0 == p0->id || SCF_EDA_NAND_IN1 == p0->id)
+					&&  SCF_EDA_NAND_OUT == p1->id)
+				return 0;
 
-	} else if (p1 && SCF_EDA_NAND_NEG != p1->id)
-		return 1;
+			if (SCF_EDA_NAND_NEG != p1->id)
+				return 1;
+		}
+	}
 	return 0;
 }
 
-static int __nand_shared(ScfEpin* p)
+static int __nand_shared(ScfEpin* p, int flags)
 {
 	if (SCF_EDA_NAND_NEG == p->id || SCF_EDA_NAND_POS == p->id)
 		return 1;
-	return 0;
-}
 
-static int __nor_path_off(ScfEpin* p0, ScfEpin* p1)
-{
-	if (SCF_EDA_NOR_NEG == p0->id)
-		return 1;
-
-	if (SCF_EDA_NOR_POS == p0->id) {
-		if (p1 && (SCF_EDA_NOR_IN0 == p1->id || SCF_EDA_NOR_IN1 == p1->id))
-			return 1;
-
-	} else if (p1 && SCF_EDA_NOR_NEG != p1->id)
+	if (!flags && SCF_EDA_NAND_OUT != p->id)
 		return 1;
 	return 0;
 }
 
-static int __nor_shared(ScfEpin* p)
-{
-	if (SCF_EDA_NOR_NEG == p->id || SCF_EDA_NOR_POS == p->id)
-		return 1;
-	return 0;
+#define SCF_EDA_GATE(name, off, shared) \
+static int __##name##_path_off(ScfEpin* p0, ScfEpin* p1, int flags) \
+{ \
+	return off(p0, p1, flags); \
+} \
+static int __##name##_shared(ScfEpin* p, int flags) \
+{ \
+	return shared(p, flags); \
 }
+SCF_EDA_GATE(nor, __nand_path_off, __nand_shared)
+SCF_EDA_GATE(and, __nand_path_off, __nand_shared)
+SCF_EDA_GATE(or,  __nand_path_off, __nand_shared)
+SCF_EDA_GATE(xor, __nand_path_off, __nand_shared)
 
-static int __not_path_off(ScfEpin* p0, ScfEpin* p1)
+
+static int __not_path_off(ScfEpin* p0, ScfEpin* p1, int flags)
 {
 	if (SCF_EDA_NOT_NEG == p0->id)
 		return 1;
@@ -106,15 +117,24 @@ static int __not_path_off(ScfEpin* p0, ScfEpin* p1)
 	if (SCF_EDA_NOT_POS == p0->id) {
 		if (p1 && SCF_EDA_NOT_IN == p1->id)
 			return 1;
+	} else {
+		if (p1) {
+			if (!flags && SCF_EDA_NOT_IN == p0->id && SCF_EDA_NOT_OUT == p1->id)
+				return 0;
 
-	} else if (p1 && SCF_EDA_NOT_NEG != p1->id)
-		return 1;
+			if (SCF_EDA_NOT_NEG != p1->id)
+				return 1;
+		}
+	}
 	return 0;
 }
 
-static int __not_shared(ScfEpin* p)
+static int __not_shared(ScfEpin* p, int flags)
 {
 	if (SCF_EDA_NOT_NEG == p->id || SCF_EDA_NOT_POS == p->id)
+		return 1;
+
+	if (!flags && SCF_EDA_NOT_OUT != p->id)
 		return 1;
 	return 0;
 }
@@ -149,6 +169,24 @@ static ScfEops __nor_ops =
 	__nor_shared,
 };
 
+static ScfEops __and_ops =
+{
+	__and_path_off,
+	__and_shared,
+};
+
+static ScfEops __or_ops =
+{
+	__or_path_off,
+	__or_shared,
+};
+
+static ScfEops __xor_ops =
+{
+	__xor_path_off,
+	__xor_shared,
+};
+
 static ScfEops __not_ops =
 {
 	__not_path_off,
@@ -166,11 +204,15 @@ static ScfEdata  component_datas[] =
 
 	{SCF_EDA_Diode,      0,                   0, 0, 0,    0,   0,   0, 0, &__diode_ops, NULL, NULL},
 	{SCF_EDA_NPN,        0,                   0, 0, 0,    0,   0,   0, 0, &__npn_ops,   NULL, "./cpk/9013.txt"},
-	{SCF_EDA_PNP,        0,                   0, 0, 0,    0,   0,   0, 0, &__pnp_ops,   NULL, NULL},
+	{SCF_EDA_PNP,        0,                   0, 0, 0,    0,   0,   0, 0, &__pnp_ops,   NULL, "./cpk/9012.txt"},
 
 	{SCF_EDA_NAND,       0,                   0, 0, 0,    0,   0,   0, 0, &__nand_ops,  "./cpk/nand.cpk", NULL},
-	{SCF_EDA_NOR,        0,                   0, 0, 0,    0,   0,   0, 0, &__nor_ops,   "./cpk/nor.cpk", NULL},
-	{SCF_EDA_NOT,        0,                   0, 0, 0,    0,   0,   0, 0, &__not_ops,   "./cpk/not.cpk", NULL},
+	{SCF_EDA_NOR,        0,                   0, 0, 0,    0,   0,   0, 0, &__nor_ops,   "./cpk/nor.cpk",  NULL},
+	{SCF_EDA_NOT,        0,                   0, 0, 0,    0,   0,   0, 0, &__not_ops,   "./cpk/not.cpk",  NULL},
+
+	{SCF_EDA_AND,        0,                   0, 0, 0,    0,   0,   0, 0, &__and_ops,   "./cpk/and.cpk",  NULL},
+	{SCF_EDA_OR,         0,                   0, 0, 0,    0,   0,   0, 0, &__or_ops,    "./cpk/or.cpk",   NULL},
+	{SCF_EDA_XOR,        0,                   0, 0, 0,    0,   0,   0, 0, &__xor_ops,   "./cpk/xor.cpk",  NULL},
 };
 
 static ScfEdata  pin_datas[] =
@@ -823,6 +865,9 @@ int scf_pins_same_line(ScfEfunction* f)
 						p ->lid    = el->id;
 						p ->c_lid  = el->id;
 						el->flags |= p->flags;
+
+						if (p->flags & (SCF_EDA_PIN_IN | SCF_EDA_PIN_OUT))
+							el->io_lid = p->io_lid;
 						goto next;
 					}
 				}
@@ -844,6 +889,9 @@ int scf_pins_same_line(ScfEfunction* f)
 			p ->lid    = el->id;
 			p ->c_lid  = el->id;
 			el->flags |= p->flags;
+
+			if (p->flags & (SCF_EDA_PIN_IN | SCF_EDA_PIN_OUT))
+				el->io_lid = p->io_lid;
 next:
 			for (n = 0; n + 1 < p->n_tos; n += 2) {
 
@@ -870,6 +918,9 @@ next:
 					p2->lid    = el->id;
 					p2->c_lid  = el->id;
 					el->flags |= p2->flags;
+
+					if (p2->flags & (SCF_EDA_PIN_IN | SCF_EDA_PIN_OUT))
+						el->io_lid = p2->io_lid;
 				}
 
 				qsort(el->pins, el->n_pins / 2, sizeof(uint64_t) * 2, epin_cmp);

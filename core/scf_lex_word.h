@@ -114,18 +114,25 @@ enum scf_lex_words
 
 	// data types
 	SCF_LEX_WORD_KEY_CHAR,		// char
-	SCF_LEX_WORD_KEY_BIT,       // bit
 
 	SCF_LEX_WORD_KEY_INT,		// int
 	SCF_LEX_WORD_KEY_FLOAT,     // float
 	SCF_LEX_WORD_KEY_DOUBLE,	// double
 
 	SCF_LEX_WORD_KEY_INT8,      // int8_t
+	SCF_LEX_WORD_KEY_INT1,      // int1_t
+	SCF_LEX_WORD_KEY_INT2,      // int2_t
+	SCF_LEX_WORD_KEY_INT3,      // int3_t
+	SCF_LEX_WORD_KEY_INT4,      // int4_t
 	SCF_LEX_WORD_KEY_INT16,     // int16_t
 	SCF_LEX_WORD_KEY_INT32,     // int32_t
 	SCF_LEX_WORD_KEY_INT64,     // int64_t
 
 	SCF_LEX_WORD_KEY_UINT8,     // uint8_t
+	SCF_LEX_WORD_KEY_BIT,       // bit
+	SCF_LEX_WORD_KEY_BIT2,      // bit2_t
+	SCF_LEX_WORD_KEY_BIT3,      // bit3_t
+	SCF_LEX_WORD_KEY_BIT4,      // bit4_t
 	SCF_LEX_WORD_KEY_UINT16,    // uint16_t
 	SCF_LEX_WORD_KEY_UINT32,    // uint32_t
 	SCF_LEX_WORD_KEY_UINT64,    // uint64_t

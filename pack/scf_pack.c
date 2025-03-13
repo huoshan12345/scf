@@ -19,7 +19,6 @@ long __scf_pack_one_index(uint8_t* pack, uint64_t u, long shift)
 			max = i;
 		else
 			max -= i;
-		scf_logd("max: %d, i: %d, j: %d, k: %d, shift: %d\n", max, i, j, k, shift);
 
 		pack[j] |= max << k;
 
@@ -48,15 +47,13 @@ long __scf_pack_one_index(uint8_t* pack, uint64_t u, long shift)
 			return -EINVAL;
 		}
 
-		scf_logd("max: %d, i: %d, j: %d, k: %d, shift: %d\n\n", max, i, j, k, shift);
+		scf_logd("max: %ld, i: %ld, j: %ld, k: %ld, shift: %ld\n\n", max, i, j, k, shift);
 
 		max = i;
 	}
 
-	if (8 - k < shift && 0 != max) {
+	if (8 - k < shift && 0 != max)
 		pack[++j] = 0;
-		scf_logd("max: %d, i: %d, j: %d, k: %d, shift: %d\n\n", max, i, j, k, shift);
-	}
 
 	return j + 1;
 }
@@ -201,7 +198,9 @@ long __scf_unpack2(void* p, long shift, const uint8_t* buf, long len)
 				return -EINVAL;
 			}
 
-			scf_logd("max: %d, i: %d, j: %d, k: %d, shift: %d\n\n", max, i, j, k, shift);
+			scf_logd("max: %ld, i: %ld, j: %ld, k: %ld, shift: %ld\n\n", max, i, j, k, shift);
+			if (0 == max)
+				break;
 		}
 
 		j++;
@@ -354,7 +353,6 @@ long scf_pack(void* p, scf_pack_info_t* infos, long n_infos, uint8_t** pbuf, lon
 	if (!*pbuf)
 		*plen = 0;
 
-//	prlongf("\n");
 	scf_logd("p: %p\n", p);
 
 	long i;

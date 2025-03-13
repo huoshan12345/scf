@@ -136,18 +136,6 @@ int scf_eda_select_inst(scf_native_t* ctx, scf_function_t* f)
 	if (ret < 0)
 		return ret;
 
-	for (l = scf_list_head(&f->dag_list_head); l != scf_list_sentinel(&f->dag_list_head); l = scf_list_next(l)) {
-
-		dn = scf_list_data(l, scf_dag_node_t, list);
-
-		if (dn->var && dn->var->arg_flag) {
-
-			int i;
-			for (i = 0; i < dn->n_pins; i++)
-				dn->pins[i]->flags |= SCF_EDA_PIN_IN;
-		}
-	}
-
 #if 0
 	ScfEcomponent* c;
 	ScfEpin*       p;

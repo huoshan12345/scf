@@ -19,6 +19,10 @@ enum {
 	SCF_EDA_NOR,
 	SCF_EDA_NOT,
 
+	SCF_EDA_AND,
+	SCF_EDA_OR,
+	SCF_EDA_XOR,
+
 	SCF_EDA_Components_NB,
 };
 
@@ -90,14 +94,47 @@ enum {
 };
 
 enum {
-	SCF_EDA_NOR_NEG,
-	SCF_EDA_NOR_POS,
+	SCF_EDA_NOR_NEG = SCF_EDA_NAND_NEG,
+	SCF_EDA_NOR_POS = SCF_EDA_NAND_POS,
 
-	SCF_EDA_NOR_IN0,
-	SCF_EDA_NOR_IN1,
-	SCF_EDA_NOR_OUT,
+	SCF_EDA_NOR_IN0 = SCF_EDA_NAND_IN0,
+	SCF_EDA_NOR_IN1 = SCF_EDA_NAND_IN1,
+	SCF_EDA_NOR_OUT = SCF_EDA_NAND_OUT,
 
 	SCF_EDA_NOR_NB,
+};
+
+enum {
+	SCF_EDA_AND_NEG = SCF_EDA_NAND_NEG,
+	SCF_EDA_AND_POS = SCF_EDA_NAND_POS,
+
+	SCF_EDA_AND_IN0 = SCF_EDA_NAND_IN0,
+	SCF_EDA_AND_IN1 = SCF_EDA_NAND_IN1,
+	SCF_EDA_AND_OUT = SCF_EDA_NAND_OUT,
+
+	SCF_EDA_AND_NB,
+};
+
+enum {
+	SCF_EDA_OR_NEG = SCF_EDA_NAND_NEG,
+	SCF_EDA_OR_POS = SCF_EDA_NAND_POS,
+
+	SCF_EDA_OR_IN0 = SCF_EDA_NAND_IN0,
+	SCF_EDA_OR_IN1 = SCF_EDA_NAND_IN1,
+	SCF_EDA_OR_OUT = SCF_EDA_NAND_OUT,
+
+	SCF_EDA_OR_NB,
+};
+
+enum {
+	SCF_EDA_XOR_NEG = SCF_EDA_NAND_NEG,
+	SCF_EDA_XOR_POS = SCF_EDA_NAND_POS,
+
+	SCF_EDA_XOR_IN0 = SCF_EDA_NAND_IN0,
+	SCF_EDA_XOR_IN1 = SCF_EDA_NAND_IN1,
+	SCF_EDA_XOR_OUT = SCF_EDA_NAND_OUT,
+
+	SCF_EDA_XOR_NB,
 };
 
 enum {
@@ -162,8 +199,9 @@ typedef struct scf_eboard_s      ScfEboard;
 
 struct scf_eops_s
 {
-	int (*off   )(ScfEpin* p0, ScfEpin* p1);
-	int (*shared)(ScfEpin* p);
+	int (*off   )(ScfEpin* p0, ScfEpin* p1, int flags);
+
+	int (*shared)(ScfEpin* p,  int flags);
 };
 
 struct scf_epin_s
@@ -174,6 +212,8 @@ struct scf_epin_s
 	SCF_PACK_DEF_VAR(uint64_t, flags);
 	SCF_PACK_DEF_VARS(uint64_t, tos);
 	SCF_PACK_DEF_VAR(uint64_t, c_lid);
+
+	SCF_PACK_DEF_VAR(int64_t, io_lid);
 
 	SCF_PACK_DEF_VAR(int64_t, ic_lid);
 	SCF_PACK_DEF_OBJ(ScfEcomponent, IC);
@@ -197,7 +237,6 @@ struct scf_epin_s
 	SCF_PACK_DEF_VAR(int, y);
 
 	SCF_PACK_DEF_VAR(int, n_diodes);
-	SCF_PACK_DEF_VAR(int, l_pos);
 
 	SCF_PACK_DEF_VAR(uint8_t, vflag);
 	SCF_PACK_DEF_VAR(uint8_t, pflag);
@@ -213,6 +252,7 @@ SCF_PACK_INFO_VAR(ScfEpin, flags),
 SCF_PACK_INFO_VARS(ScfEpin, tos, uint64_t),
 SCF_PACK_INFO_VAR(ScfEpin, c_lid),
 
+SCF_PACK_INFO_VAR(ScfEpin, io_lid),
 SCF_PACK_INFO_VAR(ScfEpin, ic_lid),
 
 SCF_PACK_INFO_VAR(ScfEpin, v),
@@ -231,7 +271,6 @@ SCF_PACK_INFO_VAR(ScfEpin, path),
 SCF_PACK_INFO_VAR(ScfEpin, x),
 SCF_PACK_INFO_VAR(ScfEpin, y),
 SCF_PACK_INFO_VAR(ScfEpin, n_diodes),
-SCF_PACK_INFO_VAR(ScfEpin, l_pos),
 
 SCF_PACK_INFO_VAR(ScfEpin, vflag),
 SCF_PACK_INFO_VAR(ScfEpin, pflag),
@@ -255,6 +294,9 @@ typedef struct {
 	SCF_PACK_DEF_VAR(uint64_t, c_pins);
 	SCF_PACK_DEF_VAR(uint64_t, flags);
 	SCF_PACK_DEF_VAR(int64_t, color);
+	SCF_PACK_DEF_VAR(int64_t, io_lid);
+
+	SCF_PACK_DEF_OBJ(ScfEfunction, pf);
 
 	SCF_PACK_DEF_OBJS(ScfEconn, conns);
 	SCF_PACK_DEF_OBJS(ScfLine, lines);
@@ -274,6 +316,7 @@ SCF_PACK_INFO_VARS(ScfEline, pins, uint64_t),
 SCF_PACK_INFO_VAR(ScfEline, c_pins),
 SCF_PACK_INFO_VAR(ScfEline, flags),
 SCF_PACK_INFO_VAR(ScfEline, color),
+SCF_PACK_INFO_VAR(ScfEline, io_lid),
 
 SCF_PACK_INFO_OBJS(ScfEline, conns, ScfEconn),
 SCF_PACK_INFO_OBJS(ScfEline, lines, ScfLine),
@@ -352,6 +395,9 @@ struct scf_efunction_s
 	SCF_PACK_DEF_VARS(uint8_t, name);
 	SCF_PACK_DEF_OBJS(ScfEcomponent, components);
 	SCF_PACK_DEF_OBJS(ScfEline,      elines);
+
+	SCF_PACK_DEF_OBJ(ScfEcomponent, IC);
+
 	SCF_PACK_DEF_VAR(int, x);
 	SCF_PACK_DEF_VAR(int, y);
 	SCF_PACK_DEF_VAR(int, w);
