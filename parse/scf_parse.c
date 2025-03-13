@@ -24,9 +24,14 @@ scf_base_type_t	base_types[] =
 
 	{SCF_VAR_VOID,      "void",       1},
 	{SCF_VAR_BIT,       "bit",        1},
-	{SCF_VAR_BIT2,      "bit2_t",     1},
-	{SCF_VAR_BIT3,      "bit3_t",     1},
-	{SCF_VAR_BIT4,      "bit4_t",     1},
+	{SCF_VAR_U2,        "bit2_t",     1},
+	{SCF_VAR_U3,        "bit3_t",     1},
+	{SCF_VAR_U4,        "bit4_t",     1},
+
+	{SCF_VAR_I1,        "int1_t",     1},
+	{SCF_VAR_I2,        "int2_t",     1},
+	{SCF_VAR_I3,        "int3_t",     1},
+	{SCF_VAR_I4,        "int4_t",     1},
 
 	{SCF_VAR_INT, 		"int",		  4},
 	{SCF_VAR_FLOAT,     "float",      4},

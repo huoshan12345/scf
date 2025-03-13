@@ -621,9 +621,11 @@ int scf_3ac_code_to_dag(scf_3ac_code_t* c, scf_list_t* dag)
 		if (ret < 0)
 			return ret;
 
+		if (SCF_OP_ASSIGN == c->op->type && src->dag_node == dst->dag_node)
+			return 0;
+
 		scf_dag_node_t* dn_src;
 		scf_dag_node_t* dn_parent;
-		scf_dag_node_t* dn_child;
 		scf_dag_node_t* dn_assign;
 		scf_variable_t* v_assign = NULL;
 
@@ -634,26 +636,23 @@ int scf_3ac_code_to_dag(scf_3ac_code_t* c, scf_list_t* dag)
 
 		scf_list_add_tail(dag, &dn_assign->list);
 
-		ret = scf_dag_node_add_child(dn_assign, dst->dag_node);
-		if (ret < 0)
-			return ret;
-
 		dn_src = src->dag_node;
 
 		if (dn_src->parents && dn_src->parents->size > 0 && !scf_variable_may_malloced(dn_src->var)) {
 			dn_parent        = dn_src->parents->data[dn_src->parents->size - 1];
 
 			if (SCF_OP_ASSIGN == dn_parent->type) {
-				assert(2      == dn_parent->childs->size);
-				dn_child      =  dn_parent->childs->data[1];
 
-				return scf_dag_node_add_child(dn_assign, dn_child);
+				assert(2 == dn_parent->childs->size);
+				dn_src    = dn_parent->childs->data[1];
 			}
 		}
 
-		ret = scf_dag_node_add_child(dn_assign, src->dag_node);
+		ret = scf_dag_node_add_child(dn_assign, dst->dag_node);
 		if (ret < 0)
 			return ret;
+
+		return scf_dag_node_add_child(dn_assign, dn_src);
 
 	} else if (scf_type_is_assign_array_index(c->op->type)
 			|| scf_type_is_assign_dereference(c->op->type)

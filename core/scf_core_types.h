@@ -53,6 +53,7 @@ enum scf_core_types
 	SCF_OP_BIT_AND,     // &
 	SCF_OP_BIT_OR,      // |
 	SCF_OP_BIT_NOT,     // ~
+	SCF_OP_BIT_XOR,     // ^
 
 	SCF_OP_LOGIC_AND,   // &&
 	SCF_OP_LOGIC_OR,    // ||
@@ -192,6 +193,10 @@ enum scf_core_types
 	SCF_VAR_CHAR,       // char variable
 
 	SCF_VAR_I8,
+	SCF_VAR_I1,
+	SCF_VAR_I2,
+	SCF_VAR_I3,
+	SCF_VAR_I4,
 	SCF_VAR_I16,
 	SCF_VAR_I32,
 	SCF_VAR_INT = SCF_VAR_I32,
@@ -202,9 +207,9 @@ enum scf_core_types
 	SCF_VAR_U8,
 	SCF_VAR_VOID,
 	SCF_VAR_BIT,
-	SCF_VAR_BIT2,
-	SCF_VAR_BIT3,
-	SCF_VAR_BIT4,
+	SCF_VAR_U2,
+	SCF_VAR_U3,
+	SCF_VAR_U4,
 	SCF_VAR_U16,
 	SCF_VAR_U32,
 	SCF_VAR_U64,
