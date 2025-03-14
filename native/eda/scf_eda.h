@@ -26,13 +26,13 @@ static inline int eda_variable_size(scf_variable_t* v)
 	if (v->type >= SCF_STRUCT)
 		return 64;
 
-	if (SCF_VAR_BIT == v->type)
+	if (SCF_VAR_BIT == v->type || SCF_VAR_I1 == v->type)
 		return 1;
-	if (SCF_VAR_U2 == v->type)
+	if (SCF_VAR_U2 == v->type || SCF_VAR_I2 == v->type)
 		return 2;
-	if (SCF_VAR_U3 == v->type)
+	if (SCF_VAR_U3 == v->type || SCF_VAR_I3 == v->type)
 		return 3;
-	if (SCF_VAR_U4 == v->type)
+	if (SCF_VAR_U4 == v->type || SCF_VAR_I4 == v->type)
 		return 4;
 
 	return v->size << 3;

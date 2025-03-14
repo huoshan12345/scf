@@ -33,8 +33,9 @@ enum {
 #define SCF_EDA_PIN_NEG    8
 #define SCF_EDA_PIN_CF     16
 #define SCF_EDA_PIN_BORDER 32
-#define SCF_EDA_PIN_CONST  64
+#define SCF_EDA_PIN_SHIFT  64
 #define SCF_EDA_PIN_IN0   128
+#define SCF_EDA_PIN_DIV0  256
 
 #define SCF_EDA_V_INIT   -10001001.0
 #define SCF_EDA_V_MIN    -10000000.0
