@@ -866,7 +866,7 @@ int scf_pins_same_line(ScfEfunction* f)
 						p ->c_lid  = el->id;
 						el->flags |= p->flags;
 
-						if (p->flags & (SCF_EDA_PIN_IN | SCF_EDA_PIN_OUT))
+						if (p->flags & (SCF_EDA_PIN_IN | SCF_EDA_PIN_OUT | SCF_EDA_PIN_SHIFT))
 							el->io_lid = p->io_lid;
 						goto next;
 					}
@@ -890,7 +890,7 @@ int scf_pins_same_line(ScfEfunction* f)
 			p ->c_lid  = el->id;
 			el->flags |= p->flags;
 
-			if (p->flags & (SCF_EDA_PIN_IN | SCF_EDA_PIN_OUT))
+			if (p->flags & (SCF_EDA_PIN_IN | SCF_EDA_PIN_OUT | SCF_EDA_PIN_SHIFT))
 				el->io_lid = p->io_lid;
 next:
 			for (n = 0; n + 1 < p->n_tos; n += 2) {
@@ -919,7 +919,7 @@ next:
 					p2->c_lid  = el->id;
 					el->flags |= p2->flags;
 
-					if (p2->flags & (SCF_EDA_PIN_IN | SCF_EDA_PIN_OUT))
+					if (p2->flags & (SCF_EDA_PIN_IN | SCF_EDA_PIN_OUT | SCF_EDA_PIN_SHIFT))
 						el->io_lid = p2->io_lid;
 				}
 
