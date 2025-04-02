@@ -1,6 +1,6 @@
+cmake_minimum_required(VERSION 3.30)
 PROJECT(scf LANGUAGES C)
 SET(BUILD_TARGET_NAME ${PROJECT_NAME})
-cmake_minimum_required(VERSION 3.30)
 
 add_executable(${BUILD_TARGET_NAME}
         util/scf_string.c
@@ -184,3 +184,14 @@ target_include_directories(${BUILD_TARGET_NAME} PRIVATE native/eda)
 
 set(CMAKE_BUILD_TYPE Debug)
 SET(GCC_COVERAGE_LINK_FLAGS "-ldl")
+
+
+add_executable("lex"
+        util/scf_string.c
+        lex/scf_lex.c
+        lex/scf_lex_util.c
+        core/scf_lex_word.c
+        lex/scf_lex_test.c)
+
+target_include_directories("lex" PRIVATE util)
+target_include_directories("lex" PRIVATE core)
