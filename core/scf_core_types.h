@@ -29,6 +29,8 @@ typedef struct scf_ecomponent_s  ScfEcomponent;
 typedef struct scf_efunction_s   ScfEfunction;
 typedef struct scf_eboard_s      ScfEboard;
 
+#define SCF_EDA_MAX_BITS 256
+
 enum scf_core_types
 {
 	SCF_OP_ADD	= 0,    // +

@@ -15,6 +15,7 @@ extern scf_optimizer_t   scf_optimizer_pointer_aliases;
 extern scf_optimizer_t   scf_optimizer_loads_saves;
 
 extern scf_optimizer_t   scf_optimizer_dominators;
+extern scf_optimizer_t   scf_optimizer_dominators_reverse;
 
 extern scf_optimizer_t   scf_optimizer_auto_gc_find;
 extern scf_optimizer_t   scf_optimizer_auto_gc;
@@ -59,6 +60,8 @@ static scf_optimizer_t*  scf_optimizers[] =
 	&scf_optimizer_group,
 
 	&scf_optimizer_generate_loads_saves,
+
+	&scf_optimizer_dominators_reverse,
 };
 
 int scf_optimize(scf_ast_t* ast, scf_vector_t* functions)

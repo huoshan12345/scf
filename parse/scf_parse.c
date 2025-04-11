@@ -2084,7 +2084,7 @@ int scf_eda_write_cpk(scf_parse_t* parse, const char* out, scf_vector_t* functio
 		return ret;
 	}
 
-	scf_loge("len: %ld\n", len);
+	scf_logi("len: %ld\n", len);
 
 	ScfEboard_free(b);
 	b = NULL;

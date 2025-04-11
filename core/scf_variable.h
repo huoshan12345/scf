@@ -27,8 +27,12 @@ struct scf_variable_s {
 	int					size;
 	int                 data_size;
 
-	int                 bit_offset;
+	int                 bit_offset; // for bit-flag like: uint8_t flag:1;
 	int                 bit_size;
+
+	int                 n_pins;
+	ScfEpin*            r_pins[SCF_EDA_MAX_BITS]; // read  pins to get var
+	ScfEpin*            w_pins[SCF_EDA_MAX_BITS]; // write pins to set var
 
 	int					offset;
 	int					bp_offset;  // offset based on RBP / EBP register

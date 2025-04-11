@@ -37,7 +37,6 @@ struct scf_dag_node_s
 	void*               rabi;
 	void*               rabi2;
 
-#define SCF_EDA_MAX_BITS 256
 	ScfEpin*            pins[SCF_EDA_MAX_BITS];
 	int                 n_pins;
 

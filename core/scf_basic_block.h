@@ -77,6 +77,12 @@ struct scf_basic_block_s
 
 	void*           ds_auto_gc;
 
+#define SCF_EDA_FLAG_BITS 4
+#define SCF_EDA_FLAG_ZERO 1
+#define SCF_EDA_FLAG_SIGN 2
+	ScfEpin*        flag_pins[SCF_EDA_FLAG_BITS];
+	ScfEpin*        mask_pin;
+
 	int             code_bytes;
 	int             index;
 

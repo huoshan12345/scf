@@ -45,10 +45,6 @@ scf_function_t* scf_function_alloc(scf_lex_word_t* w)
 	if (!f->jmps)
 		goto _jmps_error;
 
-	f->dfs_tree = scf_vector_alloc();
-	if (!f->dfs_tree)
-		goto _dfs_tree_error;
-
 	f->bb_loops = scf_vector_alloc();
 	if (!f->bb_loops)
 		goto _loop_error;
@@ -74,8 +70,6 @@ _text_rela_error:
 _group_error:
 	scf_vector_free(f->bb_loops);
 _loop_error:
-	scf_vector_free(f->dfs_tree);
-_dfs_tree_error:
 	scf_vector_free(f->jmps);
 _jmps_error:
 	scf_vector_free(f->caller_functions);

@@ -92,24 +92,15 @@
 
 #define EDA_PIN_ADD_INPUT(_in, _i, _ef, _p) \
 		do { \
-			ScfEcomponent* c = (_ef)->components[(_p)->cid]; \
-			ScfEcomponent* R = NULL; \
-			\
-			if (!(_in)->pins[_i]) { \
-				EDA_INST_ADD_COMPONENT(_ef, R, SCF_EDA_Resistor); \
-				\
-				EDA_PIN_ADD_PIN(c, (_p)->id, R, 0); \
-				\
-				(_in)->pins[_i] = R->pins[1]; \
-			} else { \
-				R = (_ef)->components[(_in)->pins[_i]->cid]; \
-				\
-				EDA_PIN_ADD_PIN(c, (_p)->id, R, 0); \
-			} \
+			if (!(_in)->pins[_i]) \
+				(_in)->pins[_i] = _p; \
+			else if (_p) \
+				EDA_PIN_ADD_PIN_EF(_ef, _p, (_in)->pins[_i]); \
+			else \
+		        _p = (_in)->pins[_i]; \
 		} while (0)
 
-
-static int __eda_bit_nand(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** out)
+int __eda_bit_nand(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** out)
 {
 	ScfEcomponent*  B    = f->ef->components[0];
 	ScfEcomponent*  NAND = NULL;
@@ -125,7 +116,7 @@ static int __eda_bit_nand(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEp
 	return 0;
 }
 
-static int __eda_bit_nor(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** out)
+int __eda_bit_nor(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** out)
 {
 	ScfEcomponent*  B   = f->ef->components[0];
 	ScfEcomponent*  NOR = NULL;
@@ -141,22 +132,23 @@ static int __eda_bit_nor(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpi
 	return 0;
 }
 
-static int __eda_bit_not(scf_function_t* f, ScfEpin** in, ScfEpin** out)
+int __eda_bit_not(scf_function_t* f, ScfEpin** in, ScfEpin** out)
 {
 	ScfEcomponent*  B   = f->ef->components[0];
 	ScfEcomponent*  NOT = NULL;
 
 	EDA_INST_ADD_COMPONENT(f->ef, NOT, SCF_EDA_NOT);
 
-	EDA_PIN_ADD_PIN(NOT, SCF_EDA_NOT_POS, B, SCF_EDA_Battery_POS);
-	EDA_PIN_ADD_PIN(NOT, SCF_EDA_NOT_NEG, B, SCF_EDA_Battery_NEG);
+	EDA_PIN_ADD_PIN(NOT, SCF_EDA_NOT_POS, B,   SCF_EDA_Battery_POS);
+	EDA_PIN_ADD_PIN(NOT, SCF_EDA_NOT_NEG, B,   SCF_EDA_Battery_NEG);
+	EDA_PIN_ADD_PIN(NOT, SCF_EDA_NOT_IN,  NOT, SCF_EDA_NOT_IN);
 
 	*in  = NOT->pins[SCF_EDA_NOT_IN];
 	*out = NOT->pins[SCF_EDA_NOT_OUT];
 	return 0;
 }
 
-static int __eda_bit_and(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** out)
+int __eda_bit_and(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** out)
 {
 	ScfEcomponent*  B   = f->ef->components[0];
 	ScfEcomponent*  AND = NULL;
@@ -172,7 +164,7 @@ static int __eda_bit_and(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpi
 	return 0;
 }
 
-static int __eda_bit_or(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** out)
+int __eda_bit_or(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** out)
 {
 	ScfEcomponent*  B  = f->ef->components[0];
 	ScfEcomponent*  OR = NULL;
@@ -185,6 +177,41 @@ static int __eda_bit_or(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin
 	*in0 = OR->pins[SCF_EDA_OR_IN0];
 	*in1 = OR->pins[SCF_EDA_OR_IN1];
 	*out = OR->pins[SCF_EDA_OR_OUT];
+	return 0;
+}
+
+int __eda_bit_if(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** in2, ScfEpin** out)
+{
+	ScfEcomponent*  B  = f->ef->components[0];
+	ScfEcomponent*  IF = NULL;
+
+	EDA_INST_ADD_COMPONENT(f->ef, IF, SCF_EDA_IF);
+
+	EDA_PIN_ADD_PIN(IF, SCF_EDA_IF_POS, B, SCF_EDA_Battery_POS);
+	EDA_PIN_ADD_PIN(IF, SCF_EDA_IF_NEG, B, SCF_EDA_Battery_NEG);
+
+	*in0 = IF->pins[SCF_EDA_IF_TRUE];
+	*in1 = IF->pins[SCF_EDA_IF_COND];
+	*in2 = IF->pins[SCF_EDA_IF_FALSE];
+	*out = IF->pins[SCF_EDA_IF_OUT];
+	return 0;
+}
+
+int __eda_bit_and2_or(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** in2, ScfEpin** in3, ScfEpin** out)
+{
+	ScfEcomponent*  B       = f->ef->components[0];
+	ScfEcomponent*  AND2_OR = NULL;
+
+	EDA_INST_ADD_COMPONENT(f->ef, AND2_OR, SCF_EDA_AND2_OR);
+
+	EDA_PIN_ADD_PIN(AND2_OR, SCF_EDA_AND2_OR_POS, B, SCF_EDA_Battery_POS);
+	EDA_PIN_ADD_PIN(AND2_OR, SCF_EDA_AND2_OR_NEG, B, SCF_EDA_Battery_NEG);
+
+	*in0 = AND2_OR->pins[SCF_EDA_AND2_OR_IN0];
+	*in1 = AND2_OR->pins[SCF_EDA_AND2_OR_IN1];
+	*in2 = AND2_OR->pins[SCF_EDA_AND2_OR_IN2];
+	*in3 = AND2_OR->pins[SCF_EDA_AND2_OR_IN3];
+	*out = AND2_OR->pins[SCF_EDA_AND2_OR_OUT];
 	return 0;
 }
 
@@ -206,19 +233,20 @@ static int __eda_bit_xor(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpi
 
 static int __eda_bit_add(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** out, ScfEpin** cf)
 {
-	ScfEpin* and0 = NULL;
-	ScfEpin* and1 = NULL;
+	ScfEcomponent*  B   = f->ef->components[0];
+	ScfEcomponent*  ADD = NULL;
 
-	int ret = __eda_bit_xor(f, in0, in1, out);
-	if (ret < 0)
-		return ret;
+	EDA_INST_ADD_COMPONENT(f->ef, ADD, SCF_EDA_ADD);
 
-	ret = __eda_bit_and(f, &and0, &and1, cf);
-	if (ret < 0)
-		return ret;
+	EDA_PIN_ADD_PIN(ADD, SCF_EDA_ADD_POS, B, SCF_EDA_Battery_POS);
+	EDA_PIN_ADD_PIN(ADD, SCF_EDA_ADD_NEG, B, SCF_EDA_Battery_NEG);
 
-	EDA_PIN_ADD_PIN_EF(f->ef, and0, *in0);
-	EDA_PIN_ADD_PIN_EF(f->ef, and1, *in1);
+	ADD->pins[SCF_EDA_ADD_CF]->flags = SCF_EDA_PIN_CF;
+
+	*in0 = ADD->pins[SCF_EDA_ADD_IN0];
+	*in1 = ADD->pins[SCF_EDA_ADD_IN1];
+	*out = ADD->pins[SCF_EDA_ADD_OUT];
+	*cf  = ADD->pins[SCF_EDA_ADD_CF];
 	return 0;
 }
 
@@ -250,6 +278,73 @@ static int __eda_bit_adc(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpi
 	return 0;
 }
 
+static int __eda_teq(scf_function_t* f, scf_dag_node_t* in, ScfEpin** res)
+{
+	ScfEpin* prev = NULL;
+	ScfEpin* p0;
+	ScfEpin* p1;
+	ScfEpin* po;
+
+	int N = eda_variable_size(in->var);
+	int ret;
+	int i;
+
+	if (1 == N) {
+		EDA_PIN_ADD_INPUT(in, 0, f->ef, prev);
+		*res = prev;
+
+		if (in->var->arg_flag) {
+			in->pins[0]->flags |= SCF_EDA_PIN_IN | SCF_EDA_PIN_IN0;
+			in->pins[0]->io_lid = 0;
+		}
+		return 0;
+	}
+
+	for (i = 0; i + 1 < N; i += 2) {
+		ret = __eda_bit_nor(f, &p0, &p1, &po);
+		if (ret < 0)
+			return ret;
+		EDA_PIN_ADD_INPUT(in, i,     f->ef, p0);
+		EDA_PIN_ADD_INPUT(in, i + 1, f->ef, p1);
+
+		if (!prev)
+			prev = po;
+		else
+			EDA_PIN_ADD_PIN_EF(f->ef, prev, po);
+
+		if (in->var->arg_flag) {
+			in->pins[i]->flags |= SCF_EDA_PIN_IN | SCF_EDA_PIN_IN0;
+			in->pins[i]->io_lid = i;
+
+			in->pins[i + 1]->flags |= SCF_EDA_PIN_IN | SCF_EDA_PIN_IN0;
+			in->pins[i + 1]->io_lid = i + 1;
+		}
+	}
+
+	if (N & 0x1) {
+		ret = __eda_bit_not(f, &p0, &po);
+		if (ret < 0)
+			return ret;
+		EDA_PIN_ADD_INPUT(in, N - 1, f->ef, p0);
+
+		if (!prev)
+			prev = po;
+		else
+			EDA_PIN_ADD_PIN_EF(f->ef, prev, po);
+
+		if (in->var->arg_flag) {
+			in->pins[N - 1]->flags |= SCF_EDA_PIN_IN | SCF_EDA_PIN_IN0;
+			in->pins[N - 1]->io_lid = N - 1;
+		}
+	}
+
+	ret = __eda_bit_not(f, &po, res);
+	if (ret < 0)
+		return ret;
+	EDA_PIN_ADD_PIN_EF(f->ef, po, prev);
+	return 0;
+}
+
 static int _eda_inst_logic_not_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
 	if (!c->dsts || c->dsts->size != 1)
@@ -271,71 +366,36 @@ static int _eda_inst_logic_not_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	scf_dag_node_t* in  = src->dag_node;
 	scf_dag_node_t* out = dst->dag_node;
 
+	ScfEpin* res = NULL;
+	ScfEpin* p0  = NULL;
+	ScfEpin* p1  = NULL;
+	ScfEpin* p2  = NULL;
+
 	int N = eda_variable_size(in->var);
-	int M = eda_variable_size(out->var);
+	int i;
 
 	EDA_INST_IN_CHECK(in, N);
 
 	in ->n_pins = N;
-	out->n_pins = M;
+	out->n_pins = eda_variable_size(out->var);
 
-	ScfEpin* p2  = NULL;
-	ScfEpin* not = NULL;
-	ScfEpin* res = NULL;
-
-	int i;
-	for (i = 0; i + 1 < N; i += 2) {
-		ScfEpin* p0 = NULL;
-		ScfEpin* p1 = NULL;
-		ScfEpin* po = NULL;
-
-		int ret = __eda_bit_nor(f, &p0, &p1, &po);
-		if (ret < 0)
-			return ret;
-
-		EDA_PIN_ADD_INPUT(in, i,     f->ef, p0);
-		EDA_PIN_ADD_INPUT(in, i + 1, f->ef, p1);
-
-		if (!p2)
-			p2 = po;
-		else
-			EDA_PIN_ADD_PIN_EF(f->ef, p2, po);
-
-		if (in->var->arg_flag) {
-			in->pins[i]->flags |= SCF_EDA_PIN_IN | SCF_EDA_PIN_IN0;
-			in->pins[i]->io_lid = i;
-
-			in->pins[i + 1]->flags |= SCF_EDA_PIN_IN | SCF_EDA_PIN_IN0;
-			in->pins[i + 1]->io_lid = i + 1;
-		}
-	}
-
-	if (N & 0x1) {
-		ScfEpin* p0 = NULL;
-		ScfEpin* po = NULL;
-
-		int ret = __eda_bit_not(f, &p0, &po);
-		if (ret < 0)
-			return ret;
-
-		if (!p2)
-			p2 = po;
-		else
-			EDA_PIN_ADD_PIN_EF(f->ef, p2, po);
-
-		if (in->var->arg_flag) {
-			in->pins[N - 1]->flags |= SCF_EDA_PIN_IN | SCF_EDA_PIN_IN0;
-			in->pins[N - 1]->io_lid = N - 1;
-		}
-	}
-
-	int ret = __eda_bit_not(f, &not, &res);
+	int ret = __eda_teq(f, in, &res);
 	if (ret < 0)
 		return ret;
-	EDA_PIN_ADD_PIN_EF(f->ef, not, p2);
 
-	for (i = 0; i < M; i++) {
-		out->pins[i] = res;
+	for (i = 0; i < out->n_pins; i++) {
+		if (i > 0) {
+			ret = __eda_bit_not(f, &p0, &p1);
+			if (ret < 0)
+				return ret;
+
+			ret = __eda_bit_not(f, &p2, &(out->pins[i]));
+			if (ret < 0)
+				return ret;
+			EDA_PIN_ADD_PIN_EF(f->ef, p0, res);
+			EDA_PIN_ADD_PIN_EF(f->ef, p1, p2);
+		} else
+			out->pins[i] = res;
 	}
 	return 0;
 }
@@ -523,14 +583,8 @@ static int _eda_inst_shl_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 		for ( ; i < N; i++) {
 			ScfEpin* p00 = NULL;
 			ScfEpin* p01 = NULL;
-			ScfEpin* po0 = NULL;
-
 			ScfEpin* p10 = NULL;
 			ScfEpin* p11 = NULL;
-			ScfEpin* po1 = NULL;
-
-			ScfEpin* p20 = NULL;
-			ScfEpin* p21 = NULL;
 			ScfEpin* po  = NULL;
 /*
 x = sht[j]
@@ -541,23 +595,11 @@ out[i] =     (x & y) |   (~x & z)
        =  ~(~(x & y) &  ~(~x & z))
        = (x NAND y) NAND (~x NAND z)
  */
-			ret = __eda_bit_nand(f, &p00, &p10, &po0);
+			ret = __eda_bit_and2_or(f, &p00, &p10, &p01, &p11, &po);
 			if (ret < 0)
 				return ret;
-
-			ret = __eda_bit_nand(f, &p01, &p11, &po1);
-			if (ret < 0)
-				return ret;
-
-			ret = __eda_bit_nand(f, &p20, &p21, &po);
-			if (ret < 0)
-				return ret;
-
 			EDA_PIN_ADD_PIN_EF(f->ef, p10, p2);
 			EDA_PIN_ADD_PIN_EF(f->ef, p11, p1);
-
-			EDA_PIN_ADD_PIN_EF(f->ef, p20, po0);
-			EDA_PIN_ADD_PIN_EF(f->ef, p21, po1);
 
 			if (j > 0) {
 				EDA_PIN_ADD_PIN_EF(f->ef, p00, res[i]);
@@ -595,78 +637,67 @@ out[i] =     (x & y) |   (~x & z)
 	return 0;
 }
 
-static int __eda_shr(scf_function_t* f, scf_dag_node_t* src, int shift, int sign, ScfEpin* cur, ScfEpin* high, ScfEpin** res, int N)
+static int __eda_shr(scf_function_t* f, scf_dag_node_t* src, int shift, int sign, ScfEpin** cur, ScfEpin** res, int i, int N)
 {
 	ScfEpin* tmp[SCF_EDA_MAX_BITS];
 
 	ScfEpin* p00 = NULL;
 	ScfEpin* p10 = NULL;
-	ScfEpin* po0 = NULL;
-
 	ScfEpin* p01 = NULL;
 	ScfEpin* p11 = NULL;
-	ScfEpin* po1 = NULL;
 
-	ScfEpin* p20 = NULL;
-	ScfEpin* p21 = NULL;
+	ScfEpin* po2 = NULL;
 	ScfEpin* po  = NULL;
 
 	int ret;
-	int i;
+	int j;
 
-	for (i = 0; i < N - (1 << shift); i++) {
+	for (j = i ; j < N - (1 << shift); j++) {
 
-		ret = __eda_bit_nand(f, &p00, &p10, &po0);
+		ret = __eda_bit_if(f, &p00, &p10, &p01, &po);
 		if (ret < 0)
 			return ret;
-
-		ret = __eda_bit_nand(f, &p01, &p11, &po1);
-		if (ret < 0)
-			return ret;
-
-		ret = __eda_bit_nand(f, &p20, &p21, &po);
-		if (ret < 0)
-			return ret;
-
-		EDA_PIN_ADD_PIN_EF(f->ef, p10, cur);
-		EDA_PIN_ADD_PIN_EF(f->ef, p11, high);
-
-		EDA_PIN_ADD_PIN_EF(f->ef, p21, po1);
-		EDA_PIN_ADD_PIN_EF(f->ef, p20, po0);
+		if (*cur)
+			EDA_PIN_ADD_PIN_EF(f->ef, p10, *cur);
+		else
+			*cur = p10;
 
 		if (!src)
-			EDA_PIN_ADD_PIN_EF(f->ef, p01, res[i + (1 << shift)]);
+			EDA_PIN_ADD_PIN_EF(f->ef, p01, res[j + (1 << shift)]);
 		else
-			EDA_PIN_ADD_INPUT(src, i + (1 << shift), f->ef, p01);
+			EDA_PIN_ADD_INPUT(src, j + (1 << shift), f->ef, p01);
 
 		if (!src)
-			EDA_PIN_ADD_PIN_EF(f->ef, p00, res[i]);
+			EDA_PIN_ADD_PIN_EF(f->ef, p00, res[j]);
 		else
-			EDA_PIN_ADD_INPUT(src, i, f->ef, p00);
+			EDA_PIN_ADD_INPUT(src, j, f->ef, p00);
 
-		tmp[i] = po;
+		tmp[j] = po;
 	}
 
-	for ( ; i < N; i++) {
+	for ( ; j < N; j++) {
 
-		if (sign && N - 1 == i) {
+		if (sign && N - 1 == j) {
 			ret = __eda_bit_not(f, &p00, &p10);
 			if (ret < 0)
 				return ret;
 
-			ret = __eda_bit_not(f, &p20, &po);
+			ret = __eda_bit_not(f, &po2, &po);
 			if (ret < 0)
 				return ret;
-			EDA_PIN_ADD_PIN_EF(f->ef, p20, p10);
+			EDA_PIN_ADD_PIN_EF(f->ef, po2, p10);
 
 		} else {
 			ret = __eda_bit_and(f, &p00, &p10, &po);
 			if (ret < 0)
 				return ret;
-			EDA_PIN_ADD_PIN_EF(f->ef, p10, cur);
+			if (*cur)
+				EDA_PIN_ADD_PIN_EF(f->ef, p10, *cur);
+			else
+				*cur = p10;
 
 			if (sign) {
-				ret = __eda_bit_or(f, &p01, &p11, &po1);
+				ret = __eda_bit_or(f, &p01, &p11, &po2);
 				if (ret < 0)
 					return ret;
 				EDA_PIN_ADD_PIN_EF(f->ef, p11, po);
@@ -676,23 +707,23 @@ static int __eda_shr(scf_function_t* f, scf_dag_node_t* src, int shift, int sign
 				else
 					EDA_PIN_ADD_INPUT(src, N - 1, f->ef, p01);
 
-				po = po1;
+				po = po2;
 			}
 		}
 
 		if (!src)
-			EDA_PIN_ADD_PIN_EF(f->ef, p00, res[i]);
+			EDA_PIN_ADD_PIN_EF(f->ef, p00, res[j]);
 		else
-			EDA_PIN_ADD_INPUT(src, i, f->ef, p00);
+			EDA_PIN_ADD_INPUT(src, j, f->ef, p00);
 
-		tmp[i] = po;
+		tmp[j] = po;
 	}
 
-	for (i = 0; i < N; i++) {
-		res[i] = tmp[i];
+	for (j = i; j < N; j++) {
+		res[j] = tmp[j];
 
-		res[i]->flags |= SCF_EDA_PIN_SHIFT;
-		res[i]->io_lid = i;
+		res[j]->flags |= SCF_EDA_PIN_SHIFT;
+		res[j]->io_lid = j;
 	}
 
 	return 0;
@@ -740,9 +771,9 @@ out[i] =     (x & y) |   (~x & z)
        = (x NAND y) NAND (~x NAND z)
  */
 		if (j > 0)
-			ret = __eda_shr(f, NULL, j, sign, p2, p1, res, N);
+			ret = __eda_shr(f, NULL, j, sign, &p2, res, 0, N);
 		else
-			ret = __eda_shr(f, src, j, sign, p2, p1, res, N);
+			ret = __eda_shr(f, src, j, sign, &p2, res, 0, N);
 
 		if (ret < 0)
 			return ret;
@@ -829,6 +860,39 @@ static int _eda_inst_add_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	return 0;
 }
 
+static int __eda_sub(scf_function_t* f, ScfEpin** a, ScfEpin** b, ScfEpin** res, ScfEpin** cf, int N)
+{
+	ScfEcomponent*  B  = f->ef->components[0];
+	ScfEcomponent*  R0 = NULL;
+	ScfEpin*        pc = NULL;
+
+	EDA_INST_ADD_COMPONENT(f->ef, R0, SCF_EDA_Resistor);
+
+	EDA_PIN_ADD_PIN(R0, 1, B, SCF_EDA_Battery_POS);
+	pc = R0->pins[0];
+
+	int i;
+	for (i = 0; i < N; i++) {
+		ScfEpin* p1 = NULL;
+		ScfEpin* p2 = NULL;
+		ScfEpin* p3 = NULL;
+
+		int ret = __eda_bit_not(f, &b[i], &p1);
+		if (ret < 0)
+			return ret;
+
+		ret = __eda_bit_adc(f, &a[i], &p2, &p3, &res[i], cf);
+		if (ret < 0)
+			return ret;
+		EDA_PIN_ADD_PIN_EF(f->ef, p2, p1);
+		EDA_PIN_ADD_PIN_EF(f->ef, p3, pc);
+
+		pc         = *cf;
+		pc->flags |= SCF_EDA_PIN_CF;
+	}
+	return 0;
+}
+
 static int _eda_inst_sub_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
 	EDA_INST_OP3_CHECK()
@@ -837,11 +901,6 @@ static int _eda_inst_sub_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	scf_dag_node_t* in1 = src1->dag_node;
 	scf_dag_node_t* out = dst ->dag_node;
 
-	ScfEcomponent*  B   = f->ef->components[0];
-	ScfEcomponent*  R0  = NULL;
-	ScfEpin*        pc  = NULL;
-
-	int i;
 	int N = eda_variable_size(in0->var);
 
 	EDA_INST_IN_CHECK(in0, N);
@@ -851,36 +910,21 @@ static int _eda_inst_sub_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	in1->n_pins = N;
 	out->n_pins = N;
 
-	EDA_INST_ADD_COMPONENT(f->ef, R0, SCF_EDA_Resistor);
+	ScfEpin* a[SCF_EDA_MAX_BITS];
+	ScfEpin* b[SCF_EDA_MAX_BITS];
+	ScfEpin* res[SCF_EDA_MAX_BITS];
+	ScfEpin* cf;
 
-	EDA_PIN_ADD_PIN(R0, 1, B, SCF_EDA_Battery_POS);
-	pc = R0->pins[0];
+	int ret = __eda_sub(f, a, b, res, &cf, N);
+	if (ret < 0)
+		return ret;
 
+	int i;
 	for (i = 0; i < N; i++) {
+		EDA_PIN_ADD_INPUT(in0, i, f->ef, a[i]);
+		EDA_PIN_ADD_INPUT(in1, i, f->ef, b[i]);
 
-		ScfEpin* p0  = NULL;
-		ScfEpin* p1  = NULL;
-		ScfEpin* p2  = NULL;
-		ScfEpin* p3  = NULL;
-		ScfEpin* not = NULL;
-		ScfEpin* cf  = NULL;
-		ScfEpin* res = NULL;
-
-		int ret = __eda_bit_not(f, &p1, &not);
-		if (ret < 0)
-			return ret;
-
-		ret = __eda_bit_adc(f, &p0, &p2, &p3, &res, &cf);
-		if (ret < 0)
-			return ret;
-		EDA_PIN_ADD_PIN_EF(f->ef, p2, not);
-		EDA_PIN_ADD_PIN_EF(f->ef, p3, pc);
-
-		EDA_PIN_ADD_INPUT(in0, i, f->ef, p0);
-		EDA_PIN_ADD_INPUT(in1, i, f->ef, p1);
-
-		pc         = cf;
-		cf->flags |= SCF_EDA_PIN_CF;
+		out->pins[i] = res[i];
 
 		if (in0->var->arg_flag) {
 			in0->pins[i]->flags |= SCF_EDA_PIN_IN | SCF_EDA_PIN_IN0;
@@ -891,35 +935,26 @@ static int _eda_inst_sub_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 			in1->pins[i]->flags |= SCF_EDA_PIN_IN;
 			in1->pins[i]->io_lid = i;
 		}
-
-		out->pins[i] = res;
 	}
-
 	return 0;
 }
 
 static int __eda_bit_mla(scf_function_t* f, ScfEpin** a, ScfEpin** b, ScfEpin** c, ScfEpin** d, ScfEpin** out, ScfEpin** cf)
 {
-	ScfEpin* ab0 = NULL;
-	ScfEpin* cd0 = NULL;
+	ScfEcomponent*  B   = f->ef->components[0];
+	ScfEcomponent*  MLA = NULL;
 
-	ScfEpin* ab1 = NULL;
-	ScfEpin* cd1 = NULL;
+	EDA_INST_ADD_COMPONENT(f->ef, MLA, SCF_EDA_MLA);
 
-	int ret = __eda_bit_and(f, a, b, &ab0);
-	if (ret < 0)
-		return ret;
+	EDA_PIN_ADD_PIN(MLA, SCF_EDA_MLA_POS, B, SCF_EDA_Battery_POS);
+	EDA_PIN_ADD_PIN(MLA, SCF_EDA_MLA_NEG, B, SCF_EDA_Battery_NEG);
 
-	ret = __eda_bit_and(f, c, d, &cd0);
-	if (ret < 0)
-		return ret;
-
-	ret = __eda_bit_add(f, &ab1, &cd1, out, cf);
-	if (ret < 0)
-		return ret;
-
-	EDA_PIN_ADD_PIN_EF(f->ef, ab0, ab1);
-	EDA_PIN_ADD_PIN_EF(f->ef, cd0, cd1);
+	*a   = MLA->pins[SCF_EDA_MLA_IN0];
+	*b   = MLA->pins[SCF_EDA_MLA_IN1];
+	*c   = MLA->pins[SCF_EDA_MLA_IN2];
+	*d   = MLA->pins[SCF_EDA_MLA_IN3];
+	*out = MLA->pins[SCF_EDA_MLA_OUT];
+	*cf  = MLA->pins[SCF_EDA_MLA_CF];
 	return 0;
 }
 
@@ -1117,21 +1152,19 @@ static int __eda_div(scf_function_t* f, ScfEpin** a, ScfEpin** b, ScfEpin** x, i
 			k = n_adds - 1;
 
 			while (j < k) {
-				int ret = __eda_bit_xor(f, &p0, &p1, &res);
+				int ret;
+
+				if (i < N - 1)
+					ret = __eda_bit_add(f, &p0, &p1, &res, &cfs[n_cfs]);
+				else
+					ret = __eda_bit_xor(f, &p0, &p1, &res);
 				if (ret < 0)
 					return ret;
 				EDA_PIN_ADD_PIN_EF(f->ef, p0, adds[j]);
 				EDA_PIN_ADD_PIN_EF(f->ef, p1, adds[k]);
 
-				if (i < N - 1) {
-					ret = __eda_bit_and(f, &p0, &p1, &cfs[n_cfs]);
-					if (ret < 0)
-						return ret;
-					EDA_PIN_ADD_PIN_EF(f->ef, p0, adds[j]);
-					EDA_PIN_ADD_PIN_EF(f->ef, p1, adds[k]);
-
+				if (i < N - 1)
 					cfs[n_cfs++]->flags |= SCF_EDA_PIN_CF;
-				}
 
 				adds[j] = res;
 
@@ -1194,50 +1227,41 @@ static int _eda_inst_div_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	ScfEpin* sh1[SCF_EDA_MAX_BITS] = {NULL};
 	ScfEpin* mask = NULL;
 
+	ScfEpin* high;
+	ScfEpin* cur;
+	ScfEpin* pm0;
+	ScfEpin* pm1;
+	ScfEpin* pm;
+
 	int ret;
 	int i;
 	for (i = 0; i < N - 1; i++) {
 
-		ScfEpin* high = NULL;
-		ScfEpin* cur  = NULL;
-		ScfEpin* pm0  = NULL;
-		ScfEpin* pm1  = NULL;
-		ScfEpin* pm   = NULL;
-// high = ~p1 & mask
-// cur  = ~p1 NAND mask
-// high = ~cur
-		ret = __eda_bit_not(f, &cur, &high);
-		if (ret < 0)
-			return ret;
-		EDA_PIN_ADD_INPUT(in1, i, f->ef, cur);
-
 		if (mask) {
-			ret = __eda_bit_nand(f, &pm0, &pm1, &cur);
+			ret = __eda_bit_or(f, &pm0, &pm1, &cur);
 			if (ret < 0)
 				return ret;
 			EDA_PIN_ADD_PIN_EF(f->ef, pm0, mask);
-			EDA_PIN_ADD_PIN_EF(f->ef, pm1, high);
-
-			ret = __eda_bit_not(f, &pm, &high);
-			if (ret < 0)
-				return ret;
-			EDA_PIN_ADD_PIN_EF(f->ef, pm, cur);
+			EDA_PIN_ADD_INPUT(in1, i, f->ef, pm1);
 		}
-		mask = high;
 
 		if (i > 0)
-			ret = __eda_shr(f, NULL, 0, sign, cur, high, sh0, N);
+			ret = __eda_shr(f, NULL, 0, sign, &cur, sh0, 0, N);
 		else
-			ret = __eda_shr(f, in0, 0, sign, cur, high, sh0, N);
+			ret = __eda_shr(f, in0, 0, sign, &cur, sh0, 0, N);
 		if (ret < 0)
 			return ret;
 
 		if (i > 0)
-			ret = __eda_shr(f, NULL, 0, sign, cur, high, sh1, N);
+			ret = __eda_shr(f, NULL, 0, sign, &cur, sh1, 1, N);
 		else
-			ret = __eda_shr(f, in1, 0, sign, cur, high, sh1, N);
+			ret = __eda_shr(f, in1, 0, sign, &cur, sh1, 1, N);
 		if (ret < 0)
 			return ret;
+
+		if (!mask)
+			EDA_PIN_ADD_INPUT(in1, i, f->ef, cur);
+		mask = cur;
 	}
 
 	if (1 == N) {
@@ -1247,9 +1271,17 @@ static int _eda_inst_div_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 		EDA_PIN_ADD_INPUT(in0, 0, f->ef, sh0[0]);
 		EDA_PIN_ADD_INPUT(in1, 0, f->ef, sh1[0]);
-	}
 
-	sh1[0]->flags |= SCF_EDA_PIN_DIV0;
+		sh1[0]->flags |= SCF_EDA_PIN_DIV0;
+	} else {
+		ret = __eda_bit_or(f, &pm0, &pm1, &cur);
+		if (ret < 0)
+			return ret;
+		EDA_PIN_ADD_PIN_EF(f->ef, pm0, mask);
+		EDA_PIN_ADD_INPUT(in1, N - 1, f->ef, pm1);
+
+		cur->flags |= SCF_EDA_PIN_DIV0;
+	}
 
 	ret = __eda_div(f, sh0, sh1, res, N);
 	if (ret < 0)
@@ -1468,12 +1500,108 @@ static int _eda_inst_array_index_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 static int _eda_inst_teq_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
-	return -EINVAL;
+	EDA_INST_SRC_CHECK()
+
+	scf_basic_block_t* bb  = c->basic_block;
+	scf_dag_node_t*    in  = src->dag_node;
+	ScfEpin*           res = NULL;
+
+	int ret = __eda_teq(f, in, &res);
+	if (ret < 0)
+		return ret;
+
+	EDA_PIN_ADD_CONN(f->ef, bb->flag_pins[SCF_EDA_FLAG_ZERO], res);
+	return 0;
 }
 
 static int _eda_inst_cmp_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
-	return -EINVAL;
+	if (!c->srcs || c->srcs->size != 2)
+		return -EINVAL;
+	scf_eda_context_t* eda  = ctx->priv;
+	scf_function_t*    f    = eda->f;
+	scf_basic_block_t* bb   = c->basic_block;
+	scf_3ac_operand_t* src0 = c->srcs->data[0];
+	scf_3ac_operand_t* src1 = c->srcs->data[1];
+
+	if (!src0 || !src0->dag_node)
+		return -EINVAL;
+	if (!src1 || !src1->dag_node)
+		return -EINVAL;
+	scf_dag_node_t* in0 = src0->dag_node;
+	scf_dag_node_t* in1 = src1->dag_node;
+
+	int N = eda_variable_size(in0->var);
+
+	EDA_INST_IN_CHECK(in0, N);
+	EDA_INST_IN_CHECK(in1, N);
+
+	in0->n_pins = N;
+	in1->n_pins = N;
+
+	ScfEpin* a[SCF_EDA_MAX_BITS];
+	ScfEpin* b[SCF_EDA_MAX_BITS];
+	ScfEpin* res[SCF_EDA_MAX_BITS];
+	ScfEpin* cf;
+
+	int ret = __eda_sub(f, a, b, res, &cf, N);
+	if (ret < 0)
+		return ret;
+
+	int i;
+	for (i = 0; i < N; i++) {
+		EDA_PIN_ADD_INPUT(in0, i, f->ef, a[i]);
+		EDA_PIN_ADD_INPUT(in1, i, f->ef, b[i]);
+
+		if (in0->var->arg_flag) {
+			in0->pins[i]->flags |= SCF_EDA_PIN_IN | SCF_EDA_PIN_IN0;
+			in0->pins[i]->io_lid = i;
+		}
+
+		if (in1->var->arg_flag) {
+			in1->pins[i]->flags |= SCF_EDA_PIN_IN;
+			in1->pins[i]->io_lid = i;
+		}
+	}
+
+	ScfEpin* prev = NULL;
+	ScfEpin* p0;
+	ScfEpin* p1;
+	ScfEpin* po;
+
+	for (i = 0; i + 1 < N; i += 2) {
+		ret = __eda_bit_nor(f, &p0, &p1, &po);
+		if (ret < 0)
+			return ret;
+		EDA_PIN_ADD_PIN_EF(f->ef, p0, res[i]);
+		EDA_PIN_ADD_PIN_EF(f->ef, p1, res[i + 1]);
+
+		if (prev)
+			EDA_PIN_ADD_PIN_EF(f->ef, po, prev);
+		else
+			prev = po;
+	}
+
+	if (N & 0x1) {
+		ret = __eda_bit_not(f, &p0, &po);
+		if (ret < 0)
+			return ret;
+		EDA_PIN_ADD_PIN_EF(f->ef, p0, res[N - 1]);
+
+		if (prev)
+			EDA_PIN_ADD_PIN_EF(f->ef, po, prev);
+		else
+			prev = po;
+	}
+
+	ret = __eda_bit_not(f, &p0, &po);
+	if (ret < 0)
+		return ret;
+	EDA_PIN_ADD_PIN_EF(f->ef, p0, prev);
+
+	EDA_PIN_ADD_CONN(f->ef, bb->flag_pins[SCF_EDA_FLAG_ZERO], po);
+	EDA_PIN_ADD_CONN(f->ef, bb->flag_pins[SCF_EDA_FLAG_SIGN], res[N - 1]);
+	return 0;
 }
 
 static int _eda_inst_setz_handler(scf_native_t* ctx, scf_3ac_code_t* c)
@@ -1536,6 +1664,62 @@ static int _eda_inst_le_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	return -EINVAL;
 }
 
+static int __eda_cast(scf_function_t* f, scf_dag_node_t* in, ScfEpin** res, int N)
+{
+	ScfEpin* zero = NULL;
+
+	int M    = eda_variable_size(in->var);
+	int sign = scf_variable_signed(in->var);
+	int ret;
+	int i;
+
+	for (i = 0; i < N; i++) {
+		ScfEpin* p0 = NULL;
+		ScfEpin* p1 = NULL;
+		ScfEpin* p2 = NULL;
+		ScfEpin* po = NULL;
+
+		if (i == M && !sign && !zero) {
+
+			ret = __eda_bit_xor(f, &p0, &p1, &zero);
+			if (ret < 0)
+				return ret;
+			EDA_PIN_ADD_PIN_EF(f->ef, p0, zero);
+			EDA_PIN_ADD_INPUT(in, M - 1, f->ef, p0);
+			EDA_PIN_ADD_INPUT(in, M - 1, f->ef, p1);
+
+			res[i] = zero;
+		} else {
+			ScfEcomponent* R;
+
+			if (!in->pins[i]) {
+				EDA_INST_ADD_COMPONENT(f->ef, R, SCF_EDA_Resistor);
+				in->pins[i] = R->pins[1];
+				res[i]      = R->pins[0];
+
+			} else if (i < M)
+				res[i] = in->pins[i];
+			else if (sign)
+				res[i] = in->pins[M - 1];
+			else
+				res[i] = zero;
+		}
+	}
+
+	for (i = 0; i < M; i++) {
+		if (in->pins[i] && in->var->arg_flag) {
+			in->pins[i]->flags |= SCF_EDA_PIN_IN;
+
+			int j = eda_find_argv_index(f, in->var);
+			if (0 == j)
+				in->pins[i]->flags |= SCF_EDA_PIN_IN0;
+
+			in->pins[i]->io_lid = j;
+		}
+	}
+	return 0;
+}
+
 static int _eda_inst_cast_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
 	if (!c->dsts || c->dsts->size != 1)
@@ -1555,40 +1739,93 @@ static int _eda_inst_cast_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	if (!dst || !dst->dag_node)
 		return -EINVAL;
 
-	if (0 == dst->dag_node->color)
-		return -EINVAL;
+	scf_dag_node_t* in  = src->dag_node;
+	scf_dag_node_t* out = dst->dag_node;
 
-	return -EINVAL;
+	int M = eda_variable_size(in->var);
+	int N = eda_variable_size(out->var);
+	int i;
+
+	EDA_INST_IN_CHECK(in, M);
+
+	in ->n_pins = M;
+	out->n_pins = N;
+
+	return __eda_cast(f, in, out->pins, N);
 }
 
 static int _eda_inst_return_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 {
+	scf_eda_context_t*  eda = ctx->priv;
+	scf_function_t*     f   = eda->f;
+	scf_basic_block_t*  bb  = c->basic_block;
+
+	scf_3ac_operand_t*  src = NULL;
+	scf_3ac_operand_t*  dst = NULL;
+	scf_dag_node_t*     in  = NULL;
+	scf_variable_t*     v   = NULL;
+
 	if (!c->srcs || c->srcs->size < 1) {
 		scf_loge("\n");
 		return -EINVAL;
 	}
 
-	scf_eda_context_t*  eda  = ctx->priv;
-	scf_function_t*     f    = eda->f;
-	scf_3ac_operand_t*  src  = NULL;
-	scf_dag_node_t*     out  = NULL;
+	if (!f->rets || f->rets->size < c->srcs->size) {
+		scf_loge("\n");
+		return -EINVAL;
+	}
+
+	ScfEpin* res[SCF_EDA_MAX_BITS];
+	ScfEpin* p0;
+	ScfEpin* p1;
+	ScfEpin* p2;
+	ScfEpin* po;
 
 	int i;
 	int j;
-
 	for (i  = 0; i < c->srcs->size; i++) {
 		src =        c->srcs->data[i];
 
-		out = src->dag_node;
+		v   = f->rets->data[i];
+		in  = src->dag_node;
 
-		if (out->n_pins <= 0) {
-			scf_loge("out: %p\n", out);
-			return -EINVAL;
-		}
+		v->n_pins = eda_variable_size(v);
 
-		for (j = 0; j < out->n_pins; j++) {
-			out->pins[j]->flags |= SCF_EDA_PIN_OUT;
-			out->pins[j]->io_lid = j;
+		int ret = __eda_cast(f, in, res, v->n_pins);
+		if (ret < 0)
+			return ret;
+
+		for (j = 0; j < v->n_pins; j++) {
+
+			if (bb->mask_pin) {
+				ret = __eda_bit_and(f, &p0, &p1, &po);
+				if (ret < 0)
+					return ret;
+
+				EDA_PIN_ADD_PIN_EF(f->ef, p0, res[j]);
+				EDA_PIN_ADD_PIN_EF(f->ef, p1, bb->mask_pin);
+
+				res[j] = po;
+			}
+
+			if (v->w_pins[j]) {
+				ret = __eda_bit_or(f, &p0, &p1, &po);
+				if (ret < 0)
+					return ret;
+
+				EDA_PIN_ADD_PIN_EF(f->ef, p0, v->w_pins[j]);
+				EDA_PIN_ADD_PIN_EF(f->ef, p1, res[j]);
+
+				res[j] = po;
+			}
+
+			if (v->w_pins[j])
+				v->w_pins[j]->flags &= ~SCF_EDA_PIN_OUT;
+
+			v->w_pins[j] = res[j];
+
+			v->w_pins[j]->flags |= SCF_EDA_PIN_OUT;
+			v->w_pins[j]->io_lid = j;
 		}
 	}
 
@@ -1663,11 +1900,15 @@ static int _eda_inst_assign_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	scf_dag_node_t* out = dst->dag_node;
 
 	int i;
-	int N = eda_variable_size(in->var);
+	int M = eda_variable_size(in->var);
+	int N = eda_variable_size(out->var);
 
-	EDA_INST_IN_CHECK(in, N);
+	if (M < N)
+		return _eda_inst_cast_handler(ctx, c);
 
-	in ->n_pins = N;
+	EDA_INST_IN_CHECK(in, M);
+
+	in ->n_pins = M;
 	out->n_pins = N;
 
 	for (i = 0; i < N; i++) {

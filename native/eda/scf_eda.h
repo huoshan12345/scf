@@ -18,6 +18,20 @@ int scf_eda_open  (scf_native_t* ctx, const char* arch);
 int scf_eda_close (scf_native_t* ctx);
 int scf_eda_select(scf_native_t* ctx);
 
+int __eda_bit_nand(scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** out);
+int __eda_bit_nor (scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** out);
+int __eda_bit_not (scf_function_t* f, ScfEpin** in,  ScfEpin** out);
+int __eda_bit_and (scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** out);
+int __eda_bit_or  (scf_function_t* f, ScfEpin** in0, ScfEpin** in1, ScfEpin** out);
+
+#define EDA_PIN_ADD_CONN(_ef, _dst, _p) \
+	do { \
+		if (_dst) \
+			EDA_PIN_ADD_PIN_EF(_ef, _dst, _p); \
+		else \
+			_dst = _p; \
+	} while (0)
+
 static inline int eda_variable_size(scf_variable_t* v)
 {
 	if (v->nb_dimentions + v->nb_pointers > 0)
@@ -36,6 +50,19 @@ static inline int eda_variable_size(scf_variable_t* v)
 		return 4;
 
 	return v->size << 3;
+}
+
+static inline int eda_find_argv_index(scf_function_t* f, scf_variable_t* v)
+{
+	int i;
+	if (f->argv) {
+		for (i = 0; i < f->argv->size; i++) {
+			if (v == f->argv->data[i])
+				return i;
+		}
+	}
+
+	return -1;
 }
 
 #endif

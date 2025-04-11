@@ -23,6 +23,13 @@ enum {
 	SCF_EDA_OR,
 	SCF_EDA_XOR,
 
+	SCF_EDA_ADD,
+
+	SCF_EDA_NAND4,
+	SCF_EDA_AND2_OR,
+	SCF_EDA_IF,
+	SCF_EDA_MLA,
+
 	SCF_EDA_Components_NB,
 };
 
@@ -36,6 +43,7 @@ enum {
 #define SCF_EDA_PIN_SHIFT  64
 #define SCF_EDA_PIN_IN0   128
 #define SCF_EDA_PIN_DIV0  256
+#define SCF_EDA_PIN_KEY   512
 
 #define SCF_EDA_V_INIT   -10001001.0
 #define SCF_EDA_V_MIN    -10000000.0
@@ -81,6 +89,16 @@ enum {
 	SCF_EDA_PNP_E  = SCF_EDA_NPN_E,
 	SCF_EDA_PNP_C  = SCF_EDA_NPN_C,
 	SCF_EDA_PNP_NB = SCF_EDA_NPN_NB,
+};
+
+enum {
+	SCF_EDA_NOT_NEG,
+	SCF_EDA_NOT_POS,
+
+	SCF_EDA_NOT_IN,
+	SCF_EDA_NOT_OUT,
+
+	SCF_EDA_NOT_NB,
 };
 
 enum {
@@ -139,13 +157,68 @@ enum {
 };
 
 enum {
-	SCF_EDA_NOT_NEG,
-	SCF_EDA_NOT_POS,
+	SCF_EDA_ADD_NEG = SCF_EDA_NAND_NEG,
+	SCF_EDA_ADD_POS = SCF_EDA_NAND_POS,
 
-	SCF_EDA_NOT_IN,
-	SCF_EDA_NOT_OUT,
+	SCF_EDA_ADD_IN0 = SCF_EDA_NAND_IN0,
+	SCF_EDA_ADD_IN1 = SCF_EDA_NAND_IN1,
+	SCF_EDA_ADD_OUT = SCF_EDA_NAND_OUT,
+	SCF_EDA_ADD_CF,
 
-	SCF_EDA_NOT_NB,
+	SCF_EDA_ADD_NB,
+};
+
+enum {
+	SCF_EDA_NAND4_NEG,
+	SCF_EDA_NAND4_POS,
+
+	SCF_EDA_NAND4_IN0,
+	SCF_EDA_NAND4_IN1,
+	SCF_EDA_NAND4_IN2,
+	SCF_EDA_NAND4_IN3,
+	SCF_EDA_NAND4_OUT,
+
+	SCF_EDA_NAND4_NB,
+};
+
+enum {
+	SCF_EDA_AND2_OR_NEG = SCF_EDA_NAND4_NEG,
+	SCF_EDA_AND2_OR_POS = SCF_EDA_NAND4_POS,
+
+	SCF_EDA_AND2_OR_IN0 = SCF_EDA_NAND4_IN0,
+	SCF_EDA_AND2_OR_IN1 = SCF_EDA_NAND4_IN1,
+	SCF_EDA_AND2_OR_IN2 = SCF_EDA_NAND4_IN2,
+	SCF_EDA_AND2_OR_IN3 = SCF_EDA_NAND4_IN3,
+	SCF_EDA_AND2_OR_OUT = SCF_EDA_NAND4_OUT,
+
+	SCF_EDA_AND2_OR_NB,
+};
+
+enum {
+	SCF_EDA_IF_NEG,
+	SCF_EDA_IF_POS,
+
+	SCF_EDA_IF_TRUE,
+	SCF_EDA_IF_COND,
+	SCF_EDA_IF_FALSE,
+	SCF_EDA_IF_OUT,
+
+	SCF_EDA_IF_NB,
+};
+
+enum {
+	SCF_EDA_MLA_NEG,
+	SCF_EDA_MLA_POS,
+
+	SCF_EDA_MLA_IN0,
+	SCF_EDA_MLA_IN1,
+	SCF_EDA_MLA_IN2,
+	SCF_EDA_MLA_IN3,
+
+	SCF_EDA_MLA_OUT,
+	SCF_EDA_MLA_CF,
+
+	SCF_EDA_MLA_NB,
 };
 
 typedef struct {
@@ -217,7 +290,7 @@ struct scf_epin_s
 	SCF_PACK_DEF_VAR(int64_t, io_lid);
 
 	SCF_PACK_DEF_VAR(int64_t, ic_lid);
-	SCF_PACK_DEF_OBJ(ScfEcomponent, IC);
+	SCF_PACK_DEF_OBJ(ScfEcomponent, c);
 
 	SCF_PACK_DEF_VAR(double, v);
 	SCF_PACK_DEF_VAR(double, a);
@@ -308,7 +381,7 @@ typedef struct {
 	SCF_PACK_DEF_VAR(uint8_t, vconst);
 	SCF_PACK_DEF_VAR(uint8_t, aconst);
 	SCF_PACK_DEF_VAR(uint8_t, vflag);
-	SCF_PACK_DEF_VAR(uint8_t, vinit);
+	SCF_PACK_DEF_VAR(uint8_t, open_flag);
 } ScfEline;
 
 SCF_PACK_TYPE(ScfEline)
@@ -476,7 +549,7 @@ int            scf_pins_same_line(ScfEfunction* f);
 			return ret; \
 		} \
 		\
-		for (size_t i = 0;  i < (_c)->n_pins; i++) \
+		for (long i = 0; i < (_c)->n_pins; i++) \
 			(_c)->pins[i]->cid = (_c)->id; \
 	} while (0)
 

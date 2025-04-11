@@ -443,8 +443,8 @@ static int _x64_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 
 	_x64_elf_process_sections(x64, &section_offset, &cs, &ros, &ds, &crela, &drela);
 
-	uint64_t cs_align  = (cs ->offset + cs ->data_len + 0x200000 - 1) >> 21 << 21;
-	uint64_t ro_align  = (ros->offset + ros->data_len + 0x200000 - 1) >> 21 << 21;
+	uint64_t cs_align  = (cs ->offset + cs ->data_len + 0x2000 - 1) >> 13 << 13;
+	uint64_t ro_align  = (ros->offset + ros->data_len + 0x2000 - 1) >> 13 << 13;
 
 	uint64_t rx_base   = 0x400000;
 	uint64_t r_base    = 0x400000 + cs_align;
@@ -578,8 +578,8 @@ static int _x64_elf_write_dyn(scf_elf_context_t* elf, const char* sysroot)
 
 	_x64_elf_process_sections(x64, &section_offset, &cs, &ros, &ds, &crela, &drela);
 
-	uint64_t cs_align  = (cs ->offset + cs ->data_len + 0x200000 - 1) >> 21 << 21;
-	uint64_t ro_align  = (ros->offset + ros->data_len + 0x200000 - 1) >> 21 << 21;
+	uint64_t cs_align  = (cs ->offset + cs ->data_len + 0x2000 - 1) >> 13 << 13;
+	uint64_t ro_align  = (ros->offset + ros->data_len + 0x2000 - 1) >> 13 << 13;
 
 	uint64_t rx_base   = 0;
 	uint64_t r_base    = cs_align;

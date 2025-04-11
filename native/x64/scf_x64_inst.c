@@ -616,6 +616,7 @@ static int _x64_inst_call_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 		}
 	}
 
+	f->call_flag = 1;
 	return 0;
 }
 
@@ -2029,7 +2030,6 @@ static int _x64_inst_push_rets_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	if (!f->void_flag) {
 		n = f->rets->size;
-
 		if (n > X64_ABI_RET_NB)
 			return -EINVAL;
 	}
@@ -2041,6 +2041,11 @@ static int _x64_inst_push_rets_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 		X64_INST_ADD_CHECK(c->instructions, inst);
 	}
 
+	if (n & 0x1) {
+		r    = x64_find_register_type_id_bytes(0, x64_abi_ret_regs[n - 1], 8);
+		inst = x64_make_inst_G(push, r);
+		X64_INST_ADD_CHECK(c->instructions, inst);
+	}
 	return 0;
 }
 
@@ -2064,9 +2069,14 @@ static int _x64_inst_pop_rets_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	if (!f->void_flag) {
 		n = f->rets->size;
-
 		if (n > X64_ABI_RET_NB)
 			return -EINVAL;
+	}
+
+	if (n & 0x1) {
+		r    = x64_find_register_type_id_bytes(0, x64_abi_ret_regs[n - 1], 8);
+		inst = x64_make_inst_G(pop, r);
+		X64_INST_ADD_CHECK(c->instructions, inst);
 	}
 
 	for (i = n - 1; i >= 0; i--) {

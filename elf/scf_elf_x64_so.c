@@ -1145,7 +1145,7 @@ int __x64_elf_write_text(scf_elf_context_t* elf, uint64_t rx_base, uint64_t offs
 	ph_text.p_paddr    = ph_text.p_vaddr;
 	ph_text.p_filesz   = len;
 	ph_text.p_memsz    = ph_text.p_filesz;
-	ph_text.p_align    = 0x200000;
+	ph_text.p_align    = 0x2000;
 
 	fwrite(&ph_text,  sizeof(ph_text),  1, elf->fp);
 	return 0;
@@ -1162,7 +1162,7 @@ int __x64_elf_write_rodata(scf_elf_context_t* elf, uint64_t r_base, uint64_t off
 	ph_rodata.p_paddr  = ph_rodata.p_vaddr;
 	ph_rodata.p_filesz = len;
 	ph_rodata.p_memsz  = ph_rodata.p_filesz;
-	ph_rodata.p_align  = 0x200000;
+	ph_rodata.p_align  = 0x2000;
 
 	fwrite(&ph_rodata,  sizeof(ph_rodata),  1, elf->fp);
 	return 0;
@@ -1179,7 +1179,7 @@ int __x64_elf_write_data(scf_elf_context_t* elf, uint64_t rw_base, uint64_t offs
 	ph_data.p_paddr    = ph_data.p_vaddr;
 	ph_data.p_filesz   = len;
 	ph_data.p_memsz    = ph_data.p_filesz;
-	ph_data.p_align    = 0x200000;
+	ph_data.p_align    = 0x2000;
 
 	fwrite(&ph_data,  sizeof(ph_data),  1, elf->fp);
 	return 0;

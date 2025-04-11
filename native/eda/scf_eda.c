@@ -65,6 +65,194 @@ static int _eda_make_insts_for_list(scf_native_t* ctx, scf_list_t* h, int bb_off
 	return bb_offset;
 }
 
+static int __eda_dfs_mask(scf_function_t* f, ScfEpin* mask, scf_basic_block_t* root)
+{
+	ScfEpin* p0;
+	ScfEpin* p1;
+	ScfEpin* po;
+
+	if (root->visit_flag)
+		return 0;
+	root->visit_flag = 1;
+
+	if (root->mask_pin) {
+		int ret = __eda_bit_and(f, &p0, &p1, &po);
+		if (ret < 0)
+			return ret;
+		EDA_PIN_ADD_PIN_EF(f->ef, p0, root->mask_pin);
+		EDA_PIN_ADD_PIN_EF(f->ef, p1, mask);
+		root->mask_pin = po;
+	} else
+		root->mask_pin = mask;
+
+	int i;
+	for (i = 0; i < root->nexts->size; i++) {
+		int ret = __eda_dfs_mask(f, mask, root->nexts->data[i]);
+		if (ret < 0)
+			return ret;
+	}
+	return 0;
+}
+
+static int __eda_bb_mask(scf_function_t* f, ScfEpin* mask, scf_basic_block_t* root)
+{
+	scf_basic_block_t* bb;
+	scf_list_t*        l;
+	int i;
+
+	for (l = scf_list_head(&f->basic_block_list_head); l != scf_list_sentinel(&f->basic_block_list_head); l = scf_list_next(l)) {
+		bb = scf_list_data(l, scf_basic_block_t, list);
+		bb->visit_flag = 0;
+	}
+
+	for (i = 0; i < root->dominators->size; i++) {
+		bb =        root->dominators->data[i];
+
+		if (bb->dfo < root->dfo) {
+			bb->visit_flag = 1;
+			scf_logw("dom->index: %d, dfo: %d, root->index: %d, dfo: %d\n", bb->index, bb->dfo, root->index, root->dfo);
+			break;
+		}
+	}
+
+	return __eda_dfs_mask(f, mask, root);
+}
+
+static int __eda_jmp_mask(scf_function_t* f, scf_3ac_code_t* c, scf_basic_block_t* bb)
+{
+	scf_3ac_operand_t* dst = c->dsts->data[0];
+	scf_basic_block_t* bb2;
+	scf_list_t*        l;
+
+	ScfEpin* __true  = NULL;
+	ScfEpin* __false = NULL;
+	ScfEpin* p0;
+	ScfEpin* p1;
+	ScfEpin* p2;
+	ScfEpin* po;
+
+	int ret;
+	int i;
+	switch (c->op->type) {
+
+		case SCF_OP_3AC_JZ:
+			ret = __eda_bit_not(f, &__false, &__true);
+			if (ret < 0)
+				return ret;
+			EDA_PIN_ADD_CONN(f->ef, bb->flag_pins[SCF_EDA_FLAG_ZERO], __false);
+			break;
+		case SCF_OP_3AC_JNZ:
+			ret = __eda_bit_not(f, &__true, &__false);
+			if (ret < 0)
+				return ret;
+			EDA_PIN_ADD_CONN(f->ef, bb->flag_pins[SCF_EDA_FLAG_ZERO], __true);
+			break;
+
+		case SCF_OP_3AC_JLT:
+			ret = __eda_bit_not(f, &__true, &__false);
+			if (ret < 0)
+				return ret;
+			EDA_PIN_ADD_CONN(f->ef, bb->flag_pins[SCF_EDA_FLAG_SIGN], __true);
+			break;
+		case SCF_OP_3AC_JGE:
+			ret = __eda_bit_not(f, &__false, &__true);
+			if (ret < 0)
+				return ret;
+			EDA_PIN_ADD_CONN(f->ef, bb->flag_pins[SCF_EDA_FLAG_SIGN], __false);
+			break;
+
+		case SCF_OP_3AC_JGT:
+			ret = __eda_bit_not(f, &p1, &p2);
+			if (ret < 0)
+				return ret;
+			EDA_PIN_ADD_CONN(f->ef, bb->flag_pins[SCF_EDA_FLAG_SIGN], p1);
+
+			ret = __eda_bit_and(f, &p0, &p1, &po);
+			if (ret < 0)
+				return ret;
+			EDA_PIN_ADD_PIN_EF(f->ef, p1, p2);
+			EDA_PIN_ADD_CONN(f->ef, bb->flag_pins[SCF_EDA_FLAG_ZERO], p0);
+
+			ret = __eda_bit_not(f, &__true, &__false);
+			if (ret < 0)
+				return ret;
+			EDA_PIN_ADD_PIN_EF(f->ef, po, __true);
+			break;
+
+		case SCF_OP_3AC_JLE:
+			ret = __eda_bit_not(f, &p0, &p2);
+			if (ret < 0)
+				return ret;
+			EDA_PIN_ADD_CONN(f->ef, bb->flag_pins[SCF_EDA_FLAG_ZERO], p0);
+
+			ret = __eda_bit_or(f, &p0, &p1, &po);
+			if (ret < 0)
+				return ret;
+			EDA_PIN_ADD_PIN_EF(f->ef, p0, p2);
+			EDA_PIN_ADD_CONN(f->ef, bb->flag_pins[SCF_EDA_FLAG_SIGN], p1);
+
+			ret = __eda_bit_not(f, &__true, &__false);
+			if (ret < 0)
+				return ret;
+			EDA_PIN_ADD_PIN_EF(f->ef, po, __true);
+			break;
+
+		case SCF_OP_GOTO:
+			scf_logi("'%s'\n", c->op->name);
+			return 0;
+			break;
+		default:
+			scf_loge("'%s' not support\n", c->op->name);
+			return -EINVAL;
+			break;
+	};
+
+	if (__true)
+		__true->flags |= SCF_EDA_PIN_CF;
+
+	for (i = 0; i < bb->nexts->size; i++) {
+		bb2       = bb->nexts->data[i];
+
+		if (bb2 == dst->bb)
+			ret = __eda_bb_mask(f, __true, bb2);
+		else
+			ret = __eda_bb_mask(f, __false, bb2);
+		if (ret < 0)
+			return ret;
+	}
+	return 0;
+}
+
+static int _eda_fix_jmps(scf_native_t* ctx, scf_function_t* f)
+{
+	scf_basic_block_t* cur_bb;
+	scf_basic_block_t* bb;
+	scf_3ac_code_t*    c;
+	scf_list_t*        l;
+
+	int i;
+	for (i = 0; i < f->jmps->size; i++) {
+		c  =        f->jmps->data[i];
+
+		cur_bb = c->basic_block;
+
+		for (l = scf_list_prev(&cur_bb->list); l != scf_list_sentinel(&f->basic_block_list_head); l = scf_list_prev(l)) {
+			bb = scf_list_data(l, scf_basic_block_t, list);
+
+			if (!bb->jmp_flag)
+				break;
+		}
+
+		if (l == scf_list_sentinel(&f->basic_block_list_head))
+			continue;
+
+		int ret = __eda_jmp_mask(f, c, bb);
+		if (ret < 0)
+			return ret;
+	}
+	return 0;
+}
+
 int	_scf_eda_select_inst(scf_native_t* ctx)
 {
 	scf_eda_context_t*	eda = ctx->priv;
@@ -76,6 +264,8 @@ int	_scf_eda_select_inst(scf_native_t* ctx)
 	int j;
 	int ret = 0;
 
+	_eda_fix_jmps(ctx, f);
+
 	for (i  = 0; i < f->bb_groups->size; i++) {
 		bbg =        f->bb_groups->data[i];
 
@@ -84,12 +274,12 @@ int	_scf_eda_select_inst(scf_native_t* ctx)
 
 			assert(!bb->native_flag);
 
-			scf_loge("************ bb: %d\n", bb->index);
+			scf_logd("************ bb: %d\n", bb->index);
 			ret = _eda_make_insts_for_list(ctx, &bb->code_list_head, 0);
 			if (ret < 0)
 				return ret;
 			bb->native_flag = 1;
-			scf_loge("************ bb: %d\n", bb->index);
+			scf_logd("************ bb: %d\n", bb->index);
 		}
 	}
 

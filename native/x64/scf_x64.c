@@ -217,7 +217,7 @@ static int _x64_function_finish(scf_function_t* f)
 	l   = scf_list_tail(&bb->code_list_head);
 	end = scf_list_data(l, scf_3ac_code_t, list);
 
-	if (f->bp_used_flag || f->vla_flag) {
+	if (f->bp_used_flag || f->vla_flag || f->call_flag) {
 
 		inst = x64_make_inst_G2E(mov, rsp, rbp);
 		X64_INST_ADD_CHECK(end->instructions, inst);
@@ -242,7 +242,7 @@ static int _x64_function_finish(scf_function_t* f)
 
 	uint32_t local = f->bp_used_flag ? f->local_vars_size : 0;
 
-	if (f->bp_used_flag || f->vla_flag) {
+	if (f->bp_used_flag || f->vla_flag || f->call_flag) {
 
 		inst = x64_make_inst_G(push, rbp);
 		X64_INST_ADD_CHECK(f->init_code->instructions, inst);
@@ -1096,7 +1096,7 @@ int	_scf_x64_select_inst(scf_native_t* ctx)
 #endif
 	_x64_set_offsets(f);
 
-	_x64_set_offset_for_jmps( ctx, f);
+	_x64_set_offset_for_jmps(ctx, f);
 	return 0;
 }
 
@@ -1151,6 +1151,7 @@ int scf_x64_select_inst(scf_native_t* ctx, scf_function_t* f)
 
 	f->local_vars_size = local_vars_size;
 	f->bp_used_flag    = 1;
+	f->call_flag       = 0;
 
 	ret = _scf_x64_select_inst(ctx);
 	if (ret < 0)

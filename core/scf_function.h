@@ -31,10 +31,8 @@ struct scf_function_s {
 
 	scf_list_t        dag_list_head;
 
-	scf_vector_t*     dfs_tree;
 	scf_vector_t*     bb_loops;
 	scf_vector_t*     bb_groups;
-	int               max_dfo;
 
 	scf_vector_t*     text_relas; // re-localtions in .text segment
 	scf_vector_t*     data_relas; // re-localtions in .data segment
@@ -61,6 +59,7 @@ struct scf_function_s {
 
 	uint32_t          vargs_flag:1;
 	uint32_t          void_flag :1;
+	uint32_t          call_flag :1;
 	uint32_t          vla_flag  :1;
 };
 
