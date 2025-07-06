@@ -30,6 +30,16 @@ enum {
 	SCF_EDA_IF,
 	SCF_EDA_MLA,
 
+	SCF_EDA_ADC,
+
+	SCF_EDA_DFF, // D flip flop
+
+	SCF_EDA_Signal,
+
+	SCF_EDA_OP_AMP,
+
+	SCF_EDA_Crystal,
+
 	SCF_EDA_Components_NB,
 };
 
@@ -41,9 +51,12 @@ enum {
 #define SCF_EDA_PIN_CF     16
 #define SCF_EDA_PIN_BORDER 32
 #define SCF_EDA_PIN_SHIFT  64
-#define SCF_EDA_PIN_IN0   128
-#define SCF_EDA_PIN_DIV0  256
-#define SCF_EDA_PIN_KEY   512
+#define SCF_EDA_PIN_IN0    128
+#define SCF_EDA_PIN_DIV0   256
+#define SCF_EDA_PIN_KEY    512
+#define SCF_EDA_PIN_DELAY  1024
+#define SCF_EDA_PIN_CK     2048
+#define SCF_EDA_PIN_GND    4096
 
 #define SCF_EDA_V_INIT   -10001001.0
 #define SCF_EDA_V_MIN    -10000000.0
@@ -62,6 +75,14 @@ enum {
 	SCF_EDA_Battery_NEG,
 	SCF_EDA_Battery_POS,
 	SCF_EDA_Battery_NB,
+};
+
+#define SCF_EDA_Signal_SIN  0
+#define SCF_EDA_Signal_DC   1
+enum {
+	SCF_EDA_Signal_NEG,
+	SCF_EDA_Signal_POS,
+	SCF_EDA_Signal_NB,
 };
 
 enum {
@@ -91,6 +112,7 @@ enum {
 	SCF_EDA_PNP_NB = SCF_EDA_NPN_NB,
 };
 
+#define SCF_EDA_TTL_DELAY 1
 enum {
 	SCF_EDA_NOT_NEG,
 	SCF_EDA_NOT_POS,
@@ -157,6 +179,28 @@ enum {
 };
 
 enum {
+	SCF_EDA_OP_AMP_NEG = SCF_EDA_NAND_NEG,
+	SCF_EDA_OP_AMP_POS = SCF_EDA_NAND_POS,
+
+	SCF_EDA_OP_AMP_IN     = SCF_EDA_NAND_IN0,
+	SCF_EDA_OP_AMP_INVERT = SCF_EDA_NAND_IN1,
+	SCF_EDA_OP_AMP_OUT    = SCF_EDA_NAND_OUT,
+
+	SCF_EDA_OP_AMP_NB,
+};
+
+enum {
+	SCF_EDA_DFF_NEG = SCF_EDA_NAND_NEG,
+	SCF_EDA_DFF_POS = SCF_EDA_NAND_POS,
+
+	SCF_EDA_DFF_IN  = SCF_EDA_NAND_IN0,
+	SCF_EDA_DFF_CK  = SCF_EDA_NAND_IN1,
+	SCF_EDA_DFF_OUT = SCF_EDA_NAND_OUT,
+
+	SCF_EDA_DFF_NB,
+};
+
+enum {
 	SCF_EDA_ADD_NEG = SCF_EDA_NAND_NEG,
 	SCF_EDA_ADD_POS = SCF_EDA_NAND_POS,
 
@@ -166,6 +210,19 @@ enum {
 	SCF_EDA_ADD_CF,
 
 	SCF_EDA_ADD_NB,
+};
+
+enum {
+	SCF_EDA_ADC_NEG,
+	SCF_EDA_ADC_POS,
+
+	SCF_EDA_ADC_CI,
+	SCF_EDA_ADC_IN0,
+	SCF_EDA_ADC_IN1,
+	SCF_EDA_ADC_OUT,
+	SCF_EDA_ADC_CF,
+
+	SCF_EDA_ADC_NB,
 };
 
 enum {
@@ -233,6 +290,7 @@ typedef struct {
 	double    uf;
 	double    uh;
 	double    hfe;
+	double    Hz;
 
 	void*     ops;
 	char*     cpk;
@@ -240,33 +298,20 @@ typedef struct {
 } ScfEdata;
 
 typedef struct {
-	SCF_PACK_DEF_VAR(int, x0);
-	SCF_PACK_DEF_VAR(int, y0);
-	SCF_PACK_DEF_VAR(int, x1);
-	SCF_PACK_DEF_VAR(int, y1);
-} ScfLine;
-
-SCF_PACK_TYPE(ScfLine)
-SCF_PACK_INFO_VAR(ScfLine, x0),
-SCF_PACK_INFO_VAR(ScfLine, y0),
-SCF_PACK_INFO_VAR(ScfLine, x1),
-SCF_PACK_INFO_VAR(ScfLine, y1),
-SCF_PACK_END(ScfLine)
-
-typedef struct {
-	SCF_PACK_DEF_VAR(double, v);
-	SCF_PACK_DEF_VAR(double, a);
-	SCF_PACK_DEF_VAR(double, hfe);
+	SCF_PACK_DEF_VAR(double, Vb);
+	SCF_PACK_DEF_VAR(double, Ib);
+	SCF_PACK_DEF_VAR(double, Vc);
 } ScfEcurve;
 
 SCF_PACK_TYPE(ScfEcurve)
-SCF_PACK_INFO_VAR(ScfEcurve, v),
-SCF_PACK_INFO_VAR(ScfEcurve, a),
-SCF_PACK_INFO_VAR(ScfEcurve, hfe),
+SCF_PACK_INFO_VAR(ScfEcurve, Vb),
+SCF_PACK_INFO_VAR(ScfEcurve, Ib),
+SCF_PACK_INFO_VAR(ScfEcurve, Vc),
 SCF_PACK_END(ScfEcurve)
 
 typedef struct scf_eops_s        ScfEops;
 typedef struct scf_epin_s        ScfEpin;
+typedef struct scf_eline_s       ScfEline;
 typedef struct scf_ecomponent_s  ScfEcomponent;
 typedef struct scf_efunction_s   ScfEfunction;
 typedef struct scf_eboard_s      ScfEboard;
@@ -278,11 +323,26 @@ struct scf_eops_s
 	int (*shared)(ScfEpin* p,  int flags);
 };
 
+typedef struct {
+	SCF_PACK_DEF_VAR(int, x0);
+	SCF_PACK_DEF_VAR(int, y0);
+	SCF_PACK_DEF_VAR(int, x1);
+	SCF_PACK_DEF_VAR(int, y1);
+	SCF_PACK_DEF_OBJ(ScfEline, el);
+} ScfLine;
+
+SCF_PACK_TYPE(ScfLine)
+SCF_PACK_INFO_VAR(ScfLine, x0),
+SCF_PACK_INFO_VAR(ScfLine, y0),
+SCF_PACK_INFO_VAR(ScfLine, x1),
+SCF_PACK_INFO_VAR(ScfLine, y1),
+SCF_PACK_END(ScfLine)
+
 struct scf_epin_s
 {
 	SCF_PACK_DEF_VAR(uint64_t, id);
 	SCF_PACK_DEF_VAR(uint64_t, cid);
-	SCF_PACK_DEF_VAR(uint64_t, lid);
+	SCF_PACK_DEF_VAR(int64_t,  lid);
 	SCF_PACK_DEF_VAR(uint64_t, flags);
 	SCF_PACK_DEF_VARS(uint64_t, tos);
 	SCF_PACK_DEF_VAR(uint64_t, c_lid);
@@ -362,7 +422,8 @@ SCF_PACK_INFO_VAR(ScfEconn, lid),
 SCF_PACK_INFO_VARS(ScfEconn, cids, uint64_t),
 SCF_PACK_END(ScfEconn)
 
-typedef struct {
+struct scf_eline_s
+{
 	SCF_PACK_DEF_VAR(uint64_t, id);
 	SCF_PACK_DEF_VARS(uint64_t, pins);
 	SCF_PACK_DEF_VAR(uint64_t, c_pins);
@@ -382,7 +443,7 @@ typedef struct {
 	SCF_PACK_DEF_VAR(uint8_t, aconst);
 	SCF_PACK_DEF_VAR(uint8_t, vflag);
 	SCF_PACK_DEF_VAR(uint8_t, open_flag);
-} ScfEline;
+};
 
 SCF_PACK_TYPE(ScfEline)
 SCF_PACK_INFO_VAR(ScfEline, id),
@@ -425,6 +486,9 @@ struct scf_ecomponent_s
 	SCF_PACK_DEF_VAR(double, uf);
 	SCF_PACK_DEF_VAR(double, uh);
 
+	SCF_PACK_DEF_VAR(double, Hz);
+
+	SCF_PACK_DEF_VAR(int64_t, mirror_id);
 
 	SCF_PACK_DEF_VAR(int64_t, count);
 	SCF_PACK_DEF_VAR(int64_t, color);
@@ -442,6 +506,7 @@ SCF_PACK_INFO_VAR(ScfEcomponent, id),
 SCF_PACK_INFO_VAR(ScfEcomponent, type),
 SCF_PACK_INFO_VAR(ScfEcomponent, model),
 SCF_PACK_INFO_OBJS(ScfEcomponent, pins,   ScfEpin),
+
 SCF_PACK_INFO_OBJS(ScfEcomponent, curves, ScfEcurve),
 
 SCF_PACK_INFO_VAR(ScfEcomponent, v),
@@ -452,6 +517,9 @@ SCF_PACK_INFO_VAR(ScfEcomponent, dr),
 SCF_PACK_INFO_VAR(ScfEcomponent, r),
 SCF_PACK_INFO_VAR(ScfEcomponent, uf),
 SCF_PACK_INFO_VAR(ScfEcomponent, uh),
+SCF_PACK_INFO_VAR(ScfEcomponent, Hz),
+
+SCF_PACK_INFO_VAR(ScfEcomponent, mirror_id),
 
 SCF_PACK_INFO_VAR(ScfEcomponent, count),
 SCF_PACK_INFO_VAR(ScfEcomponent, color),
@@ -532,7 +600,15 @@ ScfEboard*     scf_eboard__alloc();
 int            scf_eboard__add_function(ScfEboard* b, ScfEfunction* f);
 int            scf_eboard__del_function(ScfEboard* b, ScfEfunction* f);
 
-int            scf_pins_same_line(ScfEfunction* f);
+int            scf_pins_same_line  (ScfEfunction* f);
+
+long           scf_find_eline_index(ScfEfunction* f, int64_t lid);
+
+void           scf_efunction_find_pin  (ScfEfunction* f, ScfEcomponent** pc,  ScfEpin** pp, int x, int y);
+void           scf_efunction_find_eline(ScfEfunction* f, ScfEline**      pel, ScfLine** pl, int x, int y);
+
+int            scf_epin_in_line(int px, int py, int x0, int y0, int x1, int y1);
+
 
 #define EDA_INST_ADD_COMPONENT(_ef, _c, _type) \
 	do { \
@@ -574,4 +650,38 @@ int            scf_pins_same_line(ScfEfunction* f);
 #define EDA_PIN_ADD_PIN_EF(_ef, _p0, _p1) \
 	EDA_PIN_ADD_PIN((_ef)->components[(_p0)->cid], (_p0)->id, (_ef)->components[(_p1)->cid], (_p1)->id)
 
+#define EDA_SET_MIRROR(_c0, _c1) \
+	do { \
+		(_c0)->mirror_id = (_c1)->id; \
+		(_c1)->mirror_id = (_c0)->id; \
+	} while (0)
+
+static char* component_types[SCF_EDA_Components_NB] =
+{
+	"None",
+	"Battery",
+
+	"Resistor",
+	"Capacitor",
+	"Inductor",
+
+	"Diode",
+	"NPN",
+	"PNP",
+
+	"NAND",
+	"NOR",
+	"NOT",
+
+	"AND",
+	"OR",
+	"XOR",
+
+	"ADD",
+
+	"NAND4",
+	"AND2_OR",
+	"IF",
+	"MLA",
+};
 #endif

@@ -180,8 +180,7 @@ CFLAGS += -I../native/x64
 CFLAGS += -I../native/risc
 CFLAGS += -I../native/eda
 
-LDFLAGS += -ldl
-#LDFLAGS += -lprotobuf-c
+LDFLAGS += -ldl -lm
 
 all:
 	gcc $(CFLAGS) $(CFILES) $(LDFLAGS) -o scf

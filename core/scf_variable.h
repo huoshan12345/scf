@@ -33,6 +33,7 @@ struct scf_variable_s {
 	int                 n_pins;
 	ScfEpin*            r_pins[SCF_EDA_MAX_BITS]; // read  pins to get var
 	ScfEpin*            w_pins[SCF_EDA_MAX_BITS]; // write pins to set var
+	ScfEcomponent*      DFFs  [SCF_EDA_MAX_BITS]; // D flip-flops to save var
 
 	int					offset;
 	int					bp_offset;  // offset based on RBP / EBP register
