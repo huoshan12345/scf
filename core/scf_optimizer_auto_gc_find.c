@@ -868,8 +868,11 @@ static int _auto_gc_function_find(scf_ast_t* ast, scf_function_t* f, scf_list_t*
 
 static int _optimize_auto_gc_find(scf_ast_t* ast, scf_function_t* f, scf_vector_t* functions)
 {
-	if (!ast || !functions || functions->size <= 0)
+	if (!ast || !functions)
 		return -EINVAL;
+
+	if (functions->size <= 0)
+		return 0;
 
 	scf_vector_t* fqueue = scf_vector_alloc();
 	if (!fqueue)

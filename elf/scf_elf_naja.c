@@ -251,7 +251,7 @@ static int _naja_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 
 		if (!strcmp(".text", s->name->data)) {
 
-			assert(s->data_len > 0);
+			assert(s->data_len >= 0);
 			assert(!cs);
 			cs = s;
 

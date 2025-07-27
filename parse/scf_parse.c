@@ -309,7 +309,6 @@ static int __debug_add_type(scf_dwarf_info_entry_t** pie, scf_dwarf_abbrev_decla
 	int ret;
 
 	if (nb_pointers > 0) {
-
 		d = scf_vector_find_cmp(parse->debug->abbrevs, (void*)DW_TAG_pointer_type, _debug_abbrev_find_by_tag);
 		if (!d) {
 			ret = scf_dwarf_abbrev_add_pointer_type(parse->debug->abbrevs);
@@ -352,6 +351,7 @@ static int __debug_add_type(scf_dwarf_info_entry_t** pie, scf_dwarf_abbrev_decla
 			}
 
 			d = parse->debug->abbrevs->data[parse->debug->abbrevs->size - 1];
+			d->has_children = t->scope->vars->size > 0;
 		}
 
 		types = parse->debug->struct_types;
@@ -1873,6 +1873,10 @@ int scf_parse_compile_functions(scf_parse_t* parse, scf_vector_t* functions)
 		if (!f->node.define_flag)
 			continue;
 
+		if (f->compile_flag)
+			continue;
+		f->compile_flag = 1;
+
 		int ret = scf_function_semantic_analysis(parse->ast, f);
 		if (ret < 0)
 			return ret;
@@ -2117,6 +2121,10 @@ int scf_parse_native_functions(scf_parse_t* parse, scf_vector_t* functions, cons
 		if (!f->node.define_flag)
 			continue;
 
+		if (f->native_flag)
+			continue;
+		f->native_flag = 1;
+
 		ret = scf_native_select_inst(native, f);
 		if (ret < 0) {
 			scf_loge("\n");
@@ -2356,13 +2364,40 @@ int scf_parse_fill_code(scf_parse_t* parse, scf_vector_t* functions, scf_vector_
 	return 0;
 }
 
-int scf_parse_compile(scf_parse_t* parse, const char* out, const char* arch, int _3ac)
+int scf_parse_compile(scf_parse_t* parse, const char* arch, int _3ac)
 {
 	scf_block_t* b = parse->ast->root_block;
 	if (!b)
 		return -EINVAL;
 
-	int ret = 0;
+	scf_vector_t* functions = scf_vector_alloc();
+	if (!functions)
+		return -ENOMEM;
+
+	int ret = scf_node_search_bfs((scf_node_t*)b, NULL, functions, -1, _find_function);
+	if (ret < 0)
+		goto error;
+
+	scf_logi("all functions: %d\n", functions->size);
+
+	ret = scf_parse_compile_functions(parse, functions);
+	if (ret < 0)
+		goto error;
+
+	if (_3ac)
+		goto error;
+
+	ret = scf_parse_native_functions(parse, functions, arch);
+error:
+	scf_vector_free(functions);
+	return ret;
+}
+
+int scf_parse_to_obj(scf_parse_t* parse, const char* out, const char* arch)
+{
+	scf_block_t* b = parse->ast->root_block;
+	if (!b)
+		return -EINVAL;
 
 	scf_vector_t*  functions   = NULL;
 	scf_vector_t*  global_vars = NULL;
@@ -2372,24 +2407,7 @@ int scf_parse_compile(scf_parse_t* parse, const char* out, const char* arch, int
 	if (!functions)
 		return -ENOMEM;
 
-	ret = scf_node_search_bfs((scf_node_t*)b, NULL, functions, -1, _find_function);
-	if (ret < 0) {
-		scf_vector_free(functions);
-		return ret;
-	}
-
-	scf_logi("all functions: %d\n", functions->size);
-
-	ret = scf_parse_compile_functions(parse, functions);
-	if (ret < 0) {
-		scf_vector_free(functions);
-		return ret;
-	}
-
-	if (_3ac)
-		return 0;
-
-	ret = scf_parse_native_functions(parse, functions, arch);
+	int ret = scf_node_search_bfs((scf_node_t*)b, NULL, functions, -1, _find_function);
 	if (ret < 0) {
 		scf_vector_free(functions);
 		return ret;

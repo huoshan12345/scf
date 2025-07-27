@@ -301,7 +301,7 @@ static int _x64_elf_process_sections(elf_native_t* x64, uint64_t* section_offset
 
 		if (!strcmp(".text", s->name->data)) {
 
-			assert(s->data_len > 0);
+			assert(s->data_len >= 0);
 			assert(!*cs);
 			*cs = s;
 

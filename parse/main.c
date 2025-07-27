@@ -232,7 +232,12 @@ int main(int argc, char* argv[])
 			exec = out;
 	}
 
-	if (scf_parse_compile(parse, obj, arch, _3ac) < 0) {
+	if (scf_parse_compile(parse, arch, _3ac) < 0) {
+		scf_loge("\n");
+		return -1;
+	}
+
+	if (scf_parse_to_obj(parse, obj, arch) < 0) {
 		scf_loge("\n");
 		return -1;
 	}

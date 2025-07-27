@@ -559,11 +559,22 @@ scf_instruction_t* x64_make_inst_P2G(scf_x64_OpCode_t* OpCode, scf_register_t* r
 		return NULL;
 	}
 
-	scf_instruction_t* inst = _x64_make_OpCode(OpCode, r_dst->bytes, r_dst, r_base, NULL);
+	scf_instruction_t* inst = NULL;
+
+	uint32_t base;
+
+	if (r_base) {
+		base = r_base->id;
+		inst = _x64_make_OpCode(OpCode, r_dst->bytes, r_dst, r_base, NULL);
+	} else {
+		base = -1;
+		inst = _x64_make_OpCode(OpCode, r_dst->bytes, r_dst, NULL, NULL);
+	}
+
 	if (!inst)
 		return NULL;
 
-	if (_x64_make_disp(NULL, inst, r_dst->id, r_base->id, offset) < 0) {
+	if (_x64_make_disp(NULL, inst, r_dst->id, base, offset) < 0) {
 		free(inst);
 		return NULL;
 	}

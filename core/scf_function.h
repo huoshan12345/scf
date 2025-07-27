@@ -61,6 +61,9 @@ struct scf_function_s {
 	uint32_t          void_flag :1;
 	uint32_t          call_flag :1;
 	uint32_t          vla_flag  :1;
+
+	uint32_t          compile_flag:1;
+	uint32_t          native_flag :1;
 };
 
 scf_function_t*	scf_function_alloc(scf_lex_word_t* w);

@@ -27,7 +27,8 @@ static int _x64_peephole_mov(scf_vector_t* std_insts, scf_instruction_t* inst)
 		if (SCF_X64_LEA == std->OpCode->type) {
 
 			if (scf_inst_data_same(&std->dst, &inst->src)
-					&& x64_inst_data_is_reg(&inst->dst)) {
+					&& x64_inst_data_is_reg(&inst->dst)
+					&& x64_inst_data_is_local(&std->src)) {
 
 				if (std->src.index)
 					inst2 = x64_make_inst_SIB2G((scf_x64_OpCode_t*)std->OpCode,
