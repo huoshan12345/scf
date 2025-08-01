@@ -1049,7 +1049,7 @@ static int _x64_inst_array_index(scf_native_t* ctx, scf_3ac_code_t* c, int lea_f
 		return ret;
 	}
 
-	if (vb->nb_dimentions > 1 || lea_flag) {
+	if (vb->nb_dimentions > 1 || (vb->type >= SCF_STRUCT && 0 == vb->nb_pointers) || lea_flag) {
 		OpCode = x64_find_OpCode(SCF_X64_LEA, rd->bytes, rd->bytes, SCF_X64_E2G);
 
 	} else {

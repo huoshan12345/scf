@@ -105,7 +105,7 @@ static int _scf_op_expr_array_index(scf_ast_t* ast, scf_node_t** nodes, int nb_n
 		return -EINVAL;
 	}
 
-	if (!v0->const_literal_flag) {
+	if (!v0->const_literal_flag && !v0->member_flag) {
 		scf_loge("\n");
 		return -EINVAL;
 	}
