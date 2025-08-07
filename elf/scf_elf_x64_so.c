@@ -170,10 +170,7 @@ static int _x64_elf_add_gnu_hash(elf_native_t* x64, elf_section_t** ps)
 #define HASH_BUCKETS 3
 #define HASH_BLOOMS  1
 
-	int n_syms = x64->dynsyms->size;
-
-	if (x64->dyn_relas)
-		n_syms -= x64->dyn_relas->size;
+	int n_syms = x64->dynsyms->size - x64->n_plts;
 
 	int len = sizeof(uint32_t) * 4 + sizeof(uint64_t) * HASH_BLOOMS
 		                           + sizeof(uint32_t) * HASH_BUCKETS
@@ -833,11 +830,8 @@ int __x64_so_add_dyn(elf_native_t* x64, const char* sysroot)
 	scf_string_t* str = scf_string_alloc();
 
 	char c = '\0';
-	int  j = 0;
+	int  j = x64->n_plts;
 	int  i;
-
-	if (x64->dyn_relas)
-		j = x64->dyn_relas->size;
 
 	scf_string_cat_cstr_len(str, &c, 1);
 
@@ -919,7 +913,7 @@ int __x64_so_add_dyn(elf_native_t* x64, const char* sysroot)
 		dyns[i + 8].d_tag = DT_JMPREL;
 
 		dyns[i + 5].d_un.d_ptr = (uintptr_t)x64->got_plt;
-		dyns[i + 6].d_un.d_ptr = sizeof(Elf64_Rela);
+		dyns[i + 6].d_un.d_ptr = x64->rela_plt->data_len;
 		dyns[i + 7].d_un.d_ptr = DT_RELA;
 		dyns[i + 8].d_un.d_ptr = (uintptr_t)x64->rela_plt;
 
