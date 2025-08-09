@@ -428,8 +428,8 @@ int x64_load_bb_colors2(scf_basic_block_t* bb, scf_bb_group_t* bbg, scf_function
 		for (j = 0; j < bb->prevs->size; j++) {
 			prev      = bb->prevs->data[j];
 
-			if (!scf_vector_find(bbg->body, prev))
-				continue;
+//			if (!scf_vector_find(bbg->body, prev))
+//				continue;
 
 			for (k = 0; k < prev->dn_colors_exit->size; k++) {
 				ds2       = prev->dn_colors_exit->data[k];
@@ -438,7 +438,8 @@ int x64_load_bb_colors2(scf_basic_block_t* bb, scf_bb_group_t* bbg, scf_function
 					break;
 			}
 
-			assert(k < prev->dn_colors_exit->size);
+			if (k >= prev->dn_colors_exit->size)
+				break;
 
 			if (0 == first) {
 				first      = 1;
@@ -452,12 +453,11 @@ int x64_load_bb_colors2(scf_basic_block_t* bb, scf_bb_group_t* bbg, scf_function
 		}
 
 		if (j < bb->prevs->size) {
-
 			for (j = 0; j < bb->prevs->size; j++) {
 				prev      = bb->prevs->data[j];
 
-				if (!scf_vector_find(bbg->body, prev))
-					continue;
+			//	if (!scf_vector_find(bbg->body, prev))
+			//		continue;
 
 				for (k = 0; k < prev->dn_colors_exit->size; k++) {
 					ds2       = prev->dn_colors_exit->data[k];
@@ -466,7 +466,8 @@ int x64_load_bb_colors2(scf_basic_block_t* bb, scf_bb_group_t* bbg, scf_function
 						break;
 				}
 
-				assert(k < prev->dn_colors_exit->size);
+				if (k >= prev->dn_colors_exit->size)
+					continue;
 
 				if (x64_bb_save_dn2(ds2->color, dn, prev, f) < 0) {
 					scf_loge("\n");
