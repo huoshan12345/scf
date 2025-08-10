@@ -22,21 +22,48 @@ static int _find_ds_malloced(scf_basic_block_t* bb, void* data)
 	return 0;
 }
 
+static int __find_dn_active(scf_vector_t* dn_vec, scf_dag_node_t* dn)
+{
+	scf_dn_status_t* ds = NULL;
+	scf_dag_node_t*  dn2;
+	int i;
+
+	for (i = 0; i < dn_vec->size; i++) {
+		dn2       = dn_vec->data[i];
+
+		if (dn2 == dn)
+			return 1;
+
+		int ret = scf_ds_for_dn(&ds, dn2);
+		if (ret < 0)
+			return ret;
+
+		if (ds->dag_node == dn) {
+			scf_dn_status_free(ds);
+			return 1;
+		}
+
+		scf_dn_status_free(ds);
+		ds = NULL;
+	}
+
+	return 0;
+}
+
 static int _find_dn_active(scf_basic_block_t* bb, void* data)
 {
-	scf_dag_node_t* dn = data;
+	scf_dag_node_t*  dn = data;
 
-	if (scf_vector_find(bb->dn_loads, data))
-		return 1;
+	int ret = __find_dn_active(bb->dn_loads, dn);
+	if (0 == ret) {
+		ret = __find_dn_active(bb->dn_reloads, dn);
 
-	if (scf_vector_find(bb->dn_reloads, data))
-		return 1;
-
-	if (scf_vector_find(bb->entry_dn_actives, data))
-		return 1;
+		if (0 == ret)
+			ret = __find_dn_active(bb->entry_dn_actives, dn);
+	}
 
 	scf_logd("bb: %p, dn: %s, 0\n", bb, dn->var->w->text->data);
-	return 0;
+	return ret;
 }
 
 static int _bb_find_ds_malloced(scf_basic_block_t* root, scf_list_t* bb_list_head, scf_dn_status_t* ds, scf_vector_t* results)
@@ -1014,7 +1041,6 @@ static int _optimize_auto_gc(scf_ast_t* ast, scf_function_t* f, scf_vector_t* fu
 		}
 	}
 
-//	scf_basic_block_print_list(bb_list_head);
 	return 0;
 }
 
