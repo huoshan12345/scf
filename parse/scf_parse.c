@@ -1937,7 +1937,7 @@ static int _scf_parse_add_text_relas(scf_parse_t* parse, scf_elf_context_t* elf,
 		for (j = 0; j < f->text_relas->size; j++) {
 			r  =        f->text_relas->data[j];
 
-			if (scf_function_signature(r->func) < 0) {
+			if (scf_function_signature(parse->ast, r->func) < 0) {
 				scf_loge("\n");
 				goto error;
 			}
@@ -2234,7 +2234,7 @@ int64_t scf_parse_fill_code2(scf_parse_t* parse, scf_vector_t* functions, scf_ve
 				return ret;
 		}
 
-		if (scf_function_signature(f) < 0)
+		if (scf_function_signature(parse->ast, f) < 0)
 			return -ENOMEM;
 
 		int ret = _fill_function_inst(code, f, offset, parse);

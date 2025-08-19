@@ -65,27 +65,36 @@ static uint32_t x64_abi_ret_regs[] =
 };
 #define X64_ABI_RET_NB (sizeof(x64_abi_ret_regs) / sizeof(x64_abi_ret_regs[0]))
 
-static uint32_t x64_abi_caller_saves[] =
+static const char* x64_abi_caller_saves[] =
 {
-	SCF_X64_REG_RAX,
-	SCF_X64_REG_RCX,
-	SCF_X64_REG_RDX,
-	SCF_X64_REG_RSI,
-	SCF_X64_REG_RDI,
-	SCF_X64_REG_R8,
-	SCF_X64_REG_R9,
-	SCF_X64_REG_R10,
-	SCF_X64_REG_R11,
+	"rax",
+	"rcx",
+	"rdx",
+	"rsi",
+	"rdi",
+	"r8",
+	"r9",
+	"r10",
+	"r11",
+
+	"xmm0",
+	"xmm1",
+	"xmm2",
+	"xmm3",
+	"xmm4",
+	"xmm5",
+	"xmm6",
+	"xmm7",
 };
 #define X64_ABI_CALLER_SAVES_NB (sizeof(x64_abi_caller_saves) / sizeof(x64_abi_caller_saves[0]))
 
-static uint32_t x64_abi_callee_saves[] =
+static const char* x64_abi_callee_saves[] =
 {
-	SCF_X64_REG_RBX,
-	SCF_X64_REG_R12,
-	SCF_X64_REG_R13,
-	SCF_X64_REG_R14,
-	SCF_X64_REG_R15,
+	"rbx",
+	"r12",
+	"r13",
+	"r14",
+	"r15",
 };
 #define X64_ABI_CALLEE_SAVES_NB (sizeof(x64_abi_callee_saves) / sizeof(x64_abi_callee_saves[0]))
 
@@ -138,7 +147,7 @@ int                 x64_save_var2(scf_dag_node_t* dn, scf_register_t* r, scf_3ac
 int                 x64_push_regs(scf_vector_t* instructions, uint32_t* regs, int nb_regs);
 int                 x64_pop_regs (scf_vector_t* instructions, scf_register_t** regs, int nb_regs, scf_register_t** updated_regs, int nb_updated);
 
-int                 x64_caller_save_regs(scf_3ac_code_t* c, uint32_t* regs, int nb_regs, int stack_size, scf_register_t** saved_regs);
+int                 x64_caller_save_regs(scf_3ac_code_t* c, const char* regs[], int nb_regs, int stack_size, scf_register_t** saved_regs);
 
 int                 x64_push_callee_regs(scf_3ac_code_t* c, scf_function_t* f);
 int                 x64_pop_callee_regs (scf_3ac_code_t* c, scf_function_t* f);

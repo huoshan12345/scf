@@ -197,7 +197,7 @@ static int _expr_action_number(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 					return SCF_DFA_ERROR;
 				}
 
-				if (scf_function_signature(f) < 0)
+				if (scf_function_signature(parse->ast, f) < 0)
 					return SCF_DFA_ERROR;
 
 				w->text->data[2] = '\0';

@@ -410,3 +410,170 @@ int scf_ast_find_type_type(scf_type_t** pt, scf_ast_t* ast, int type)
 	return scf_ast_find_global_type_type(pt, ast, type);
 }
 
+int scf_ast_add_const_str(scf_ast_t* ast, scf_node_t* parent, scf_lex_word_t* w)
+{
+	scf_variable_t* v;
+	scf_lex_word_t* w2;
+	scf_type_t*     t = scf_block_find_type_type(ast->current_block, SCF_VAR_CHAR);
+	scf_node_t*     node;
+
+	w2 = scf_lex_word_clone(w);
+	if (!w2)
+		return -ENOMEM;
+
+	int ret = scf_string_cat_cstr(w2->text, "__cstr");
+	if (ret < 0) {
+		scf_lex_word_free(w2);
+		return ret;
+	}
+
+	v = SCF_VAR_ALLOC_BY_TYPE(w2, t, 1, 1, NULL);
+	scf_lex_word_free(w2);
+	w2 = NULL;
+	if (!v)
+		return -ENOMEM;
+	v->const_literal_flag = 1;
+
+	scf_logi("w->text: %s\n", w->text->data);
+	v->data.s = scf_string_clone(w->text);
+	if (!v->data.s) {
+		scf_variable_free(v);
+		return -ENOMEM;
+	}
+
+	node = scf_node_alloc(NULL, v->type, v);
+	scf_variable_free(v);
+	v = NULL;
+	if (!node)
+		return -ENOMEM;
+
+	ret = scf_node_add_child(parent, node);
+	if (ret < 0) {
+		scf_node_free(node);
+		return ret;
+	}
+
+	return 0;
+}
+
+int scf_ast_add_const_var(scf_ast_t* ast, scf_node_t* parent, int type, const uint64_t u64)
+{
+	scf_variable_t* v;
+	scf_type_t*     t = scf_block_find_type_type(ast->current_block, type);
+	scf_node_t*     node;
+
+	v = SCF_VAR_ALLOC_BY_TYPE(NULL, t, 1, 0, NULL);
+	if (!v)
+		return -ENOMEM;
+	v->data.u64           = u64;
+	v->const_literal_flag = 1;
+
+	node = scf_node_alloc(NULL, v->type, v);
+	scf_variable_free(v);
+	v = NULL;
+	if (!node)
+		return -ENOMEM;
+
+	int ret = scf_node_add_child(parent, node);
+	if (ret < 0) {
+		scf_node_free(node);
+		return ret;
+	}
+
+	return 0;
+}
+
+int scf_function_signature(scf_ast_t* ast, scf_function_t* f)
+{
+	scf_string_t* s;
+	scf_type_t*   t = (scf_type_t*)f->node.parent;
+
+	int ret;
+	int i;
+
+	s = scf_string_alloc();
+	if (!s)
+		return -ENOMEM;
+
+	if (t->node.type >= SCF_STRUCT) {
+		assert(t->node.class_flag);
+
+		ret = scf_string_cat(s, t->name);
+		if (ret < 0)
+			goto error;
+
+		ret = scf_string_cat_cstr(s, "_");
+		if (ret < 0)
+			goto error;
+	}
+
+	if (f->op_type >= 0) {
+		scf_operator_t* op = scf_find_base_operator_by_type(f->op_type);
+
+		if (!op->signature)
+			goto error;
+
+		ret = scf_string_cat_cstr(s, op->signature);
+	} else
+		ret = scf_string_cat(s, f->node.w->text);
+
+	if (ret < 0)
+		goto error;
+	scf_logd("f signature: %s\n", s->data);
+
+	if (t->node.type < SCF_STRUCT) {
+		if (f->signature)
+			scf_string_free(f->signature);
+
+		f->signature = s;
+		return 0;
+	}
+
+	if (f->argv) {
+		for (i = 0; i < f->argv->size; i++) {
+			scf_variable_t* v   = f->argv->data[i];
+			scf_type_t*     t_v = NULL;
+
+			t_v = scf_block_find_type_type((scf_block_t*)t, v->type);
+			if (!t_v) {
+				ret = scf_ast_find_global_type_type(&t_v, ast, v->type);
+				if (ret < 0)
+					goto error;
+			}
+
+			ret = scf_string_cat_cstr(s, "_");
+			if (ret < 0)
+				goto error;
+
+			scf_logd("t_v: %p, v->type: %d, v->w->text->data: %s\n", t_v, v->type, v->w->text->data);
+
+			const char* abbrev = scf_type_find_abbrev(t_v->name->data);
+			if (abbrev)
+				ret = scf_string_cat_cstr(s, abbrev);
+			else
+				ret = scf_string_cat(s, t_v->name);
+			if (ret < 0)
+				goto error;
+
+			if (v->nb_pointers > 0) {
+				char buf[64];
+				snprintf(buf, sizeof(buf) - 1, "%d", v->nb_pointers);
+
+				ret = scf_string_cat_cstr(s, buf);
+				if (ret < 0)
+					goto error;
+			}
+		}
+	}
+
+	scf_logd("f signature: %s\n", s->data);
+
+	if (f->signature)
+		scf_string_free(f->signature);
+	f->signature = s;
+	return 0;
+
+error:
+	scf_string_free(s);
+	return -1;
+}

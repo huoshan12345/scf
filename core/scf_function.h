@@ -74,6 +74,4 @@ int             scf_function_same_type(scf_function_t* f0, scf_function_t* f1);
 int             scf_function_same_argv(scf_vector_t* argv0, scf_vector_t* argv1);
 int             scf_function_like_argv(scf_vector_t* argv0, scf_vector_t* argv1);
 
-int             scf_function_signature(scf_function_t* f);
-
 #endif

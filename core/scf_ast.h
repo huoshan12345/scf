@@ -101,5 +101,9 @@ int scf_ast_add_base_type(scf_ast_t* ast, scf_base_type_t* base_type);
 
 int scf_ast_add_file_block(scf_ast_t* ast, const char* path);
 
-#endif
+int scf_function_signature(scf_ast_t* ast, scf_function_t* f);
 
+int scf_ast_add_const_str(scf_ast_t* ast, scf_node_t* parent, scf_lex_word_t* w);
+int scf_ast_add_const_var(scf_ast_t* ast, scf_node_t* parent, int type, const uint64_t u64);
+
+#endif
