@@ -96,7 +96,7 @@ static int _scf_expr_calculate_internal(scf_ast_t* ast, scf_node_t* node, void* 
 		return h(ast, node->nodes, node->nb_nodes, d);
 
 	} else {
-		if (!scf_type_is_assign(node->op->type) && SCF_OP_ADDRESS_OF != node->op->type) {
+		if (!scf_type_is_assign(node->op->type) && SCF_OP_ADDRESS_OF != node->op->type && SCF_OP_CREATE != node->op->type) {
 
 			for (i = node->nb_nodes - 1; i >= 0; i--) {
 				if (_scf_expr_calculate_internal(ast, node->nodes[i], d) < 0) {
@@ -1446,15 +1446,6 @@ static int _scf_op_create(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void
 	int ret;
 	int i;
 
-	for (i = 3; i < nb_nodes; i++) {
-
-		ret = _scf_expr_calculate_internal(ast, nodes[i], d);
-		if (ret < 0) {
-			scf_loge("\n");
-			return ret;
-		}
-	}
-
 	nthis = parent->result_nodes->data[0];
 	nerr  = parent->result_nodes->data[1];
 
@@ -1473,12 +1464,6 @@ static int _scf_op_create(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void
 	nerr->op           = scf_find_base_operator_by_type(SCF_OP_CALL);
 	nerr->split_flag   = 0;
 	nerr->split_parent = NULL;
-
-	for (i = 2; i < nb_nodes; i++)
-		scf_node_add_child(nerr, nodes[i]);
-
-	for (i = 1; i < nb_nodes; i++)
-		nodes[i] = NULL;
 
 	parent->nodes[0] = nerr;
 	parent->nb_nodes = 1;
@@ -1507,6 +1492,21 @@ static int _scf_op_create(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void
 
 	jz  = scf_3ac_jmp_code(SCF_OP_3AC_JZ, NULL, NULL);
 	scf_list_add_tail(d->_3ac_list_head, &jz->list);
+
+	for (i = 3; i < nb_nodes; i++) {
+
+		ret = _scf_expr_calculate_internal(ast, nodes[i], d);
+		if (ret < 0) {
+			scf_loge("\n");
+			return ret;
+		}
+	}
+
+	for (i = 2; i < nb_nodes; i++)
+		scf_node_add_child(nerr, nodes[i]);
+
+	for (i = 1; i < nb_nodes; i++)
+		nodes[i] = NULL;
 
 	ret = _scf_3ac_code_N(d->_3ac_list_head, SCF_OP_CALL, nerr, nerr->nodes, nerr->nb_nodes);
 	if (ret < 0) {
