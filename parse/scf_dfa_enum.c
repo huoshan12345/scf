@@ -136,8 +136,6 @@ static int _enum_action_var(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 	md->current_v = v;
 
-	scf_logi("enum var: '%s', type: %d, size: %d\n", w->text->data, v->type, v->size);
-
 	return SCF_DFA_NEXT_WORD;
 }
 
@@ -197,6 +195,8 @@ static int _enum_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 		d->expr = NULL;
 		d->expr_local_flag--;
 	}
+
+	scf_logi("enum var: '%s', value: %ld\n", md->current_v->w->text->data, md->current_v->data.i64);
 
 	md->current_v = NULL;
 

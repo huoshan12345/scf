@@ -17,6 +17,9 @@ typedef struct {
 
 } dfa_switch_data_t;
 
+int _expr_add_var(scf_parse_t* parse, dfa_data_t* d);
+
+
 static int _switch_is_end(scf_dfa_t* dfa, void* word)
 {
 	return 1;
@@ -58,7 +61,7 @@ static int _switch_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	dfa_data_t*   d     = data;
 
 	assert(!d->expr);
-	d->expr_local_flag = 1;
+	d->expr_local_flag++;
 
 	SCF_DFA_PUSH_HOOK(scf_dfa_find_node(dfa, "switch_rp"),      SCF_DFA_HOOK_POST);
 	SCF_DFA_PUSH_HOOK(scf_dfa_find_node(dfa, "switch_lp_stat"), SCF_DFA_HOOK_POST);
@@ -99,7 +102,7 @@ static int _switch_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 		scf_node_add_child(sd->_switch, d->expr);
 		d->expr = NULL;
-		d->expr_local_flag = 0;
+		assert(--d->expr_local_flag >= 0);
 
 		SCF_DFA_PUSH_HOOK(scf_dfa_find_node(dfa, "switch_end"), SCF_DFA_HOOK_END);
 
@@ -121,13 +124,15 @@ static int _switch_action_case(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	dfa_switch_data_t* sd    = scf_stack_top(s);
 
 	assert(!d->expr);
-	d->expr_local_flag = 1;
+	d->expr_local_flag++;
 
 	sd->child = scf_node_alloc(w, SCF_OP_CASE, NULL);
 	if (!sd->child)
 		return SCF_DFA_ERROR;
 
 	scf_node_add_child((scf_node_t*)parse->ast->current_block, sd->child);
+
+	SCF_DFA_PUSH_HOOK(scf_dfa_find_node(dfa, "switch_colon"), SCF_DFA_HOOK_PRE);
 
 	return SCF_DFA_NEXT_WORD;
 }
@@ -165,9 +170,16 @@ static int _switch_action_colon(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 			return SCF_DFA_ERROR;
 		}
 
+		dfa_identity_t* id = scf_stack_top(d->current_identities);
+
+		if (id && id->identity) {
+			if (_expr_add_var(parse, d) < 0)
+				return SCF_DFA_ERROR;
+		}
+
 		scf_node_add_child(sd->child, d->expr);
 		d->expr = NULL;
-		d->expr_local_flag = 0;
+		assert(--d->expr_local_flag >= 0);
 
 	} else {
 		assert(SCF_OP_DEFAULT == sd->child->type);
