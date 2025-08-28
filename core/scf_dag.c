@@ -548,6 +548,9 @@ int scf_dag_node_same(scf_dag_node_t* dn, const scf_node_t* node)
 		scf_logd("dag   type: %d, node: %#lx, var: %#lx\n", dn->type, 0xffff & (uintptr_t)dn, 0xffff & (uintptr_t)dn->var);
 	}
 
+	if (SCF_OP_CREATE == node->type)
+		node = node->result_nodes->data[0];
+
 	if (dn->type != node->type)
 		return 0;
 

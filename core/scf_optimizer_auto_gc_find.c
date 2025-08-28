@@ -501,17 +501,16 @@ static int _auto_gc_find_ref(scf_dn_status_t* ds_obj, scf_dag_node_t* dn, scf_3a
 		}
 
 		if (fret->auto_gc_flag) {
-			_bb_add_ds        (cur_bb, ds_obj);
-			_bb_add_ds_for_ret(cur_bb, ds_obj, f2);
-
 			ds = scf_dn_status_alloc(dn);
 			if (!ds)
 				return -ENOMEM;
-
 			_bb_del_ds(cur_bb, ds);
 
 			scf_dn_status_free(ds);
 			ds = NULL;
+
+			_bb_add_ds        (cur_bb, ds_obj);
+			_bb_add_ds_for_ret(cur_bb, ds_obj, f2);
 			return 2;
 		}
 	} else {
@@ -849,7 +848,6 @@ static int _auto_gc_function_find(scf_ast_t* ast, scf_function_t* f, scf_list_t*
 				0xffff & (uintptr_t)ds, ds->ret_flag, ds->ret_index, ds->dag_node->var->arg_flag);
 		scf_dn_status_print(ds);
 #endif
-
 		if (ds->dag_node->var->arg_flag)
 			ds->dag_node->var->auto_gc_flag = 1;
 		else {

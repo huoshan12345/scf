@@ -42,6 +42,7 @@ enum scf_core_types
 	SCF_OP_INC,         // ++
 	SCF_OP_DEC,         // --
 
+	// 7
 	SCF_OP_INC_POST,    // ++
 	SCF_OP_DEC_POST,    // --
 
@@ -61,7 +62,7 @@ enum scf_core_types
 	SCF_OP_LOGIC_OR,    // ||
 	SCF_OP_LOGIC_NOT,   // !
 
-	// 19
+	// 20
 	SCF_OP_ASSIGN,      //  = assign
 	SCF_OP_ADD_ASSIGN,  // +=
 	SCF_OP_SUB_ASSIGN,  // -=
@@ -73,7 +74,7 @@ enum scf_core_types
 	SCF_OP_AND_ASSIGN,  // &=
 	SCF_OP_OR_ASSIGN,   // |=
 
-	// 29
+	// 30
 	SCF_OP_EQ,			// == equal
 	SCF_OP_NE,			// != not equal
 	SCF_OP_LT,			// < less than
@@ -81,7 +82,7 @@ enum scf_core_types
 	SCF_OP_LE,			// <= less equal 
 	SCF_OP_GE,			// >= greater equal
 
-	// 35
+	// 36
 	SCF_OP_EXPR,		// () expr
 	SCF_OP_CALL,		// () function call
 	SCF_OP_TYPE_CAST,	// (char*) type cast
