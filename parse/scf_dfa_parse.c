@@ -7,7 +7,7 @@ extern scf_dfa_module_t  dfa_module_include;
 extern scf_dfa_module_t  dfa_module_identity;
 
 extern scf_dfa_module_t  dfa_module_expr;
-extern scf_dfa_module_t  dfa_module_create;
+extern scf_dfa_module_t  dfa_module_new;
 extern scf_dfa_module_t  dfa_module_call;
 extern scf_dfa_module_t  dfa_module_sizeof;
 extern scf_dfa_module_t  dfa_module_container;
@@ -49,7 +49,7 @@ scf_dfa_module_t* dfa_modules[] =
 	&dfa_module_identity,
 
 	&dfa_module_expr,
-	&dfa_module_create,
+	&dfa_module_new,
 	&dfa_module_call,
 	&dfa_module_sizeof,
 	&dfa_module_container,

@@ -131,7 +131,7 @@ CFILES += scf_dfa_macro.c
 CFILES += scf_dfa_include.c
 
 CFILES += scf_dfa_call.c
-CFILES += scf_dfa_create.c
+CFILES += scf_dfa_new.c
 CFILES += scf_dfa_sizeof.c
 CFILES += scf_dfa_container.c
 CFILES += scf_dfa_va_arg.c

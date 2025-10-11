@@ -31,7 +31,7 @@ int main()
 	str* p0;
 	str* p1;
 
-	p0 = create str();
+	p0 = new str();
 	p1 = p0;
 
 	printf("%s\n", p1->data);

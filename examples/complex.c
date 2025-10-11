@@ -7,9 +7,9 @@ int main()
 	complex* c2;
 	complex* c3;
 
-	complex* c0 = create complex(1.0, 2.0);
+	complex* c0 = new complex(1.0, 2.0);
 
-	c1 = create complex(3.0, 4.0);
+	c1 = new complex(3.0, 4.0);
 
 	c2 = c0 + c1;
 	c3 = c0 * c1;

@@ -33,7 +33,7 @@ int main()
 	str* p0;
 	int  err;
 
-	p0, err = create str();
+	p0, err = new str();
 	if (err < 0)
 		return -1;
 

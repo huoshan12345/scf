@@ -12,7 +12,7 @@ struct Object
 
 	Object* operator+(Object* this, Object* that)
 	{
-		Object* res = create Object(this->d + that->d);
+		Object* res = new Object(this->d + that->d);
 		return res;
 	}
 };
@@ -24,8 +24,8 @@ Object* add(Object* x, Object* y)
 
 int main()
 {
-	Object* a = create Object(1.1);
-	Object* b = create Object(2.2);
+	Object* a = new Object(1.1);
+	Object* b = new Object(2.2);
 
 	Object* c = add(a, b);
 

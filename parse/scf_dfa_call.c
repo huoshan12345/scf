@@ -295,22 +295,22 @@ static int _dfa_init_syntax_call(scf_dfa_t* dfa)
 
 	SCF_DFA_GET_MODULE_NODE(dfa, expr,   entry,    expr);
 
-	SCF_DFA_GET_MODULE_NODE(dfa, create, create,   create);
-	SCF_DFA_GET_MODULE_NODE(dfa, create, identity, create_id);
-	SCF_DFA_GET_MODULE_NODE(dfa, create, rp,       create_rp);
+	SCF_DFA_GET_MODULE_NODE(dfa, new,    new,      new);
+	SCF_DFA_GET_MODULE_NODE(dfa, new,    identity, new_id);
+	SCF_DFA_GET_MODULE_NODE(dfa, new,    rp,       new_rp);
 
 	// no args
 	scf_dfa_node_add_child(lp,       rp);
 
 	// have args
 
-	// arg: create class object, such as: list.push(new A);
-	scf_dfa_node_add_child(lp,        create);
-	scf_dfa_node_add_child(create_id, comma);
-	scf_dfa_node_add_child(create_id, rp);
-	scf_dfa_node_add_child(create_rp, comma);
-	scf_dfa_node_add_child(create_rp, rp);
-	scf_dfa_node_add_child(comma,     create);
+	// arg: new class object, such as: list.push(new A);
+	scf_dfa_node_add_child(lp,       new);
+	scf_dfa_node_add_child(new_id,   comma);
+	scf_dfa_node_add_child(new_id,   rp);
+	scf_dfa_node_add_child(new_rp,   comma);
+	scf_dfa_node_add_child(new_rp,   rp);
+	scf_dfa_node_add_child(comma,    new);
 
 	scf_dfa_node_add_child(lp,       expr);
 	scf_dfa_node_add_child(expr,     comma);

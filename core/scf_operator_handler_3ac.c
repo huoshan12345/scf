@@ -96,7 +96,7 @@ static int _scf_expr_calculate_internal(scf_ast_t* ast, scf_node_t* node, void* 
 		return h(ast, node->nodes, node->nb_nodes, d);
 
 	} else {
-		if (!scf_type_is_assign(node->op->type) && SCF_OP_ADDRESS_OF != node->op->type && SCF_OP_CREATE != node->op->type) {
+		if (!scf_type_is_assign(node->op->type) && SCF_OP_ADDRESS_OF != node->op->type && SCF_OP_NEW != node->op->type) {
 
 			for (i = node->nb_nodes - 1; i >= 0; i--) {
 				if (_scf_expr_calculate_internal(ast, node->nodes[i], d) < 0) {
@@ -1425,7 +1425,7 @@ int scf_function_to_3ac(scf_ast_t* ast, scf_function_t* f, scf_list_t* _3ac_list
 	return 0;
 }
 
-static int _scf_op_create(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
+static int _scf_op_new(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
 {
 	assert(nb_nodes > 0);
 
@@ -2391,7 +2391,7 @@ scf_operator_handler_pt  __operator_handlers[SCF_N_3AC_OPS] =
 {
 	[SCF_OP_EXPR  ]       = _scf_op_expr,
 	[SCF_OP_CALL  ]       = _scf_op_call,
-	[SCF_OP_CREATE]       = _scf_op_create,
+	[SCF_OP_NEW   ]       = _scf_op_new,
 
 	[SCF_OP_ARRAY_INDEX]  = _scf_op_array_index,
 	[SCF_OP_POINTER    ]  = _scf_op_pointer,

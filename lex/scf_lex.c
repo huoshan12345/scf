@@ -23,7 +23,7 @@ static scf_key_word_t  key_words[] =
 
 	{"sizeof",    SCF_LEX_WORD_KEY_SIZEOF},
 
-	{"create",    SCF_LEX_WORD_KEY_CREATE},
+	{"new",       SCF_LEX_WORD_KEY_NEW},
 
 	{"operator",  SCF_LEX_WORD_KEY_OPERATOR},
 

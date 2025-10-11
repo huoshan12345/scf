@@ -1132,8 +1132,9 @@ int scf_basic_block_active_vars(scf_basic_block_t* bb)
 	}
 #endif
 
-	scf_vector_clear(bb->entry_dn_actives, NULL);
-	scf_vector_clear(bb->dn_updateds,      NULL);
+	scf_vector_clear(bb->entry_dn_actives,   NULL);
+	scf_vector_clear(bb->entry_dn_inactives, NULL);
+	scf_vector_clear(bb->dn_updateds,        NULL);
 
 	if (!scf_list_empty(&bb->code_list_head)) {
 
@@ -1318,6 +1319,9 @@ int scf_basic_block_loads_saves(scf_basic_block_t* bb, scf_list_t* bb_list_head)
 
 	int ret;
 	int i;
+
+	scf_vector_clear(bb->dn_loads, NULL);
+	scf_vector_clear(bb->dn_saves, NULL);
 
 	for (i = 0; i < bb->entry_dn_actives->size; i++) {
 		dn =        bb->entry_dn_actives->data[i];

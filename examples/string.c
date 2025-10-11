@@ -78,7 +78,7 @@ struct string
 	{
 		string* s;
 
-		s = create string();
+		s = new string();
 		if (!s)
 			return NULL, -1;
 

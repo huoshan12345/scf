@@ -87,7 +87,7 @@ enum scf_core_types
 	SCF_OP_CALL,		// () function call
 	SCF_OP_TYPE_CAST,	// (char*) type cast
 
-	SCF_OP_CREATE,	    // create
+	SCF_OP_NEW,	        // new class object
 	SCF_OP_SIZEOF,	    // sizeof
 
 	SCF_OP_CONTAINER,   // container_of

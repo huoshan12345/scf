@@ -70,7 +70,7 @@ struct mat
 	{
 		mat* res;
 
-		res = create mat(MAT_TYPE_DOUBLE, NULL, this->depth, this->width, this->height, this->count);
+		res = new mat(MAT_TYPE_DOUBLE, NULL, this->depth, this->width, this->height, this->count);
 		if (!res)
 			return NULL, -1;
 
@@ -144,9 +144,9 @@ int main()
 	mat* m3;
 	mat* m4;
 
-	m0 = create mat(MAT_TYPE_DOUBLE, (uint8_t*)a, 1, 2, 2, 1);
-	m1 = create mat(MAT_TYPE_DOUBLE, (uint8_t*)b, 1, 2, 2, 1);
-	m2 = create mat(MAT_TYPE_DOUBLE, (uint8_t*)c, 1, 2, 2, 1);
+	m0 = new mat(MAT_TYPE_DOUBLE, (uint8_t*)a, 1, 2, 2, 1);
+	m1 = new mat(MAT_TYPE_DOUBLE, (uint8_t*)b, 1, 2, 2, 1);
+	m2 = new mat(MAT_TYPE_DOUBLE, (uint8_t*)c, 1, 2, 2, 1);
 
 	m3 = m0 + m1 + m2;
 

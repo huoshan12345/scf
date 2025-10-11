@@ -60,7 +60,7 @@ enum scf_lex_words
 	SCF_LEX_WORD_RA,            // >> right angle brackets
 
 	SCF_LEX_WORD_KEY_SIZEOF,    // sizeof
-	SCF_LEX_WORD_KEY_CREATE,    // create class object
+	SCF_LEX_WORD_KEY_NEW,       // create class object
 	SCF_LEX_WORD_KEY_CONTAINER, // container_of
 	SCF_LEX_WORD_KEY_VA_ARG,    // va_arg
 

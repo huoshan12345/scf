@@ -15,7 +15,7 @@ static scf_operator_t	base_operators[] =
 	{"va_end",    NULL,   SCF_OP_VA_END,        1,  1,  SCF_OP_ASSOCIATIVITY_LEFT},
 	{"container", NULL,   SCF_OP_CONTAINER,     1,  3,  SCF_OP_ASSOCIATIVITY_LEFT},
 
-	{"create",    NULL,   SCF_OP_CREATE,        2, -1,  SCF_OP_ASSOCIATIVITY_RIGHT},
+	{"new",       NULL,   SCF_OP_NEW,           2, -1,  SCF_OP_ASSOCIATIVITY_RIGHT},
 	{"(",         NULL,   SCF_OP_TYPE_CAST,     2,  2,  SCF_OP_ASSOCIATIVITY_RIGHT},
 	{"!",         "not",  SCF_OP_LOGIC_NOT,     2,  1,  SCF_OP_ASSOCIATIVITY_RIGHT},
 	{"~",         "bnot", SCF_OP_BIT_NOT,       2,  1,  SCF_OP_ASSOCIATIVITY_RIGHT},

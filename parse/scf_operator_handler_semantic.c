@@ -479,7 +479,7 @@ static int _semantic_do_overloaded_assign(scf_ast_t* ast, scf_node_t** nodes, in
 	return ret;
 }
 
-static int _semantic_do_create(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, scf_handler_data_t* d)
+static int _semantic_do_new(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, scf_handler_data_t* d)
 {
 	scf_variable_t* v0;
 	scf_variable_t* v_pf;
@@ -489,7 +489,7 @@ static int _semantic_do_create(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes,
 	scf_node_t*     parent  = nodes[0]->parent;
 	scf_node_t*     node0   = nodes[0];
 	scf_node_t*     node1   = nodes[1];
-	scf_node_t*     create  = NULL;
+	scf_node_t*     new     = NULL;
 	scf_node_t*     node_pf = NULL;
 
 	v0 = _scf_operand_get(nodes[0]);
@@ -503,8 +503,8 @@ static int _semantic_do_create(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes,
 	assert(t);
 	assert(pt);
 
-	create = scf_node_alloc(parent->w, SCF_OP_CREATE, NULL);
-	if (!create)
+	new = scf_node_alloc(parent->w, SCF_OP_NEW, NULL);
+	if (!new)
 		return -ENOMEM;
 
 	v_pf = SCF_VAR_ALLOC_BY_TYPE(t->w, pt, 1, 1, NULL);
@@ -516,15 +516,15 @@ static int _semantic_do_create(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes,
 	if (!node_pf)
 		return -ENOMEM;
 
-	ret = scf_node_add_child(create, node_pf);
+	ret = scf_node_add_child(new, node_pf);
 	if (ret < 0)
 		return ret;
 
-	ret = scf_node_add_child(create, node1);
+	ret = scf_node_add_child(new, node1);
 	if (ret < 0)
 		return ret;
-	create->parent   = parent;
-	parent->nodes[1] = create;
+	new->parent      = parent;
+	parent->nodes[1] = new;
 
 	b = scf_block_alloc_cstr("multi_rets");
 	if (!b)
@@ -719,7 +719,7 @@ static int _semantic_add_var(scf_node_t** pp, scf_ast_t* ast, scf_node_t* parent
 	return 0;
 }
 
-static int _scf_op_semantic_create(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
+static int _scf_op_semantic_new(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
 {
 	assert(nb_nodes >= 1);
 
@@ -2645,7 +2645,7 @@ static int _semantic_multi_rets_assign(scf_ast_t* ast, scf_node_t** nodes, int n
 			break;
 	}
 
-	if (SCF_OP_CALL != call->type && SCF_OP_CREATE != call->type) {
+	if (SCF_OP_CALL != call->type && SCF_OP_NEW != call->type) {
 		scf_loge("\n");
 		return -1;
 	}
@@ -2821,7 +2821,7 @@ static int _scf_op_semantic_assign(scf_ast_t* ast, scf_node_t** nodes, int nb_no
 
 			if (scf_scope_find_function(t->scope, "__init")) {
 
-				int ret = _semantic_do_create(ast, nodes, nb_nodes, d);
+				int ret = _semantic_do_new(ast, nodes, nb_nodes, d);
 				if (0 == ret)
 					return 0;
 
@@ -3148,7 +3148,7 @@ scf_operator_handler_pt  semantic_operator_handlers[SCF_N_OPS] =
 
 	[SCF_OP_ARRAY_INDEX]  =  _scf_op_semantic_array_index,
 	[SCF_OP_POINTER    ]  =  _scf_op_semantic_pointer,
-	[SCF_OP_CREATE     ]  =  _scf_op_semantic_create,
+	[SCF_OP_NEW        ]  =  _scf_op_semantic_new,
 
 	[SCF_OP_VA_START   ]  =  _scf_op_semantic_va_start,
 	[SCF_OP_VA_ARG     ]  =  _scf_op_semantic_va_arg,

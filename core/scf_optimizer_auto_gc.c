@@ -743,7 +743,7 @@ static int _auto_gc_retval(scf_dn_status_t* ds_obj, scf_dag_node_t* dn, scf_vect
 	if (dn->node->split_flag) {
 		parent = dn->node->split_parent;
 
-		assert(SCF_OP_CALL == parent->type || SCF_OP_CREATE == parent->type);
+		assert(SCF_OP_CALL == parent->type || SCF_OP_NEW == parent->type);
 
 		for (i = 0; i < parent->result_nodes->size; i++) {
 			result    = parent->result_nodes->data[i];

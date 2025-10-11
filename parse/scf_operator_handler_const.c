@@ -109,7 +109,7 @@ static int _scf_expr_calculate_internal(scf_ast_t* ast, scf_node_t* node, void* 
 	return 0;
 }
 
-static int _scf_op_const_create(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
+static int _scf_op_const_new(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
 {
 	assert(nb_nodes > 3);
 
@@ -923,7 +923,7 @@ scf_operator_handler_pt  const_operator_handlers[SCF_N_OPS] =
 
 	[SCF_OP_ARRAY_INDEX]  =   _scf_op_const_array_index,
 	[SCF_OP_POINTER    ]  =   _scf_op_const_pointer,
-	[SCF_OP_CREATE     ]  =   _scf_op_const_create,
+	[SCF_OP_NEW        ]  =   _scf_op_const_new,
 
 	[SCF_OP_VA_START   ]  =   _scf_op_const_va_start,
 	[SCF_OP_VA_ARG     ]  =   _scf_op_const_va_arg,

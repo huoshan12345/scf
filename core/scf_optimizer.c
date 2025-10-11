@@ -54,6 +54,9 @@ static scf_optimizer_t*  scf_optimizers[] =
 	&scf_optimizer_basic_block,
 	&scf_optimizer_const_teq,
 
+	&scf_optimizer_active_vars,
+	&scf_optimizer_loads_saves,
+
 	&scf_optimizer_dominators,
 	&scf_optimizer_loop,
 	&scf_optimizer_vla,

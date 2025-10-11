@@ -69,7 +69,7 @@ struct complex
 
 		complex* res;
 
-		res = create complex(0.0, 0.0);
+		res = new complex(0.0, 0.0);
 		if (!res)
 			return NULL, -1;
 
@@ -85,7 +85,7 @@ struct complex
 
 		complex* res;
 
-		res = create complex(0.0, 0.0);
+		res = new complex(0.0, 0.0);
 		if (!res)
 			return NULL, -1;
 
@@ -101,7 +101,7 @@ struct complex
 
 		complex* res;
 
-		res = create complex(0.0, 0.0);
+		res = new complex(0.0, 0.0);
 		if (!res)
 			return NULL, -1;
 
@@ -122,7 +122,7 @@ struct complex
 
 		complex* res;
 
-		res = create complex(0.0, 0.0);
+		res = new complex(0.0, 0.0);
 		if (!res)
 			return NULL, -1;
 
@@ -136,5 +136,3 @@ struct complex
 		return res, 0;
 	}
 };
-
-

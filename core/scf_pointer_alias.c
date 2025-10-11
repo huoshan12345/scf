@@ -143,7 +143,7 @@ static int _bb_pointer_initeds(scf_vector_t* initeds, scf_list_t* bb_list_head, 
 			scf_logd("dn->node->split_parent: %d, %p\n", dn->node->split_parent->type, dn->node->split_parent);
 
 			assert(dn->node->split_parent->type == SCF_OP_CALL
-				|| dn->node->split_parent->type == SCF_OP_CREATE);
+				|| dn->node->split_parent->type == SCF_OP_NEW);
 			return 0;
 		}
 
@@ -242,7 +242,7 @@ static int _bb_pointer_initeds_leak(scf_vector_t* initeds, scf_list_t* bb_list_h
 
 		if (dn->node->split_flag) {
 			assert(dn->node->split_parent->type == SCF_OP_CALL
-				|| dn->node->split_parent->type == SCF_OP_CREATE);
+				|| dn->node->split_parent->type == SCF_OP_NEW);
 			return 0;
 		}
 

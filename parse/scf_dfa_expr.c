@@ -662,7 +662,7 @@ int _expr_multi_rets(scf_expr_t* e)
 
 		nb_rets = f->rets->size;
 
-	} else if (SCF_OP_CREATE == call->type)
+	} else if (SCF_OP_NEW == call->type)
 		nb_rets = 2;
 	else
 		return 0;
@@ -891,9 +891,9 @@ static int _dfa_init_syntax_expr(scf_dfa_t* dfa)
 	SCF_DFA_GET_MODULE_NODE(dfa, sizeof,   _sizeof,     _sizeof);
 	SCF_DFA_GET_MODULE_NODE(dfa, sizeof,   rp,          sizeof_rp);
 
-	SCF_DFA_GET_MODULE_NODE(dfa, create,   create,      create);
-	SCF_DFA_GET_MODULE_NODE(dfa, create,   identity,    create_id);
-	SCF_DFA_GET_MODULE_NODE(dfa, create,   rp,          create_rp);
+	SCF_DFA_GET_MODULE_NODE(dfa, new,      new,         new);
+	SCF_DFA_GET_MODULE_NODE(dfa, new,      identity,    new_id);
+	SCF_DFA_GET_MODULE_NODE(dfa, new,      rp,          new_rp);
 
 	SCF_DFA_GET_MODULE_NODE(dfa, type,     entry,       type_entry);
 	SCF_DFA_GET_MODULE_NODE(dfa, type,     base_type,   base_type);
@@ -925,10 +925,10 @@ static int _dfa_init_syntax_expr(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(container_rp, comma);
 	scf_dfa_node_add_child(container_rp, semicolon);
 
-	// create class object
-	scf_dfa_node_add_child(expr,       create);
-	scf_dfa_node_add_child(create_id,  semicolon);
-	scf_dfa_node_add_child(create_rp,  semicolon);
+	// new class object
+	scf_dfa_node_add_child(expr,       new);
+	scf_dfa_node_add_child(new_id,     semicolon);
+	scf_dfa_node_add_child(new_rp,     semicolon);
 
 	// va_arg(ap, type)
 	scf_dfa_node_add_child(expr,       va_arg);
@@ -1002,8 +1002,8 @@ static int _dfa_init_syntax_expr(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(binary_op,  number);
 	scf_dfa_node_add_child(binary_op,  identity);
 
-	// create class object
-	scf_dfa_node_add_child(binary_op,  create);
+	// new class object
+	scf_dfa_node_add_child(binary_op,  new);
 	scf_dfa_node_add_child(binary_op,  expr);
 
 	scf_dfa_node_add_child(unary_post, rp);
