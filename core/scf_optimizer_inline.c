@@ -378,6 +378,7 @@ static int _optimize_inline2(scf_ast_t* ast, scf_function_t* f)
 		int n_calls = 0;
 
 		bb_cur = bb;
+		bb_cur->call_flag = 0;
 
 		for (l2 = scf_list_head(&bb->code_list_head); l2 != scf_list_sentinel(&bb->code_list_head); ) {
 			c   = scf_list_data(l2, scf_3ac_code_t, list);
@@ -398,22 +399,22 @@ static int _optimize_inline2(scf_ast_t* ast, scf_function_t* f)
 			src = c->srcs->data[0];
 			v   = _scf_operand_get(src->node);
 
-			if (!v->const_literal_flag)
+			if (!v->const_literal_flag) {
+				bb_cur->call_flag |= n_calls > 0;
 				continue;
+			}
 
 			f2 = v->func_ptr;
 
-			if (!f2->node.define_flag)
+			if (!f2->node.define_flag || !f2->inline_flag || f2->vargs_flag) {
+				bb_cur->call_flag |= n_calls > 0;
 				continue;
+			}
 
-			if (!f2->inline_flag)
+			if (f2->nb_basic_blocks > 10) {
+				bb_cur->call_flag |= n_calls > 0;
 				continue;
-
-			if (f2->vargs_flag)
-				continue;
-
-			if (f2->nb_basic_blocks > 10)
-				continue;
+			}
 #if 1
 			bb2 = bb_cur;
 			bb_cur->call_flag = 0;
@@ -436,8 +437,6 @@ static int _optimize_inline2(scf_ast_t* ast, scf_function_t* f)
 			}
 #endif
 		}
-
-		bb_cur->call_flag |= n_calls > 0;
 	}
 
 #if 0

@@ -251,9 +251,9 @@ int x64_caller_save_regs(scf_3ac_code_t* c, const char* regs[], int nb_regs, int
 
 						scf_variable_t* v = dn->var;
 						if (v && v->w)
-							scf_logw("dn: %#lx, v_%d/%s/%#lx\n", 0xffff & (uintptr_t)dn, v->w->line, v->w->text->data, 0xffff & (uintptr_t)v);
+							scf_logd("dn: %#lx, v_%d/%s/%#lx\n", 0xffff & (uintptr_t)dn, v->w->line, v->w->text->data, 0xffff & (uintptr_t)v);
 						else
-							scf_logw("dn: %#lx, v_%#lx\n", 0xffff & (uintptr_t)dn, 0xffff & (uintptr_t)v);
+							scf_logd("dn: %#lx, v_%#lx\n", 0xffff & (uintptr_t)dn, 0xffff & (uintptr_t)v);
 						break;
 					}
 				}
@@ -1221,23 +1221,24 @@ int x64_array_index_reg(x64_sib_t* sib, scf_dag_node_t* base, scf_dag_node_t* in
 	if (ri->bytes < ri2->bytes) {
 
 		if (scf_variable_signed(index->var)) {
-			mov = x64_find_OpCode(SCF_X64_MOVSX, ri->bytes, ri2->bytes, SCF_X64_E2G);
+			mov  = x64_find_OpCode(SCF_X64_MOVSX, ri->bytes, ri2->bytes, SCF_X64_E2G);
+			inst = x64_make_inst_E2G(mov, ri2, ri);
+			X64_INST_ADD_CHECK(c->instructions, inst);
 
 		} else if (ri->bytes <= 2) {
-			mov = x64_find_OpCode(SCF_X64_MOVZX, ri->bytes, ri2->bytes, SCF_X64_E2G);
+			mov  = x64_find_OpCode(SCF_X64_MOVZX, ri->bytes, ri2->bytes, SCF_X64_E2G);
+			inst = x64_make_inst_E2G(mov, ri2, ri);
+			X64_INST_ADD_CHECK(c->instructions, inst);
 
 		} else {
 			assert(4 == ri->bytes);
-
+/*
 			xor  = x64_find_OpCode(SCF_X64_XOR, 8, 8, SCF_X64_G2E);
 			inst = x64_make_inst_G2E(xor, ri2, ri2);
 			X64_INST_ADD_CHECK(c->instructions, inst);
-
-			mov  = x64_find_OpCode(SCF_X64_MOV, 4, 4, SCF_X64_E2G);
+			mov = x64_find_OpCode(SCF_X64_MOV, 4, 4, SCF_X64_E2G);
+*/
 		}
-
-		inst = x64_make_inst_E2G(mov, ri2, ri);
-		X64_INST_ADD_CHECK(c->instructions, inst);
 
 		ri = ri2;
 	}
