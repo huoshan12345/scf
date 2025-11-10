@@ -373,8 +373,11 @@ static int _scf_dag_op_##name(scf_list_t* h, scf_dag_node_t* parent, scf_dag_nod
 }
 
 SCF_OP_CMP(eq, ==, SCF_OP_EQ)
-SCF_OP_CMP(gt, >, SCF_OP_GT)
-SCF_OP_CMP(lt, <, SCF_OP_LT)
+SCF_OP_CMP(ne, !=, SCF_OP_NE)
+SCF_OP_CMP(gt, >,  SCF_OP_GT)
+SCF_OP_CMP(ge, >=, SCF_OP_GE)
+SCF_OP_CMP(lt, <,  SCF_OP_LT)
+SCF_OP_CMP(le, <=, SCF_OP_LE)
 
 scf_dag_operator_t	dag_operators[] =
 {
@@ -406,8 +409,11 @@ scf_dag_operator_t	dag_operators[] =
 	{SCF_OP_BIT_OR,         SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_or},
 
 	{SCF_OP_EQ,             SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_eq},
+	{SCF_OP_NE,             SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_ne},
 	{SCF_OP_GT,             SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_gt},
+	{SCF_OP_GE,             SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_ge},
 	{SCF_OP_LT,             SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_lt},
+	{SCF_OP_LE,             SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_le},
 
 	{SCF_OP_VLA_ALLOC,      SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_vla_alloc},
 	{SCF_OP_RETURN,         SCF_OP_ASSOCIATIVITY_LEFT, _scf_dag_op_return},

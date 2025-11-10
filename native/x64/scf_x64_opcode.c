@@ -241,6 +241,12 @@ scf_x64_OpCode_t	x64_OpCodes[] = {
 	{SCF_X64_SETL,  "setl",  3, {0x0f, 0x9c, 0x0},2,  1,1, SCF_X64_E, 0,0, 0,{0,0}},
 	{SCF_X64_SETLE, "setle", 3, {0x0f, 0x9e, 0x0},2,  1,1, SCF_X64_E, 0,0, 0,{0,0}},
 
+	{SCF_X64_SETA,  "seta",  3, {0x0f, 0x97, 0x0},2,  1,1, SCF_X64_E, 0,0, 0,{0,0}},
+	{SCF_X64_SETAE, "setae", 3, {0x0f, 0x93, 0x0},2,  1,1, SCF_X64_E, 0,0, 0,{0,0}},
+
+	{SCF_X64_SETB,  "setb",  3, {0x0f, 0x92, 0x0},2,  1,1, SCF_X64_E, 0,0, 0,{0,0}},
+	{SCF_X64_SETBE, "setbe", 3, {0x0f, 0x96, 0x0},2,  1,1, SCF_X64_E, 0,0, 0,{0,0}},
+
 	{SCF_X64_ADDSS, "addss", 4, {0xf3, 0x0f, 0x58},3, 4,4, SCF_X64_E2G, 0,0, 0,{0,0}},
 	{SCF_X64_ADDSD, "addsd", 8, {0xf2, 0x0f, 0x58},3, 8,8, SCF_X64_E2G, 0,0, 0,{0,0}},
 

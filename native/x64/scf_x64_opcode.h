@@ -34,4 +34,3 @@ scf_x64_OpCode_t*   x64_find_OpCode(const int type, const int OpBytes, const int
 int                 x64_find_OpCodes(scf_vector_t* results, const int type, const int OpBytes, const int RegBytes, const int EG);
 
 #endif
-

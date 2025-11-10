@@ -204,6 +204,35 @@ int x64_inst_cmp_set(scf_native_t* ctx, scf_3ac_code_t* c, int setcc_type)
 	if (ret < 0)
 		return ret;
 
+	scf_3ac_operand_t* src = c->srcs->data[0];
+	scf_dag_node_t*    dn  = src->dag_node;
+
+	int is_float = scf_variable_float(dn->var);
+
+	switch (setcc_type)
+	{
+		case SCF_X64_SETG:
+			if (is_float)
+				setcc_type = SCF_X64_SETA;
+			break;
+
+		case SCF_X64_SETGE:
+			if (is_float)
+				setcc_type = SCF_X64_SETAE;
+			break;
+
+		case SCF_X64_SETL:
+			if (is_float)
+				setcc_type = SCF_X64_SETB;
+			break;
+
+		case SCF_X64_SETLE:
+			if (is_float)
+				setcc_type = SCF_X64_SETBE;
+			break;
+		default:
+			break;
+	};
+
 	return x64_inst_set(ctx, c, setcc_type);
 }
-

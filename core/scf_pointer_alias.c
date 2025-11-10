@@ -153,8 +153,10 @@ static int _bb_pointer_initeds(scf_vector_t* initeds, scf_list_t* bb_list_head, 
 		if (v->tmp_flag)
 			return 0;
 
-		scf_loge("pointer '%s' is not inited, tmp_flag: %d, local_flag: %d, file: %s, line: %d\n",
-				v->w->text->data, v->tmp_flag, v->local_flag, v->w->file->data, v->w->line);
+		if (SCF_OP_ADDRESS_OF != dn->type) {
+			scf_loge("pointer '%s_%d_%d' is not inited, tmp_flag: %d, local_flag: %d, file: %s, line: %d\n",
+					v->w->text->data, v->w->line, v->w->pos, v->tmp_flag, v->local_flag, v->w->file->data, v->w->line);
+		}
 		return SCF_POINTER_NOT_INIT;
 	}
 
@@ -1557,7 +1559,7 @@ int scf_pointer_alias(scf_vector_t* aliases, scf_dag_node_t* dn_alias, scf_3ac_c
 		default:
 			if (dn_alias->var && dn_alias->var->w) {
 				v = dn_alias->var;
-				scf_loge("type: %d, v_%d_%d/%s\n", dn_alias->type, v->w->line, v->w->pos, v->w->text->data);
+				scf_loge("type: %d, v_%d_%d/%s/%#lx\n", dn_alias->type, v->w->line, v->w->pos, v->w->text->data, 0xffff & (uintptr_t)dn_alias->var);
 			} else
 				scf_loge("type: %d, v_%#lx\n", dn_alias->type, 0xffff & (uintptr_t)dn_alias->var);
 			return -1;

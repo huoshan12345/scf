@@ -805,49 +805,22 @@ X64_RCG_SET(setge)
 X64_RCG_SET(setlt)
 X64_RCG_SET(setle)
 
-static int _x64_rcg_eq_handler(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g)
-{
-	scf_3ac_operand_t* dst = c->dsts->data[0];
-
-	int ret = _x64_rcg_make2(c, dst->dag_node, NULL, NULL);
-	if (ret < 0)
-		return ret;
-
-	return _x64_rcg_make(c, g, dst->dag_node, NULL, NULL);
+#define X64_RCG_CMP(op) \
+static int _x64_rcg_##op##_handler(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g) \
+{ \
+	scf_3ac_operand_t* dst = c->dsts->data[0]; \
+	\
+	int ret = _x64_rcg_make2(c, dst->dag_node, NULL, NULL); \
+	if (ret < 0) \
+		return ret; \
+	return _x64_rcg_make(c, g, dst->dag_node, NULL, NULL); \
 }
-
-static int _x64_rcg_ne_handler(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g)
-{
-	scf_3ac_operand_t* dst = c->dsts->data[0];
-
-	int ret = _x64_rcg_make2(c, dst->dag_node, NULL, NULL);
-	if (ret < 0)
-		return ret;
-
-	return _x64_rcg_make(c, g, dst->dag_node, NULL, NULL);
-}
-
-static int _x64_rcg_gt_handler(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g)
-{
-	scf_3ac_operand_t* dst = c->dsts->data[0];
-
-	int ret = _x64_rcg_make2(c, dst->dag_node, NULL, NULL);
-	if (ret < 0)
-		return ret;
-
-	return _x64_rcg_make(c, g, dst->dag_node, NULL, NULL);
-}
-
-static int _x64_rcg_lt_handler(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g)
-{
-	scf_3ac_operand_t* dst = c->dsts->data[0];
-
-	int ret = _x64_rcg_make2(c, dst->dag_node, NULL, NULL);
-	if (ret < 0)
-		return ret;
-
-	return _x64_rcg_make(c, g, dst->dag_node, NULL, NULL);
-}
+X64_RCG_CMP(eq)
+X64_RCG_CMP(ne)
+X64_RCG_CMP(gt)
+X64_RCG_CMP(ge)
+X64_RCG_CMP(lt)
+X64_RCG_CMP(le)
 
 static int _x64_rcg_assign_handler(scf_native_t* ctx, scf_3ac_code_t* c, scf_graph_t* g)
 {
@@ -1296,7 +1269,9 @@ static x64_rcg_handler_pt  x64_rcg_handlers[SCF_N_3AC_OPS] =
 	[SCF_OP_EQ  	    ]  =  _x64_rcg_eq_handler,
 	[SCF_OP_NE  	    ]  =  _x64_rcg_ne_handler,
 	[SCF_OP_GT  	    ]  =  _x64_rcg_gt_handler,
+	[SCF_OP_GE  	    ]  =  _x64_rcg_ge_handler,
 	[SCF_OP_LT  	    ]  =  _x64_rcg_lt_handler,
+	[SCF_OP_LE  	    ]  =  _x64_rcg_le_handler,
 
 	[SCF_OP_ASSIGN      ]  =  _x64_rcg_assign_handler,
 	[SCF_OP_ADD_ASSIGN  ]  =  _x64_rcg_add_assign_handler,

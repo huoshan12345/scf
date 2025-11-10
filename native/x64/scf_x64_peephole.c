@@ -339,7 +339,7 @@ static int x64_inst_is_useful(scf_instruction_t* inst, scf_instruction_t* std)
 	if (x64_inst_data_is_reg(&inst->dst)) {
 
 		scf_register_t* r0 = inst->dst.base;
-		scf_register_t* r1 = std->src.base;
+		scf_register_t* r1;
 
 		if (SCF_X64_CALL == std->OpCode->type) {
 
@@ -352,15 +352,25 @@ static int x64_inst_is_useful(scf_instruction_t* inst, scf_instruction_t* std)
 				return 1;
 
 		} else {
+			r1 = std->src.base;
 			if (x64_inst_data_is_reg(&std->src)) {
 				if (X64_COLOR_CONFLICT(r0->color, r1->color))
 					return 1;
 			}
 
-			if (std->src.base  == inst->dst.base
-					|| std->src.index == inst->dst.base
-					|| std->dst.index == inst->dst.base
-					|| std->dst.base  == inst->dst.base)
+			if (r1 && X64_COLOR_CONFLICT(r1->color, r0->color))
+				return 1;
+
+			r1 = std->src.index;
+			if (r1 && X64_COLOR_CONFLICT(r1->color, r0->color))
+				return 1;
+
+			r1 = std->dst.index;
+			if (r1 && X64_COLOR_CONFLICT(r1->color, r0->color))
+				return 1;
+
+			r1 = std->dst.base;
+			if (r1 && X64_COLOR_CONFLICT(r1->color, r0->color))
 				return 1;
 		}
 
@@ -501,9 +511,6 @@ static int _x64_peephole_function(scf_vector_t* tmp_insts, scf_function_t* f)
 
 		assert(0 == scf_vector_del(c->instructions,  inst));
 		assert(0 == scf_vector_del(tmp_insts,        inst));
-
-//		scf_logd("del: \n");
-//		scf_instruction_print(inst);
 
 		free(inst);
 		inst = NULL;

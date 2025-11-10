@@ -3037,27 +3037,11 @@ static int _scf_op_semantic_cmp(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes
 
 static int _scf_op_semantic_eq(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
 {
-#define CMPEQ_CHECK_FLOAT() \
-	do { \
-		assert(2 == nb_nodes); \
-		scf_variable_t* v0 = _scf_operand_get(nodes[0]); \
-		scf_variable_t* v1 = _scf_operand_get(nodes[1]); \
-		\
-		if (scf_variable_float(v0) || scf_variable_float(v1)) { \
-			scf_loge("float type can't cmp equal\n"); \
-			return -EINVAL; \
-		} \
-	} while (0)
-
-	CMPEQ_CHECK_FLOAT();
-
 	return _scf_op_semantic_cmp(ast, nodes, nb_nodes, data);
 }
 
 static int _scf_op_semantic_ne(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
 {
-	CMPEQ_CHECK_FLOAT();
-
 	return _scf_op_semantic_cmp(ast, nodes, nb_nodes, data);
 }
 
@@ -3068,8 +3052,6 @@ static int _scf_op_semantic_gt(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes,
 
 static int _scf_op_semantic_ge(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
 {
-	CMPEQ_CHECK_FLOAT();
-
 	return _scf_op_semantic_cmp(ast, nodes, nb_nodes, data);
 }
 
@@ -3080,8 +3062,6 @@ static int _scf_op_semantic_lt(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes,
 
 static int _scf_op_semantic_le(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* data)
 {
-	CMPEQ_CHECK_FLOAT();
-
 	return _scf_op_semantic_cmp(ast, nodes, nb_nodes, data);
 }
 

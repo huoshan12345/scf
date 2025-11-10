@@ -74,6 +74,12 @@ enum scf_x64_OpCode_types {
 	SCF_X64_SETL,
 	SCF_X64_SETLE,
 
+	SCF_X64_SETA,
+	SCF_X64_SETAE,
+
+	SCF_X64_SETB,
+	SCF_X64_SETBE,
+
 	SCF_X64_ADDSS,
 	SCF_X64_ADDSD,
 
@@ -83,7 +89,6 @@ enum scf_x64_OpCode_types {
 	SCF_X64_MULSS,
 	SCF_X64_MULSD,
 
-	// 41
 	SCF_X64_DIVSS,
 	SCF_X64_DIVSD,
 
@@ -93,7 +98,6 @@ enum scf_x64_OpCode_types {
 	SCF_X64_UCOMISS,
 	SCF_X64_UCOMISD,
 
-	// 47
 	SCF_X64_CVTSI2SD,
 	SCF_X64_CVTSI2SS,
 
