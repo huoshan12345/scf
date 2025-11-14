@@ -803,6 +803,59 @@ static int _x64_inst_neg_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	return 0;
 }
 
+static int _x64_inst_inc_float(scf_function_t* f, scf_3ac_code_t* c, int INC)
+{
+	scf_3ac_operand_t*  src = c->srcs->data[0];
+	scf_variable_t*     v   = src->dag_node->var;
+	scf_variable_t*     v1;
+	scf_register_t*     rs  = NULL;
+	scf_x64_OpCode_t*   OpCode;
+	scf_instruction_t*  inst = NULL;
+	scf_rela_t*         rela = NULL;
+
+	v1 = scf_variable_clone(v);
+	if (!v1)
+		return -ENOMEM;
+
+	scf_string_free(v1->w->text);
+	v1->w->text = scf_string_cstr("1.0");
+	if (!v1->w->text) {
+		scf_variable_free(v1);
+		return -ENOMEM;
+	}
+
+	scf_scope_push_var(f->scope, v1);
+
+	v1->const_literal_flag = 1;
+	v1->const_flag  = 1;
+	v1->global_flag = 1;
+	v1->local_flag  = 0;
+	v1->tmp_flag    = 0;
+
+	if (4 == v->size) {
+		if (SCF_X64_INC == INC)
+			OpCode = x64_find_OpCode(SCF_X64_ADDSS, 4, 4, SCF_X64_E2G);
+		else
+			OpCode = x64_find_OpCode(SCF_X64_SUBSS, 4, 4, SCF_X64_E2G);
+
+		v1->data.f = 1.0;
+	} else {
+		v1->data.d = 1.0;
+
+		if (SCF_X64_INC == INC)
+			OpCode = x64_find_OpCode(SCF_X64_ADDSD, 8, 8, SCF_X64_E2G);
+		else
+			OpCode = x64_find_OpCode(SCF_X64_SUBSD, 8, 8, SCF_X64_E2G);
+	}
+
+	X64_SELECT_REG_CHECK(&rs, src->dag_node, c, f, 1);
+
+	inst = x64_make_inst_M2G(&rela, OpCode, rs, NULL, v1);
+	X64_INST_ADD_CHECK(c->instructions, inst);
+	X64_RELA_ADD_CHECK(f->data_relas, rela, c, v1, NULL);
+	return 0;
+}
+
 static int _x64_inst_inc(scf_native_t* ctx, scf_3ac_code_t* c, int INC, int ADD)
 {
 	if (!c->srcs || c->srcs->size != 1)
@@ -818,10 +871,19 @@ static int _x64_inst_inc(scf_native_t* ctx, scf_3ac_code_t* c, int INC, int ADD)
 	if (0 == src->dag_node->color)
 		return -EINVAL;
 
+	if (!c->instructions) {
+		c->instructions = scf_vector_alloc();
+		if (!c->instructions)
+			return -ENOMEM;
+	}
+
 	scf_variable_t*     v    = src->dag_node->var;
 	scf_register_t*     rs   = NULL;
 	scf_x64_OpCode_t*   OpCode;
 	scf_instruction_t*  inst = NULL;
+
+	if (scf_variable_float(v))
+		return _x64_inst_inc_float(f, c, INC);
 
 	int imm_size = 1;
 	if (v->data_size > 0xff)
@@ -835,12 +897,6 @@ static int _x64_inst_inc(scf_native_t* ctx, scf_3ac_code_t* c, int INC, int ADD)
 	if (!OpCode) {
 		scf_loge("v->size: %d, imm_size: %d\n", v->size, imm_size);
 		return -EINVAL;
-	}
-
-	if (!c->instructions) {
-		c->instructions = scf_vector_alloc();
-		if (!c->instructions)
-			return -ENOMEM;
 	}
 
 	if (v->nb_pointers > 0) {

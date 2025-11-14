@@ -1738,7 +1738,7 @@ static int _scf_op_semantic_inc(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes
 		}
 	}
 
-	if (scf_variable_integer(v0)) {
+	if (scf_variable_integer(v0) || scf_variable_float(v0)) {
 
 		scf_type_t*	t = NULL;
 		int ret = scf_ast_find_type_type(&t, ast, v0->type);
