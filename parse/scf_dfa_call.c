@@ -122,7 +122,7 @@ static int _call_action_lp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 		return SCF_DFA_ERROR;
 	}
 
-	scf_logd("d->expr: %p\n", d->expr);
+	scf_logi("d->expr: %p, OP: %d\n", d->expr, d->expr->type);
 
 	cd->func           = node_pf;
 	cd->call           = node_call;
@@ -173,6 +173,8 @@ static int _call_action_rp(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	assert(cd->nb_rps == cd->nb_lps);
 
 	scf_stack_pop(s);
+
+	scf_logi("d->expr: %p\n", d->expr);
 
 	if (cd->parent_expr) {
 		scf_expr_add_node(cd->parent_expr, cd->func);
@@ -233,6 +235,7 @@ static int _call_action_comma(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 		scf_loge("\n");
 		return SCF_DFA_ERROR;
 	}
+	scf_logi("d->expr: %p\n", d->expr);
 
 	if (!cd->argv)
 		cd->argv = scf_vector_alloc();

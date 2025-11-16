@@ -1289,17 +1289,23 @@ static int _scf_op_for(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, void* d
 	scf_list_t*     start_prev = scf_list_tail(d->_3ac_list_head);
 	scf_3ac_code_t* jmp_end    = NULL;
 
-	if (nodes[1]) {
-		assert(SCF_OP_EXPR == nodes[1]->type);
-
-		int jmp_op = _scf_op_cond(ast, nodes[1], d);
-		if (jmp_op < 0) {
+	scf_node_t* cond = nodes[1];
+	if (cond) {
+		if (_scf_op_node(ast, cond, d) < 0) {
 			scf_loge("\n");
 			return -1;
 		}
 
-		jmp_end = scf_3ac_jmp_code(jmp_op, NULL, NULL);
-		scf_list_add_tail(d->_3ac_list_head, &jmp_end->list);
+		if (cond->nb_nodes > 0) {
+			int jmp_op = _scf_op_cond(ast, cond->nodes[cond->nb_nodes - 1], d);
+			if (jmp_op < 0) {
+				scf_loge("\n");
+				return -1;
+			}
+
+			jmp_end = scf_3ac_jmp_code(jmp_op, NULL, NULL);
+			scf_list_add_tail(d->_3ac_list_head, &jmp_end->list);
+		}
 	}
 
 	scf_branch_ops_t* local_branch_ops = scf_branch_ops_alloc();

@@ -2374,7 +2374,7 @@ int scf_parse_compile(scf_parse_t* parse, const char* arch, int _3ac)
 	if (!functions)
 		return -ENOMEM;
 
-	int ret = scf_node_search_bfs((scf_node_t*)b, NULL, functions, -1, _find_function);
+	int ret = scf_node_search_bfs((scf_node_t*)b, NULL, functions, -1, __find_function);
 	if (ret < 0)
 		goto error;
 
@@ -2407,7 +2407,7 @@ int scf_parse_to_obj(scf_parse_t* parse, const char* out, const char* arch)
 	if (!functions)
 		return -ENOMEM;
 
-	int ret = scf_node_search_bfs((scf_node_t*)b, NULL, functions, -1, _find_function);
+	int ret = scf_node_search_bfs((scf_node_t*)b, NULL, functions, -1, __find_function);
 	if (ret < 0) {
 		scf_vector_free(functions);
 		return ret;
@@ -2426,7 +2426,7 @@ int scf_parse_to_obj(scf_parse_t* parse, const char* out, const char* arch)
 		goto global_vars_error;
 	}
 
-	ret = scf_node_search_bfs((scf_node_t*)b, NULL, global_vars, -1, _find_global_var);
+	ret = scf_node_search_bfs((scf_node_t*)b, NULL, global_vars, -1, __find_global_var);
 	if (ret < 0) {
 		scf_loge("\n");
 		goto code_error;

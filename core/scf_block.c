@@ -104,7 +104,10 @@ scf_variable_t*	scf_block_find_variable(scf_block_t* b, const char* name)
 {
 	assert(b);
 	while (b) {
-		if (SCF_OP_BLOCK == b->node.type || SCF_FUNCTION == b->node.type || b->node.type >= SCF_STRUCT) {
+		if (SCF_OP_BLOCK        == b->node.type
+				|| SCF_OP_FOR   == b->node.type
+				|| SCF_FUNCTION == b->node.type
+				|| b->node.type >= SCF_STRUCT) {
 
 			if (b->scope) {
 				scf_variable_t* v = scf_scope_find_variable(b->scope, name);
@@ -150,4 +153,64 @@ scf_label_t* scf_block_find_label(scf_block_t* b, const char* name)
 		b = (scf_block_t*)(b->node.parent);
 	}
 	return NULL;
+}
+
+int __find_local_vars(scf_node_t* node, void* arg, scf_vector_t* results)
+{
+	if (SCF_OP_BLOCK == node->type || SCF_OP_FOR == node->type || SCF_FUNCTION == node->type) {
+
+		scf_variable_t*  v;
+		scf_block_t*     b = (scf_block_t*)node;
+		int i;
+
+		if (b->scope) {
+			for (i = 0; i < b->scope->vars->size; i++) {
+				v =         b->scope->vars->data[i];
+
+				int ret = scf_vector_add(results, v);
+				if (ret < 0)
+					return ret;
+			}
+		}
+	}
+	return 0;
+}
+
+int __find_function(scf_node_t* node, void* arg, scf_vector_t* results)
+{
+	if (SCF_FUNCTION == node->type) {
+
+		scf_function_t* f = (scf_function_t*)node;
+
+		return scf_vector_add(results, f);
+	}
+
+	return 0;
+}
+
+int __find_global_var(scf_node_t* node, void* arg, scf_vector_t* results)
+{
+	if (SCF_OP_BLOCK == node->type
+			|| (node->type >= SCF_STRUCT && node->class_flag)) {
+
+		scf_variable_t* v;
+		scf_block_t*    b = (scf_block_t*)node;
+		int i;
+
+		if (!b->scope || !b->scope->vars)
+			return 0;
+
+		for (i = 0; i < b->scope->vars->size; i++) {
+			v  =        b->scope->vars->data[i];
+
+			if (v->global_flag || v->static_flag) {
+
+				int ret = scf_vector_add(results, v);
+				if (ret < 0)
+					return ret;
+			}
+		}
+	}
+
+	return 0;
 }

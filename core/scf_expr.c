@@ -91,6 +91,7 @@ static int __expr_node_add_node(scf_node_t** pparent, scf_node_t* child)
 	}
 
 	// parent->priority == child->priority
+	scf_logi("parent: %p, parent->type: %d, FOR: %d, SCF_VAR_INT: %d\n", parent, parent->type, SCF_OP_FOR, SCF_VAR_INT);
 	assert(parent->op);
 	assert(child->op);
 

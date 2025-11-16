@@ -1100,25 +1100,6 @@ int	_scf_x64_select_inst(scf_native_t* ctx)
 	return 0;
 }
 
-static int _find_local_vars(scf_node_t* node, void* arg, scf_vector_t* results)
-{
-	scf_block_t* b = (scf_block_t*)node;
-
-	if ((SCF_OP_BLOCK == b->node.type || SCF_FUNCTION == b->node.type) && b->scope) {
-
-		int i;
-		for (i = 0; i < b->scope->vars->size; i++) {
-
-			scf_variable_t* var = b->scope->vars->data[i];
-
-			int ret = scf_vector_add(results, var);
-			if (ret < 0)
-				return ret;
-		}
-	}
-	return 0;
-}
-
 int scf_x64_select_inst(scf_native_t* ctx, scf_function_t* f)
 {
 	scf_x64_context_t* x64 = ctx->priv;
@@ -1129,7 +1110,7 @@ int scf_x64_select_inst(scf_native_t* ctx, scf_function_t* f)
 	if (!local_vars)
 		return -ENOMEM;
 
-	int ret = scf_node_search_bfs((scf_node_t*)f, NULL, local_vars, -1, _find_local_vars);
+	int ret = scf_node_search_bfs((scf_node_t*)f, NULL, local_vars, -1, __find_local_vars);
 	if (ret < 0)
 		return ret;
 

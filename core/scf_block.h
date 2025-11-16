@@ -28,5 +28,6 @@ scf_function_t*	scf_block_find_function(scf_block_t* b, const char* name);
 
 scf_label_t*    scf_block_find_label(scf_block_t* b, const char* name);
 
-#endif
+int             _find_local_vars(scf_node_t* node, void* arg, scf_vector_t* results);
 
+#endif

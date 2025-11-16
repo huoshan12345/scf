@@ -1512,23 +1512,22 @@ static int _scf_op_semantic_for(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes
 		}
 	}
 
-	scf_expr_t* e = nodes[1];
-	if (e) {
-		assert(SCF_OP_EXPR == e->type);
-
-		scf_variable_t* r = NULL;
-
-		if (_scf_expr_calculate(ast, e, &r) < 0) {
+	scf_node_t* cond = nodes[1];
+	if (cond) {
+		ret = _scf_op_semantic_node(ast, cond, d);
+		if (ret < 0) {
 			scf_loge("\n");
-			return -1;
+			return ret;
 		}
 
-		if (!r || !scf_variable_integer(r)) {
-			scf_loge("\n");
-			return -1;
+		if (cond->nb_nodes > 0) { // the final expr is real cond expr
+			scf_variable_t* r = _scf_operand_get(cond->nodes[cond->nb_nodes - 1]);
+
+			if (!r || !scf_variable_integer(r)) {
+				scf_loge("\n");
+				return -1;
+			}
 		}
-		scf_variable_free(r);
-		r = NULL;
 	}
 
 	int i;

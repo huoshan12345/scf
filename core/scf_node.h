@@ -79,6 +79,10 @@ scf_function_t* _scf_function_get(scf_node_t* node);
 typedef int     (*scf_node_find_pt)(scf_node_t* node, void* arg, scf_vector_t* results);
 int             scf_node_search_bfs(scf_node_t* root, void* arg, scf_vector_t* results, int max, scf_node_find_pt find);
 
+int             __find_local_vars(scf_node_t* node, void* arg, scf_vector_t* results);
+int             __find_global_var(scf_node_t* node, void* arg, scf_vector_t* results);
+int             __find_function  (scf_node_t* node, void* arg, scf_vector_t* results);
+
 scf_label_t*	scf_label_alloc(scf_lex_word_t* w);
 void			scf_label_free(scf_label_t* l);
 

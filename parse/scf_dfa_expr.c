@@ -716,7 +716,7 @@ int _expr_multi_rets(scf_expr_t* e)
 	return 0;
 }
 
-static int _expr_fini_expr(scf_parse_t* parse, dfa_data_t* d, int semi_flag)
+int _expr_fini_expr(scf_parse_t* parse, dfa_data_t* d, int semi_flag)
 {
 	expr_module_data_t* md = d->module_datas[dfa_module_expr.index];
 	dfa_identity_t*     id = scf_stack_top(d->current_identities);

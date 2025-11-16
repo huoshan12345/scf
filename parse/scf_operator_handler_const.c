@@ -380,27 +380,8 @@ static int _scf_op_const_for(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, v
 
 	scf_handler_data_t* d = data;
 
-	if (nodes[0]) {
-		if (_scf_op_const_node(ast, nodes[0], d) < 0) {
-			scf_loge("\n");
-			return -1;
-		}
-	}
-
-	scf_expr_t* e = nodes[1];
-	if (e) {
-		assert(SCF_OP_EXPR == e->type);
-
-		scf_variable_t* r = NULL;
-
-		if (_scf_expr_calculate_internal(ast, e, &r) < 0) {
-			scf_loge("\n");
-			return -1;
-		}
-	}
-
 	int i;
-	for (i = 2; i < nb_nodes; i++) {
+	for (i = 0; i < nb_nodes; i++) {
 		if (!nodes[i])
 			continue;
 

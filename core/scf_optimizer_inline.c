@@ -186,25 +186,6 @@ static int _copy_codes(scf_list_t* hbb, scf_vector_t* argv, scf_3ac_code_t* c, s
 	return 0;
 }
 
-static int _find_local_vars(scf_node_t* node, void* arg, scf_vector_t* results)
-{
-	scf_block_t* b = (scf_block_t*)node;
-
-	if ((SCF_OP_BLOCK == b->node.type || SCF_FUNCTION == b->node.type) && b->scope) {
-
-		int i;
-		for (i = 0; i < b->scope->vars->size; i++) {
-
-			scf_variable_t* var = b->scope->vars->data[i];
-
-			int ret = scf_vector_add(results, var);
-			if (ret < 0)
-				return ret;
-		}
-	}
-	return 0;
-}
-
 static int _do_inline(scf_ast_t* ast, scf_3ac_code_t* c, scf_basic_block_t** pbb, scf_function_t* f, scf_function_t* f2)
 {
 	scf_basic_block_t* bb = *pbb;
@@ -254,7 +235,7 @@ static int _do_inline(scf_ast_t* ast, scf_3ac_code_t* c, scf_basic_block_t** pbb
 
 	scf_vector_clear(argv, NULL);
 
-	int ret = scf_node_search_bfs((scf_node_t*)f2, NULL, argv, -1, _find_local_vars);
+	int ret = scf_node_search_bfs((scf_node_t*)f2, NULL, argv, -1, __find_local_vars);
 	if (ret < 0) {
 		scf_vector_free(argv);
 		return -ENOMEM;

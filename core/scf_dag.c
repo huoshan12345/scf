@@ -280,7 +280,11 @@ void scf_dn_status_print(scf_dn_status_t* ds)
 
 	if (ds->dag_node) {
 		v = ds->dag_node->var;
-		printf("dn: v_%d_%d/%s ", v->w->line, v->w->pos, v->w->text->data);
+
+		if (v->w)
+			printf("dn: v_%d_%d/%s ", v->w->line, v->w->pos, v->w->text->data);
+		else
+			printf("dn: v_%#lx ", (uintptr_t)v & 0xffff);
 
 		if (ds->dn_indexes) {
 			for (i = ds->dn_indexes->size - 1; i >= 0; i--) {
@@ -296,7 +300,10 @@ void scf_dn_status_print(scf_dn_status_t* ds)
 
 	if (ds->alias) {
 		v = ds->alias->var;
-		printf(" alias: v_%d_%d/%s ", v->w->line, v->w->pos, v->w->text->data);
+		if (v->w)
+			printf(" alias: v_%d_%d/%s ", v->w->line, v->w->pos, v->w->text->data);
+		else
+			printf(" alias: v_%#lx ", (uintptr_t)v & 0xffff);
 
 		if (ds->alias_indexes) {
 			for (i = ds->alias_indexes->size - 1; i >= 0; i--) {
@@ -310,7 +317,7 @@ void scf_dn_status_print(scf_dn_status_t* ds)
 		}
 	}
 
-	printf(" alias_type: %d\n", ds->alias_type);
+	printf(" alias_type: %d, ret_flag: %d, ret_index: %d\n", ds->alias_type, ds->ret_flag, ds->ret_index);
 }
 
 scf_dag_node_t* scf_dag_node_alloc(int type, scf_variable_t* var, const scf_node_t* node)
@@ -548,9 +555,6 @@ int scf_dag_node_same(scf_dag_node_t* dn, const scf_node_t* node)
 		scf_logd("dag   type: %d, node: %#lx, var: %#lx\n", dn->type, 0xffff & (uintptr_t)dn, 0xffff & (uintptr_t)dn->var);
 	}
 
-	if (SCF_OP_NEW == node->type)
-		node = node->result_nodes->data[0];
-
 	if (dn->type != node->type)
 		return 0;
 
@@ -571,14 +575,26 @@ int scf_dag_node_same(scf_dag_node_t* dn, const scf_node_t* node)
 			|| SCF_OP_INC_POST == node->type
 			|| SCF_OP_DEC_POST == node->type
 			|| SCF_OP_ADDRESS_OF == node->type) {
-		if (dn->var == _scf_operand_get((scf_node_t*)node))
+		if (dn->var == _scf_operand_get(node))
 			return 1;
+
 		return 0;
 	}
 
 	if (!dn->childs) {
-		if (SCF_OP_CALL == node->type && 1 == node->nb_nodes)
-			return __dn_same_call(dn, node, split);
+		switch (node->type) {
+			case SCF_OP_CALL:
+				//if (1 == node->nb_nodes)
+				return __dn_same_call(dn, node, split);
+				break;
+
+			case SCF_OP_POINTER:
+				return dn->var == _scf_operand_get(node);
+				break;
+			default:
+				break;
+		};
+
 		return 0;
 	}
 
@@ -631,8 +647,12 @@ int scf_dag_node_same(scf_dag_node_t* dn, const scf_node_t* node)
 		}
 	}
 
-	if (dn->childs->size != node->nb_nodes)
+	if (dn->childs->size != node->nb_nodes) {
+		if (SCF_OP_CALL == node->type /*&& 1 == node->nb_nodes*/)
+			return __dn_same_call(dn, node, split);
+
 		return 0;
+	}
 
 cmp_childs:
 	for (i = 0; i < node->nb_nodes; i++) {
@@ -715,7 +735,6 @@ int scf_dag_get_node(scf_list_t* h, const scf_node_t* node, scf_dag_node_t** pp)
 		node2 = node;
 
 	v  = _scf_operand_get((scf_node_t*)node2);
-
 	dn = scf_dag_find_node(h, node2);
 
 	if (!dn) {
