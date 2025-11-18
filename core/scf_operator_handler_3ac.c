@@ -796,85 +796,98 @@ static int _scf_op_end_loop(scf_list_t* start_prev, scf_list_t* continue_prev, s
 	scf_list_t*        l2;
 	scf_list_t*        cond_prev = scf_list_tail(d->_3ac_list_head);
 
-	for (l = scf_list_next(start_prev); l != &jmp_end->list; l = scf_list_next(l)) {
-		c  = scf_list_data(l, scf_3ac_code_t, list);
-
-		c2 = scf_3ac_code_clone(c);
-		if (!c2)
-			return -ENOMEM;
-
-		scf_list_add_tail(d->_3ac_list_head, &c2->list);
-	}
-
-	for (l = scf_list_next(cond_prev); l != scf_list_sentinel(d->_3ac_list_head); l = scf_list_next(l)) {
-		c  = scf_list_data(l, scf_3ac_code_t, list);
-
-		if (!scf_type_is_jmp(c->op->type))
-			continue;
-
-		for (l2 = scf_list_next(cond_prev); l2 != scf_list_sentinel(d->_3ac_list_head); l2 = scf_list_next(l2)) {
-			c2  = scf_list_data(l2, scf_3ac_code_t, list);
-
-			dst = c->dsts->data[0];
-
-			if (dst->code == c2->origin) {
-				dst->code =  c2;
-				break;
-			}
-		}
-		assert(l2 != scf_list_sentinel(d->_3ac_list_head));
-
-		if (scf_vector_add(d->branch_ops->_breaks, c) < 0)
-			return -1;
-	}
-
 	int jmp_op = -1;
-	switch (jmp_end->op->type) {
+	if (jmp_end) {
+		for (l = scf_list_next(start_prev); l != &jmp_end->list; l = scf_list_next(l)) {
+			c  = scf_list_data(l, scf_3ac_code_t, list);
 
-		case SCF_OP_3AC_JNZ:
-			jmp_op = SCF_OP_3AC_JZ;
-			break;
-		case SCF_OP_3AC_JZ:
-			jmp_op = SCF_OP_3AC_JNZ;
-			break;
-		case SCF_OP_3AC_JLE:
-			jmp_op = SCF_OP_3AC_JGT;
-			break;
-		case SCF_OP_3AC_JLT:
-			jmp_op = SCF_OP_3AC_JGE;
-			break;
-		case SCF_OP_3AC_JGE:
-			jmp_op = SCF_OP_3AC_JLT;
-			break;
-		case SCF_OP_3AC_JGT:
-			jmp_op = SCF_OP_3AC_JLE;
-			break;
+			c2 = scf_3ac_code_clone(c);
+			if (!c2)
+				return -ENOMEM;
 
-		case SCF_OP_3AC_JA:
-			jmp_op = SCF_OP_3AC_JBE;
-			break;
-		case SCF_OP_3AC_JAE:
-			jmp_op = SCF_OP_3AC_JB;
-			break;
+			scf_list_add_tail(d->_3ac_list_head, &c2->list);
+		}
 
-		case SCF_OP_3AC_JB:
-			jmp_op = SCF_OP_3AC_JAE;
-			break;
-		case SCF_OP_3AC_JBE:
-			jmp_op = SCF_OP_3AC_JA;
-			break;
+		for (l = scf_list_next(cond_prev); l != scf_list_sentinel(d->_3ac_list_head); l = scf_list_next(l)) {
+			c  = scf_list_data(l, scf_3ac_code_t, list);
 
-		default:
-			jmp_op = -1;
-			break;
-	};
+			if (!scf_type_is_jmp(c->op->type))
+				continue;
 
-	// add loop when true
-	scf_3ac_code_t*	loop = scf_3ac_jmp_code(jmp_op, NULL, NULL);
-	scf_list_add_tail(d->_3ac_list_head, &loop->list);
+			for (l2 = scf_list_next(cond_prev); l2 != scf_list_sentinel(d->_3ac_list_head); l2 = scf_list_next(l2)) {
+				c2  = scf_list_data(l2, scf_3ac_code_t, list);
 
-	// should get the real start here,
-	scf_3ac_code_t*	start = scf_list_data(scf_list_next(&jmp_end->list), scf_3ac_code_t, list);
+				dst = c->dsts->data[0];
+
+				if (dst->code == c2->origin) {
+					dst->code =  c2;
+					break;
+				}
+			}
+			assert(l2 != scf_list_sentinel(d->_3ac_list_head));
+
+			if (scf_vector_add(d->branch_ops->_breaks, c) < 0)
+				return -1;
+		}
+
+		switch (jmp_end->op->type) {
+
+			case SCF_OP_3AC_JNZ:
+				jmp_op = SCF_OP_3AC_JZ;
+				break;
+			case SCF_OP_3AC_JZ:
+				jmp_op = SCF_OP_3AC_JNZ;
+				break;
+			case SCF_OP_3AC_JLE:
+				jmp_op = SCF_OP_3AC_JGT;
+				break;
+			case SCF_OP_3AC_JLT:
+				jmp_op = SCF_OP_3AC_JGE;
+				break;
+			case SCF_OP_3AC_JGE:
+				jmp_op = SCF_OP_3AC_JLT;
+				break;
+			case SCF_OP_3AC_JGT:
+				jmp_op = SCF_OP_3AC_JLE;
+				break;
+
+			case SCF_OP_3AC_JA:
+				jmp_op = SCF_OP_3AC_JBE;
+				break;
+			case SCF_OP_3AC_JAE:
+				jmp_op = SCF_OP_3AC_JB;
+				break;
+
+			case SCF_OP_3AC_JB:
+				jmp_op = SCF_OP_3AC_JAE;
+				break;
+			case SCF_OP_3AC_JBE:
+				jmp_op = SCF_OP_3AC_JA;
+				break;
+
+			default:
+				scf_loge("NOT support jmp op %d\n", jmp_end->op->type);
+				return -1;
+				break;
+		};
+	}
+
+	scf_3ac_code_t*	loop  = NULL;
+	scf_3ac_code_t*	start = NULL;
+
+	if (jmp_end) {
+		// add loop when true
+		loop = scf_3ac_jmp_code(jmp_op, NULL, NULL);
+		scf_list_add_tail(d->_3ac_list_head, &loop->list);
+
+		// should get the real start here,
+		start = scf_list_data(scf_list_next(&jmp_end->list), scf_3ac_code_t, list);
+	} else {
+		loop = scf_3ac_jmp_code(SCF_OP_GOTO, NULL, NULL);
+		scf_list_add_tail(d->_3ac_list_head, &loop->list);
+
+		start = scf_list_data(scf_list_next(start_prev), scf_3ac_code_t, list);
+	}
 
 	dst       = loop->dsts->data[0];
 	dst->code = start;

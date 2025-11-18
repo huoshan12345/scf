@@ -1502,43 +1502,33 @@ static int _scf_op_semantic_for(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes
 	assert(4 == nb_nodes);
 
 	scf_handler_data_t* d = data;
-	int ret = 0;
+	scf_variable_t*     r;
+	scf_node_t*         cond;
+	int i;
 
-	if (nodes[0]) {
-		ret = _scf_op_semantic_node(ast, nodes[0], d);
+	for (i = 0; i < nb_nodes; i++) {
+		if (!nodes[i])
+			continue;
+
+		int ret = _scf_op_semantic_node(ast, nodes[i], d);
 		if (ret < 0) {
 			scf_loge("\n");
 			return ret;
 		}
-	}
 
-	scf_node_t* cond = nodes[1];
-	if (cond) {
-		ret = _scf_op_semantic_node(ast, cond, d);
-		if (ret < 0) {
-			scf_loge("\n");
-			return ret;
-		}
+		if (1 == i) {
+			cond = nodes[i];
 
-		if (cond->nb_nodes > 0) { // the final expr is real cond expr
-			scf_variable_t* r = _scf_operand_get(cond->nodes[cond->nb_nodes - 1]);
+			if (cond->nb_nodes <= 0)
+				continue;
+
+			// the final expr is real cond expr
+			r = _scf_operand_get(cond->nodes[cond->nb_nodes - 1]);
 
 			if (!r || !scf_variable_integer(r)) {
 				scf_loge("\n");
 				return -1;
 			}
-		}
-	}
-
-	int i;
-	for (i = 2; i < nb_nodes; i++) {
-		if (!nodes[i])
-			continue;
-
-		ret = _scf_op_semantic_node(ast, nodes[i], d);
-		if (ret < 0) {
-			scf_loge("\n");
-			return ret;
 		}
 	}
 
