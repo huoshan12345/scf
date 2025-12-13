@@ -178,23 +178,6 @@ scf_function_t*	scf_scope_find_same_function(scf_scope_t* scope, scf_function_t*
 	return NULL;
 }
 
-scf_function_t*	scf_scope_find_proper_function(scf_scope_t* scope, const char* name, scf_vector_t* argv)
-{
-	scf_function_t* f;
-	scf_list_t*     l;
-
-	for (l = scf_list_head(&scope->function_list_head); l != scf_list_sentinel(&scope->function_list_head); l = scf_list_next(l)) {
-		f  = scf_list_data(l, scf_function_t, list);
-
-		if (strcmp(f->node.w->text->data, name))
-			continue;
-
-		if (scf_function_same_argv(f->argv, argv))
-			return f;
-	}
-	return NULL;
-}
-
 int scf_scope_find_like_functions(scf_vector_t** pfunctions, scf_scope_t* scope, const char* name, scf_vector_t* argv)
 {
 	scf_function_t* f;

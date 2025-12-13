@@ -284,55 +284,15 @@ static int _semantic_add_call(scf_ast_t* ast, scf_node_t** nodes, int nb_nodes, 
 	return _semantic_add_call_rets(ast, parent, d, f);
 }
 
-static int _semantic_find_proper_function2(scf_ast_t* ast, scf_vector_t* fvec, scf_vector_t* argv, scf_function_t** pf)
-{
-	scf_function_t* f;
-	scf_variable_t* v0;
-	scf_variable_t* v1;
-
-	int i;
-	int j;
-
-	for (i = 0; i < fvec->size; i++) {
-		f  =        fvec->data[i];
-
-		if (scf_function_same_argv(f->argv, argv)) {
-			*pf = f;
-			return 0;
-		}
-	}
-
-	for (i = 0; i < fvec->size; i++) {
-		f  =        fvec->data[i];
-
-		for (j = 0; j < argv->size; j++) {
-
-			v0 =     f->argv->data[j];
-			v1 =        argv->data[j];
-
-			if (scf_variable_is_struct_pointer(v0))
-				continue;
-
-			if (scf_type_cast_check(ast, v0, v1) < 0)
-				break;
-
-			*pf = f;
-			return 0;
-		}
-	}
-
-	return -404;
-}
-
 static int _semantic_find_proper_function(scf_ast_t* ast, scf_type_t* t, const char* fname, scf_vector_t* argv, scf_function_t** pf)
 {
 	scf_vector_t* fvec = NULL;
 
-	int ret  = scf_scope_find_like_functions(&fvec, t->scope, fname, argv);
+	int ret = scf_scope_find_like_functions(&fvec, t->scope, fname, argv);
 	if (ret < 0)
 		return ret;
 
-	ret = _semantic_find_proper_function2(ast, fvec, argv, pf);
+	ret = scf_ast_find_proper_function(pf, ast, fvec, argv);
 
 	scf_vector_free(fvec);
 	return ret;
@@ -407,7 +367,7 @@ static int _semantic_do_overloaded(scf_ast_t* ast, scf_node_t** nodes, int nb_no
 		return ret;
 	}
 
-	ret = _semantic_find_proper_function2(ast, fvec, argv, &f);
+	ret = scf_ast_find_proper_function(&f, ast, fvec, argv);
 	if (ret < 0)
 		scf_loge("\n");
 	else
@@ -468,7 +428,7 @@ static int _semantic_do_overloaded_assign(scf_ast_t* ast, scf_node_t** nodes, in
 		return ret;
 	}
 
-	ret = _semantic_find_proper_function2(ast, fvec, argv, &f);
+	ret = scf_ast_find_proper_function(&f, ast, fvec, argv);
 	if (ret < 0)
 		scf_loge("\n");
 	else

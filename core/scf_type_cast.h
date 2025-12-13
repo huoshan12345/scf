@@ -34,4 +34,3 @@ int scf_cast_to_float(scf_ast_t* ast, scf_variable_t** pret, scf_variable_t* src
 int scf_cast_to_double(scf_ast_t* ast, scf_variable_t** pret, scf_variable_t* src);
 
 #endif
-

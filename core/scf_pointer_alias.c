@@ -124,10 +124,16 @@ static int _bb_pointer_initeds(scf_vector_t* initeds, scf_list_t* bb_list_head, 
 		dn = ds->dag_node;
 		v  = dn->var;
 
+		if (ds->dn_indexes)
+			return 0;
+
 		if (scf_variable_const(v) || scf_variable_const_string(v))
 			return 0;
 
 		if (v->arg_flag)
+			return 0;
+
+		if (v->tmp_flag)
 			return 0;
 
 		if (v->global_flag) {
@@ -146,12 +152,6 @@ static int _bb_pointer_initeds(scf_vector_t* initeds, scf_list_t* bb_list_head, 
 				|| dn->node->split_parent->type == SCF_OP_NEW);
 			return 0;
 		}
-
-		if (ds->dn_indexes)
-			return 0;
-
-		if (v->tmp_flag)
-			return 0;
 
 		if (SCF_OP_ADDRESS_OF != dn->type) {
 			scf_loge("pointer '%s_%d_%d' is not inited, tmp_flag: %d, local_flag: %d, file: %s, line: %d\n",

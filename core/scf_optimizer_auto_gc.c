@@ -873,6 +873,8 @@ ref:
 				if (cur_bb != bb) {
 					scf_list_del(&c->list);
 					scf_list_add_tail(&cur_bb->code_list_head, &c->list);
+
+					c->basic_block = cur_bb;
 				}
 
 				ret = _auto_gc_bb_ref(ds_obj, ds_malloced, ast, f, &cur_bb);
@@ -894,6 +896,8 @@ end:
 		if (cur_bb != bb) {
 			scf_list_del(&c->list);
 			scf_list_add_tail(&cur_bb->code_list_head, &c->list);
+
+			c->basic_block = cur_bb;
 		}
 	}
 

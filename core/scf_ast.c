@@ -1,4 +1,5 @@
 #include"scf_ast.h"
+#include"scf_type_cast.h"
 
 int	scf_ast_open(scf_ast_t** past)
 {
@@ -576,4 +577,66 @@ int scf_function_signature(scf_ast_t* ast, scf_function_t* f)
 error:
 	scf_string_free(s);
 	return -1;
+}
+
+int scf_ast_find_proper_function(scf_function_t** pf, scf_ast_t* ast, scf_vector_t* fvec, scf_vector_t* argv)
+{
+	scf_function_t* f;
+	scf_variable_t* v0;
+	scf_variable_t* v1;
+
+	int i;
+	int j;
+
+	for (i = 0; i < fvec->size; ) {
+		f  =        fvec->data[i];
+
+		f->score = 0;
+
+		for (j = 0; j < argv->size; j++) {
+			v0 =     f->argv->data[j];
+			v1 =        argv->data[j];
+
+			if (scf_variable_is_struct_pointer(v0))
+				continue;
+
+			if (scf_type_cast_check(ast, v0, v1) < 0)
+				break;
+
+			int type = scf_find_updated_type(ast, v0, v1);
+			if (type < 0)
+				break;
+
+			if (scf_variable_nb_pointers(v0) == scf_variable_nb_pointers(v1)) {
+				if (v0->type == v1->type)
+					f->score += 10000;
+				else if (type == v0->type) {
+					f->score += 1;
+
+					if (type == v1->type)
+						f->score += 100;
+				}
+			}
+		}
+
+		if (j < argv->size)
+			assert(0 == scf_vector_del(fvec, f)); // drop invalid function
+		else
+			i++;
+	}
+
+	if (fvec->size <= 0)
+		return -404;
+
+	int max = INT_MIN;
+	for (i = 0; i < fvec->size; i++) {
+		f  =        fvec->data[i];
+
+		if (max < f->score) {
+			max = f->score;
+			*pf = f;
+		}
+	}
+
+	return 0;
 }

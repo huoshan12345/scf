@@ -82,6 +82,7 @@ static inline scf_scope_t* scf_ast_current_scope(scf_ast_t* ast)
 	return ast->current_block->scope;
 }
 
+int scf_ast_find_proper_function (scf_function_t** pf, scf_ast_t* ast, scf_vector_t* fvec, scf_vector_t* argv);
 int scf_ast_find_global_function (scf_function_t** pf, scf_ast_t* ast, char* name);
 int scf_ast_find_global_variable (scf_variable_t** pv, scf_ast_t* ast, char* name);
 int scf_ast_find_global_type     (scf_type_t**     pt, scf_ast_t* ast, char* name);
@@ -91,8 +92,6 @@ int scf_ast_find_function (scf_function_t** pf, scf_ast_t* ast, char* name);
 int scf_ast_find_variable (scf_variable_t** pv, scf_ast_t* ast, char* name);
 int scf_ast_find_type     (scf_type_t**     pt, scf_ast_t* ast, char* name);
 int scf_ast_find_type_type(scf_type_t**     pt, scf_ast_t* ast, int   type);
-
-int scf_operator_function_call(scf_ast_t* ast, scf_function_t* f, const int argc, const scf_variable_t** argv, scf_variable_t** pret, scf_list_t* _3ac_list_head);
 
 int	scf_ast_open(scf_ast_t** past);
 int scf_ast_close(scf_ast_t* ast);

@@ -27,6 +27,8 @@ struct scf_function_s {
 	scf_list_t        basic_block_list_head;
 	int               nb_basic_blocks;
 
+	int               score; // overloaded score
+
 	scf_vector_t*     jmps;
 
 	scf_list_t        dag_list_head;
