@@ -442,6 +442,9 @@ static int _risc_inst_call_handler(scf_native_t* ctx, scf_3ac_code_t* c)
 	scf_register_t* sp  = f->rops->find_register("sp");
 	scf_register_t* x0  = f->rops->find_register("x0");
 
+	if (!x0)
+		x0 = f->rops->find_register("r0");
+
 	lr->used = 1;
 	sp->used = 1;
 

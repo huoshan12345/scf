@@ -56,4 +56,3 @@ int                 risc_array_index_reg(scf_sib_t* sib, scf_dag_node_t* base, s
 void                risc_call_rabi(int* p_nints, int* p_nfloats, scf_3ac_code_t* c, scf_function_t* f);
 
 #endif
-

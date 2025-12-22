@@ -10,9 +10,9 @@
 #define NAJA_PRINTF
 #endif
 
-#define NAJA_REG_FP   28
-#define NAJA_REG_LR   29
-#define NAJA_REG_SP   30
+#define NAJA_REG_FP   12
+#define NAJA_REG_LR   13
+#define NAJA_REG_SP   14
 
 typedef struct scf_vm_s       scf_vm_t;
 typedef struct scf_vm_ops_s   scf_vm_ops_t;
@@ -67,8 +67,8 @@ typedef union {
 } fv256_t;
 
 typedef struct {
-	uint64_t  regs[32];
-	fv256_t   fvec[32];
+	uint64_t  regs[16];
+	fv256_t   fvec[16];
 
 	uint64_t  ip;
 	uint64_t  flags;

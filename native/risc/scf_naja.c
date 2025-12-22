@@ -1,5 +1,16 @@
 #include"scf_risc.h"
 
+static uint32_t naja_shift(int bytes)
+{
+	if (bytes <= 1)
+		return 0;
+	else if (bytes <= 2)
+		return 1;
+	else if (bytes <= 4)
+		return 2;
+	return 3;
+}
+
 int naja_inst_I2G(scf_3ac_code_t* c, scf_register_t* rd, uint64_t imm, int bytes)
 {
 	scf_instruction_t* inst;
@@ -10,13 +21,13 @@ int naja_inst_I2G(scf_3ac_code_t* c, scf_register_t* rd, uint64_t imm, int bytes
 	if (0 == (invert >> 32)) {
 
 		// mvn rd, invert[15:0]
-		opcode = (0xf << 26) | (rd->id << 21) | (1 << 18) | (0x3 << 16) | (invert & 0xffff);
+		opcode = (0xe << 26) | (rd->id << 21) | (0x3 << 18) | (0x3 << 16) | (invert & 0xffff);
 		inst   = risc_make_inst(c, opcode);
 		RISC_INST_ADD_CHECK(c->instructions, inst);
 
 		if (invert >> 16) {
-			// movk rd, imm[31:16]
-			opcode = (0xf << 26) | (rd->id << 21) | (1 << 19) | (0x3 << 16)| ((imm >> 16) & 0xffff);
+			// movt rd, imm[31:16]
+			opcode = (0xe << 26) | (rd->id << 21) | (0x1 << 18) | (0x2 << 16)| ((imm >> 16) & 0xffff);
 			inst   = risc_make_inst(c, opcode);
 			RISC_INST_ADD_CHECK(c->instructions, inst);
 		}
@@ -25,15 +36,15 @@ int naja_inst_I2G(scf_3ac_code_t* c, scf_register_t* rd, uint64_t imm, int bytes
 	}
 
 	// mov rd, imm[15:0]
-	opcode = (0xf << 26) | (rd->id << 21) | (0x3 << 16) | (imm & 0xffff);
+	opcode = (0xe << 26) | (rd->id << 21) | (0x2 << 16) | (imm & 0xffff);
 	inst   = risc_make_inst(c, opcode);
 	RISC_INST_ADD_CHECK(c->instructions, inst);
 
 	imm >>= 16;
 	if (imm & 0xffff) {
 
-		// movk rd, imm[31:16]
-		opcode = (0xf << 26) | (rd->id << 21) | (1 << 19) | (0x3 << 16) | (imm & 0xffff);
+		// movt rd, imm[31:16]
+		opcode = (0xe << 26) | (rd->id << 21) | (1 << 18) | (0x2 << 16) | (imm & 0xffff);
 		inst   = risc_make_inst(c, opcode);
 		RISC_INST_ADD_CHECK(c->instructions, inst);
 	}
@@ -42,7 +53,7 @@ int naja_inst_I2G(scf_3ac_code_t* c, scf_register_t* rd, uint64_t imm, int bytes
 	if (imm & 0xffff) {
 
 		// movk rd, imm[47:32]
-		opcode = (0xf << 26) | (rd->id << 21) | (2 << 19) | (0x3 << 16) | (imm & 0xffff);
+		opcode = (0xe << 26) | (rd->id << 21) | (2 << 18) | (0x2 << 16) | (imm & 0xffff);
 		inst   = risc_make_inst(c, opcode);
 		RISC_INST_ADD_CHECK(c->instructions, inst);
 	}
@@ -51,7 +62,7 @@ int naja_inst_I2G(scf_3ac_code_t* c, scf_register_t* rd, uint64_t imm, int bytes
 	if (imm & 0xffff) {
 
 		// movk rd, imm[63:48]
-		opcode = (0xf << 26) | (rd->id << 21) | (3 << 19) | (0x3 << 16) | (imm & 0xffff);
+		opcode = (0xe << 26) | (rd->id << 21) | (3 << 18) | (0x2 << 16) | (imm & 0xffff);
 		inst   = risc_make_inst(c, opcode);
 		RISC_INST_ADD_CHECK(c->instructions, inst);
 	}
@@ -76,20 +87,20 @@ int naja_inst_ADR2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, sc
 
 		offset = vs->bp_offset;
 
-		if (offset >= 0 && offset <= 0x3fff)
+		if (offset >= 0 && offset <= 0xfff)
 
-			opcode = (0 << 26) | (rd->id << 21) | (0x3 << 19) | (offset << 5) | fp->id;
+			opcode = (0 << 26) | (rd->id << 21) | (0x3 << 18) | (0x3 << 16) | (offset << 4) | fp->id;
 
 		else if (offset < 0 && -offset <= 0x3fff)
 
-			opcode = (1 << 26) | (rd->id << 21) | (0x3 << 19) | ((-offset) << 5) | fp->id;
+			opcode = (1 << 26) | (rd->id << 21) | (0x3 << 18) | (0x3 << 16) | ((-offset) << 4) | fp->id;
 
 		else {
 			int ret = naja_inst_I2G(c, rd, offset, 8);
 			if (ret < 0)
 				return ret;
 
-			opcode = (0 << 26) | (rd->id << 21) | (rd->id << 5) | fp->id;
+			opcode = (0 << 26) | (rd->id << 21) | (0x3 << 18) | (rd->id << 4) | fp->id;
 		}
 
 		inst   = risc_make_inst(c, opcode);
@@ -98,13 +109,13 @@ int naja_inst_ADR2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, sc
 	} else if (vs->global_flag) {
 		offset = 0;
 
-		opcode = (0x2a << 26) | (rd->id << 21);
+		opcode = (0x35 << 26) | (rd->id << 21);
 		inst   = risc_make_inst(c, opcode);
 		RISC_INST_ADD_CHECK(c->instructions, inst);
 		RISC_RELA_ADD_CHECK(f->data_relas, rela, c, vs, NULL);
 		rela->type = R_AARCH64_ADR_PREL_PG_HI21;
 
-		opcode = (0 << 26) | (rd->id << 21) | (0x3 << 19) | rd->id;
+		opcode = (0 << 26) | (rd->id << 21) | (0x3 << 18) | (0x3 << 16) | rd->id;
 		inst   = risc_make_inst(c, opcode);
 		RISC_INST_ADD_CHECK(c->instructions, inst);
 		RISC_RELA_ADD_CHECK(f->data_relas, rela, c, vs, NULL);
@@ -194,7 +205,7 @@ int naja_inst_M2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, scf_
 
 
 	if (offset >= -0xfff && offset <= 0xfff)
-		opcode = (0x4 << 26) | ((offset & 0x1fff) << 5) | rb->id;
+		opcode = (0x4 << 26) | ((offset & 0x1fff) << 4) | rb->id;
 	else {
 		int ret = risc_select_free_reg(&ri, c, f, 0);
 		if (ret < 0) {
@@ -206,18 +217,18 @@ int naja_inst_M2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, scf_
 		if (ret < 0)
 			return ret;
 
-		opcode = (0xd << 26) | (SIZE << 10) | (ri->id << 5) | rb->id;
+		opcode = (0xa << 26) | (SIZE << 18) | (ri->id << 4) | rb->id;
 	}
 
 	if (rd->bytes > size && scf_variable_signed(vs))
-		opcode |= 0x1 << 18;
+		opcode |= 0x1 << 17;
 
-	else if (scf_variable_float(vs) && 4 == size)
-		opcode |= 0x1 << 18;
+//	else if (scf_variable_float(vs) && 4 == size)
+//		opcode |= 0x1 << 18;
 
 	scf_loge("SIZE: %d, size: %d\n", SIZE, size);
 
-	opcode |= (rd->id << 21) | SIZE << 19;
+	opcode |= (rd->id << 21) | SIZE << 18;
 	opcode |= RISC_COLOR_TYPE(rd->color) << 30;
 
 	inst    = risc_make_inst(c, opcode);
@@ -308,7 +319,7 @@ int naja_inst_G2M(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rs, scf_
 	scf_loge("offset: %ld, SIZE: %d\n", offset, SIZE);
 
 	if (offset >= -0xfff && offset <= 0xfff)
-		opcode = (0x6 << 26) | ((offset & 0x1fff) << 5) | rb->id;
+		opcode = (0x6 << 26) | ((offset & 0x1fff) << 4) | rb->id;
 	else {
 		int ret = risc_select_free_reg(&ri, c, f, 0);
 		if (ret < 0) {
@@ -320,14 +331,14 @@ int naja_inst_G2M(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rs, scf_
 		if (ret < 0)
 			return ret;
 
-		opcode = (0xe << 26) | (SIZE << 10) | (ri->id << 5) | rb->id;
+		opcode = (0xb << 26) | (SIZE << 18) | (ri->id << 4) | rb->id;
 	}
 
-	opcode |= (rs->id << 21) | SIZE << 19;
+	opcode |= (rs->id << 21) | SIZE << 18;
 	opcode |= RISC_COLOR_TYPE(rs->color) << 30;
 
-	if (scf_variable_float(vs) && 4 == size)
-		opcode |= (1 << 18);
+//	if (scf_variable_float(vs) && 4 == size)
+//		opcode |= (1 << 18);
 
 	inst    = risc_make_inst(c, opcode);
 	RISC_INST_ADD_CHECK(c->instructions, inst);
@@ -351,13 +362,13 @@ int naja_inst_ISTR2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, s
 
 	uint32_t opcode;
 
-	opcode = (0x2a << 26) | (rd->id << 21);
+	opcode = (0x35 << 26) | (rd->id << 21);
 	inst   = risc_make_inst(c, opcode);
 	RISC_INST_ADD_CHECK(c->instructions, inst);
 	RISC_RELA_ADD_CHECK(f->data_relas, rela, c, v, NULL);
 	rela->type = R_AARCH64_ADR_PREL_PG_HI21;
 
-	opcode = (0 << 26) | (rd->id << 21) | (0x3 << 19) | rd->id;
+	opcode = (0 << 26) | (rd->id << 21) | (0x3 << 18) | (0x3 << 16) | rd->id;
 	inst   = risc_make_inst(c, opcode);
 	RISC_INST_ADD_CHECK(c->instructions, inst);
 	RISC_RELA_ADD_CHECK(f->data_relas, rela, c, v, NULL);
@@ -368,8 +379,8 @@ int naja_inst_ISTR2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, s
 
 int naja_inst_G2P(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rs, scf_register_t* rb, int32_t offset, int size)
 {
-	scf_register_t* ri   = NULL;
-	scf_instruction_t*    inst = NULL;
+	scf_register_t*     ri   = NULL;
+	scf_instruction_t*  inst = NULL;
 
 	uint32_t opcode;
 	uint32_t SIZE = 0;
@@ -413,7 +424,7 @@ int naja_inst_G2P(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rs, scf_
 		return -EINVAL;
 
 	if (offset >= -0xfff && offset <= 0xfff)
-		opcode = (0x6 << 26) | ((offset & 0x1fff) << 5) | rb->id;
+		opcode = (0x6 << 26) | ((offset & 0x1fff) << 4) | rb->id;
 	else {
 		int ret = risc_select_free_reg(&ri, c, f, 0);
 		if (ret < 0) {
@@ -425,10 +436,10 @@ int naja_inst_G2P(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rs, scf_
 		if (ret < 0)
 			return ret;
 
-		opcode = (0xe << 26) | (SIZE << 10) | (ri->id << 5) | rb->id;
+		opcode = (0xb << 26) | (SIZE << 18) | (ri->id << 4) | rb->id;
 	}
 
-	opcode |= (rs->id << 21) | SIZE << 19;
+	opcode |= (rs->id << 21) | SIZE << 18;
 	opcode |= RISC_COLOR_TYPE(rs->color) << 30;
 
 	inst    = risc_make_inst(c, opcode);
@@ -439,8 +450,8 @@ int naja_inst_G2P(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rs, scf_
 
 int naja_inst_P2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, scf_register_t* rb, int32_t offset, int size)
 {
-	scf_register_t* ri   = NULL;
-	scf_instruction_t*    inst = NULL;
+	scf_register_t*     ri   = NULL;
+	scf_instruction_t*  inst = NULL;
 
 	uint32_t opcode;
 	uint32_t SIZE = 0;
@@ -484,7 +495,7 @@ int naja_inst_P2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, scf_
 		return -EINVAL;
 
 	if (offset >= -0xfff && offset <= 0xfff)
-		opcode = (0x4 << 26) | ((offset & 0x1fff) << 5) | rb->id;
+		opcode = (0x4 << 26) | ((offset & 0x1fff) << 4) | rb->id;
 	else {
 		int ret = risc_select_free_reg(&ri, c, f, 0);
 		if (ret < 0) {
@@ -496,10 +507,10 @@ int naja_inst_P2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, scf_
 		if (ret < 0)
 			return ret;
 
-		opcode = (0xd << 26) | (SIZE << 10) | (ri->id << 5) | rb->id;
+		opcode = (0xa << 26) | (SIZE << 18) | (ri->id << 4) | rb->id;
 	}
 
-	opcode |= (rd->id << 21) | SIZE << 19;
+	opcode |= (rd->id << 21) | SIZE << 18;
 	opcode |= RISC_COLOR_TYPE(rd->color) << 30;
 
 	inst    = risc_make_inst(c, opcode);
@@ -514,11 +525,11 @@ int naja_inst_ADRP2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, s
 
 	uint32_t opcode = 0;
 
-	if (offset >= 0 && offset <= 0x3fff)
-		opcode = (0 << 26) | (rd->id << 21) | (3 << 19) | (offset << 5) | rb->id;
+	if (offset >= 0 && offset <= 0xfff)
+		opcode = (0 << 26) | (rd->id << 21) | (3 << 18) | (3 << 16) | (offset << 4) | rb->id;
 
-	else if (offset < 0 && offset >= -0x3fff)
-		opcode = (1 << 26) | (rd->id << 21) | (3 << 19) | ((-offset) << 5) | rb->id;
+	else if (offset < 0 && offset >= -0xfff)
+		opcode = (1 << 26) | (rd->id << 21) | (3 << 18) | (3 << 16) | ((-offset) << 4) | rb->id;
 
 	else {
 		int ret = risc_select_free_reg(&r, c, f, 0);
@@ -529,7 +540,7 @@ int naja_inst_ADRP2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, s
 		if (ret < 0)
 			return ret;
 
-		opcode = (0 << 26) | (rd->id << 21) | (r->id << 5) | rb->id;
+		opcode = (0 << 26) | (rd->id << 21) | (3 << 18) | (r->id << 4) | rb->id;
 	}
 
 	inst   = risc_make_inst(c, opcode);
@@ -539,9 +550,9 @@ int naja_inst_ADRP2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, s
 
 int naja_inst_ADRSIB2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, scf_sib_t* sib)
 {
-	scf_register_t* rb   = sib->base;
-	scf_register_t* ri   = sib->index;
-	scf_instruction_t*    inst = NULL;
+	scf_register_t*     rb   = sib->base;
+	scf_register_t*     ri   = sib->index;
+	scf_instruction_t*  inst = NULL;
 
 	assert(0 == sib->disp);
 
@@ -565,7 +576,7 @@ int naja_inst_ADRSIB2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd,
 	else
 		return -EINVAL;
 
-	opcode = (0 << 26) | (rd->id << 21) | (SH << 10) | (ri->id << 5) | rb->id;
+	opcode = (0 << 26) | (rd->id << 21) | (3 << 18) | (SH << 16) | (ri->id << 4) | rb->id;
 	inst   = risc_make_inst(c, opcode);
 	RISC_INST_ADD_CHECK(c->instructions, inst);
 	return 0;
@@ -573,9 +584,9 @@ int naja_inst_ADRSIB2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd,
 
 int naja_inst_SIB2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, scf_sib_t* sib)
 {
-	scf_register_t* rb   = sib->base;
-	scf_register_t* ri   = sib->index;
-	scf_instruction_t*    inst = NULL;
+	scf_register_t*     rb   = sib->base;
+	scf_register_t*     ri   = sib->index;
+	scf_instruction_t*  inst = NULL;
 
 	assert(0 == sib->disp);
 
@@ -602,8 +613,8 @@ int naja_inst_SIB2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, sc
 	else
 		return -EINVAL;
 
-	opcode  = (0xd << 26) | (rd->id << 21) | (SIZE << 10) | (ri->id << 5) | rb->id;
-	opcode |= SIZE << 19;
+	opcode  = (0xa << 26) | (rd->id << 21) | (SIZE << 10) | (ri->id << 4) | rb->id;
+	opcode |= SIZE << 18;
 	opcode |= RISC_COLOR_TYPE(rd->color) << 30;
 
 	inst    = risc_make_inst(c, opcode);
@@ -614,9 +625,9 @@ int naja_inst_SIB2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rd, sc
 
 int naja_inst_G2SIB(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rs, scf_sib_t* sib)
 {
-	scf_register_t* rb   = sib->base;
-	scf_register_t* ri   = sib->index;
-	scf_instruction_t*    inst = NULL;
+	scf_register_t*     rb   = sib->base;
+	scf_register_t*     ri   = sib->index;
+	scf_instruction_t*  inst = NULL;
 
 	assert(0 == sib->disp);
 
@@ -643,9 +654,9 @@ int naja_inst_G2SIB(scf_3ac_code_t* c, scf_function_t* f, scf_register_t* rs, sc
 	else
 		return -EINVAL;
 
-	opcode  = (0xe << 26) | (rs->id << 21) | (SIZE << 10) | (ri->id << 5) | rb->id;
-	opcode |= SIZE << 19;
-	opcode |= RISC_COLOR_TYPE(rs->color) << 26;
+	opcode  = (0xb << 26) | (rs->id << 21) | (SIZE << 10) | (ri->id << 4) | rb->id;
+	opcode |= SIZE << 18;
+	opcode |= RISC_COLOR_TYPE(rs->color) << 16;
 
 	inst    = risc_make_inst(c, opcode);
 	RISC_INST_ADD_CHECK(c->instructions, inst);
@@ -663,8 +674,9 @@ scf_instruction_t* naja_inst_PUSH(scf_3ac_code_t* c, scf_register_t* r)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x7 << 26) | (r->id << 21) | (3 << 19) | 0x1e;
-	inst   = risc_make_inst(c, opcode);
+	opcode  = (0x9 << 26) | (r->id << 21) | (3 << 18) | 0xe;
+	opcode |= RISC_COLOR_TYPE(r->color) << 17;
+	inst    = risc_make_inst(c, opcode);
 
 	return inst;
 }
@@ -674,8 +686,9 @@ scf_instruction_t* naja_inst_POP(scf_3ac_code_t* c, scf_register_t* r)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x5 << 26) | (r->id << 21) | (3 << 19) | 0x1e;
-	inst   = risc_make_inst(c, opcode);
+	opcode  = (0x8 << 26) | (r->id << 21) | (3 << 18) | 0xe;
+	opcode |= RISC_COLOR_TYPE(r->color) << 17;
+	inst    = risc_make_inst(c, opcode);
 
 	return inst;
 }
@@ -685,7 +698,7 @@ scf_instruction_t* naja_inst_RET(scf_3ac_code_t* c)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = 0x38 << 26;
+	opcode = 0x36 << 26;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -696,7 +709,7 @@ scf_instruction_t* naja_inst_MOV_SP(scf_3ac_code_t* c, scf_register_t* rd, scf_r
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0xf << 26) | (rd->id << 21) | (0x1 << 16) | rs->id;
+	opcode = (0xc << 26) | (rd->id << 21) | (3 << 18) | (0xf << 4) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -707,7 +720,7 @@ scf_instruction_t* naja_inst_MOV_G(scf_3ac_code_t* c, scf_register_t* rd, scf_re
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0xf << 26) | (rd->id << 21) | (0x1 << 16) | rs->id;
+	opcode = (0xc << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (0xf << 4) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -718,7 +731,7 @@ scf_instruction_t* naja_inst_MVN(scf_3ac_code_t* c, scf_register_t* rd, scf_regi
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0xf << 26) | (rd->id << 21) | (0x3 << 19) | (0x2 << 16) | rs->id;
+	opcode = (0xe << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (1 << 16) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -729,7 +742,7 @@ scf_instruction_t* naja_inst_FMOV_G(scf_3ac_code_t* c, scf_register_t* rd, scf_r
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x1f << 26) | (rd->id << 21) | (0x3 << 19) | (0x3 << 16) | rs->id;
+	opcode = (0x1c << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -750,7 +763,7 @@ scf_instruction_t* naja_inst_MOVSX(scf_3ac_code_t* c, scf_register_t* rd, scf_re
 	else
 		return NULL;
 
-	opcode = (0xf << 26) | (rd->id << 21) | (SH << 19) | (1 << 18) | (0x2 << 16) | rs->id;
+	opcode = (0xd << 26) | (rd->id << 21) | (SH << 18) | (1 << 17) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -771,7 +784,7 @@ scf_instruction_t* naja_inst_MOVZX(scf_3ac_code_t* c, scf_register_t* rd, scf_re
 	else
 		return NULL;
 
-	opcode = (0xf << 26) | (rd->id << 21) | (SH << 19) | (0x2 << 16)| rs->id;
+	opcode = (0xd << 26) | (rd->id << 21) | (SH << 18) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -783,7 +796,7 @@ scf_instruction_t* naja_inst_CVTSS2SD(scf_3ac_code_t* c, scf_register_t* rd, scf
 	uint32_t           opcode;
 	uint32_t           S;
 
-	opcode = (0x1f << 26) | (rd->id << 21) | (2 << 19) | rs->id;
+	opcode = (0x1d << 26) | (rd->id << 21) | (3 << 18) | (1 << 12) | (1 << 6) | (2 << 4) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -794,7 +807,7 @@ scf_instruction_t* naja_inst_CVTSD2SS(scf_3ac_code_t* c, scf_register_t* rd, scf
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x1f << 26) | (rd->id << 21) | (3 << 19) | rs->id;
+	opcode = (0x1d << 26) | (rd->id << 21) | (2 << 18) | (1 << 12) | (1 << 6) | (3 << 4) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -811,7 +824,7 @@ scf_instruction_t* naja_inst_CVTF2SI(scf_3ac_code_t* c, scf_register_t* rd, scf_
 	else
 		SH = 3;
 
-	opcode = (0x1f << 26) | (rd->id << 21) | (SH << 19) | (1 << 18) | (0x1 << 16) | rs->id;
+	opcode = (0x1d << 26) | (rd->id << 21) | (SH << 18) | (3 << 12) | (1 << 6) | (naja_shift(rs->bytes) << 4) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -828,7 +841,7 @@ scf_instruction_t* naja_inst_CVTF2UI(scf_3ac_code_t* c, scf_register_t* rd, scf_
 	else
 		SH = 3;
 
-	opcode = (0x1f << 26) | (rd->id << 21) | (SH << 19) | (0x1 << 16) | rs->id;
+	opcode = (0x1d << 26) | (rd->id << 21) | (SH << 18) | (2 << 12) | (1 << 6) | (naja_shift(rs->bytes) << 4) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -845,7 +858,7 @@ scf_instruction_t* naja_inst_CVTSI2F(scf_3ac_code_t* c, scf_register_t* rd, scf_
 	else
 		SH = 3;
 
-	opcode = (0x1f << 26) | (rd->id << 21) | (SH << 19) | (1 << 18) | (0x2 << 16) | rs->id;
+	opcode = (0x1d << 26) | (rd->id << 21) | (SH << 18) | (1 << 12) | (3 << 6) | (naja_shift(rs->bytes) << 4) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -862,7 +875,7 @@ scf_instruction_t* naja_inst_CVTUI2F(scf_3ac_code_t* c, scf_register_t* rd, scf_
 	else
 		SH = 3;
 
-	opcode = (0x1f << 26) | (rd->id << 21) | (SH << 19) | (0x2 << 16) | rs->id;
+	opcode = (0x1d << 26) | (rd->id << 21) | (SH << 18) | (1 << 12) | (2 << 6) | (naja_shift(rs->bytes) << 4) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -873,12 +886,12 @@ scf_instruction_t* naja_inst_SUB_IMM(scf_3ac_code_t* c, scf_function_t* f, scf_r
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	if (imm > 0x3fff) {
+	if (imm > 0xfff) {
 		scf_loge("NOT support too big imm: %#lx\n", imm);
 		return NULL;
 	}
 
-	opcode = (1 << 26) | (rd->id << 21) | (3 << 19) | (imm << 5) | rs->id;
+	opcode = (1 << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (3 << 16) | (imm << 4) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -889,12 +902,12 @@ scf_instruction_t* naja_inst_CMP_IMM(scf_3ac_code_t* c, scf_function_t* f, scf_r
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	if (imm > 0x3fff) {
+	if (imm > 0xfff) {
 		scf_loge("NOT support too big imm: %#lx\n", imm);
 		return NULL;
 	}
 
-	opcode = (1 << 26) | (0x1f << 21) | (3 << 19) | (imm << 5) | rs->id;
+	opcode = (1 << 26) | (0xf << 21) | (naja_shift(rs->bytes) << 18) | (3 << 16) | (imm << 4) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -905,12 +918,12 @@ scf_instruction_t* naja_inst_ADD_IMM(scf_3ac_code_t* c, scf_function_t* f, scf_r
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	if (imm > 0x3fff) {
+	if (imm > 0xfff) {
 		scf_loge("NOT support too big imm: %#lx\n", imm);
 		return NULL;
 	}
 
-	opcode = (0 << 26) | (rd->id << 21) | (3 << 19) | (imm << 5) | rs->id;
+	opcode = (0 << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (3 << 16) | (imm << 4) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -921,7 +934,7 @@ scf_instruction_t* naja_inst_ADD_G(scf_3ac_code_t* c, scf_register_t* rd, scf_re
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode  = (0 << 26) | (rd->id << 21) | (rs1->id << 5) | rs0->id;
+	opcode  = (0 << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (rs1->id << 4) | rs0->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -932,7 +945,7 @@ scf_instruction_t* naja_inst_SHL(scf_3ac_code_t* c, scf_register_t* rd, scf_regi
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode  = (0xf << 26) | (rd->id << 21) | (rs1->id << 5) | rs0->id;
+	opcode  = (0xc << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (rs1->id << 4) | rs0->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -943,7 +956,7 @@ scf_instruction_t* naja_inst_SHR(scf_3ac_code_t* c, scf_register_t* rd, scf_regi
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode  = (0xf << 26) | (rd->id << 21) | (1 << 19) | (rs1->id << 5) | rs0->id;
+	opcode  = (0xc << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (1 << 16) | (rs1->id << 4) | rs0->id;
 	inst    = risc_make_inst(c, opcode);
 
 	return inst;
@@ -954,7 +967,7 @@ scf_instruction_t* naja_inst_ASR(scf_3ac_code_t* c, scf_register_t* rd, scf_regi
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode  = (0xf << 26) | (rd->id << 21) | (2 << 19) | (rs1->id << 5) | rs0->id;
+	opcode  = (0xc << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (2 << 16) | (rs1->id << 4) | rs0->id;
 	inst    = risc_make_inst(c, opcode);
 
 	return inst;
@@ -965,7 +978,7 @@ scf_instruction_t* naja_inst_AND_G(scf_3ac_code_t* c, scf_register_t* rd, scf_re
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x8 << 26) | (rd->id << 21) | (rs1->id << 5) | rs0->id;
+	opcode = (0x5 << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (rs1->id << 4) | rs0->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -976,7 +989,7 @@ scf_instruction_t* naja_inst_OR_G(scf_3ac_code_t* c, scf_register_t* rd, scf_reg
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x9 << 26) | (rd->id << 21) | (rs1->id << 5) | rs0->id;
+	opcode = (0x7 << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (rs1->id << 4) | rs0->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -987,7 +1000,7 @@ scf_instruction_t* naja_inst_SUB_G(scf_3ac_code_t* c, scf_register_t* rd, scf_re
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x1 << 26) | (rd->id << 21) | (rs1->id << 5) | rs0->id;
+	opcode = (1 << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (rs1->id << 4) | rs0->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -998,7 +1011,7 @@ scf_instruction_t* naja_inst_CMP_G(scf_3ac_code_t* c, scf_register_t* rs0, scf_r
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x1 << 26) | (0x1f << 21) | (rs1->id << 5) | rs0->id;
+	opcode = (1 << 26) | (0xf << 21) | (naja_shift(rs0->bytes) << 18) | (rs1->id << 4) | rs0->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1009,7 +1022,7 @@ scf_instruction_t* naja_inst_FCMP(scf_3ac_code_t* c, scf_register_t* rs0, scf_re
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x11 << 26) | (0x1f << 21) | (rs1->id << 5) | rs0->id;
+	opcode = (0x11 << 26) | (0xf << 21) | (naja_shift(rs0->bytes) << 18) | (1 << 16) | (rs1->id << 4) | rs0->id;
 	inst    = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1020,7 +1033,7 @@ scf_instruction_t* naja_inst_NEG(scf_3ac_code_t* c, scf_register_t* rd, scf_regi
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0xf << 26) | (rd->id << 21) | (0x7 << 18) | (0x2 << 16) | rs->id;
+	opcode = (0xe << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1031,7 +1044,7 @@ scf_instruction_t* naja_inst_TEQ(scf_3ac_code_t* c, scf_register_t* rs)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x8 << 26) | (0x1f << 21) | (rs->id << 5) | rs->id;
+	opcode = (0x5 << 26) | (0xf << 21) | (naja_shift(rs->bytes) << 18) | (rs->id << 4) | rs->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1042,7 +1055,7 @@ scf_instruction_t* naja_inst_FADD(scf_3ac_code_t* c, scf_register_t* rd, scf_reg
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x10 << 26) | (rd->id << 21) | (rs1->id << 5) | rs0->id;
+	opcode = (0x10 << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (rs1->id << 4) | rs0->id;
 	inst    = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1053,7 +1066,7 @@ scf_instruction_t* naja_inst_FSUB(scf_3ac_code_t* c, scf_register_t* rd, scf_reg
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x11 << 26) | (rd->id << 21) | (rs1->id << 5) | rs0->id;
+	opcode = (0x11 << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (rs1->id << 4) | rs0->id;
 	inst    = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1064,7 +1077,7 @@ scf_instruction_t* naja_inst_MUL(scf_3ac_code_t* c, scf_register_t* rd, scf_regi
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x2 << 26) | (rd->id << 21) | (2 << 19) | (rs1->id << 5) | rs0->id;
+	opcode = (2 << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (0xf << 12) | (rs1->id << 4) | rs0->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1075,7 +1088,7 @@ scf_instruction_t* naja_inst_FMUL(scf_3ac_code_t* c, scf_register_t* rd, scf_reg
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x12 << 26) | (rd->id << 21) | (2 << 19) | (1 << 18) | (rs1->id << 5) | rs0->id;
+	opcode = (0x12 << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (0xf << 12) | (rs1->id << 4) | rs0->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1086,7 +1099,7 @@ scf_instruction_t* naja_inst_FDIV(scf_3ac_code_t* c, scf_register_t* rd, scf_reg
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x13 << 26) | (rd->id << 21) | (2 << 19) | (1 << 18) | (rs1->id << 5) | rs0->id;
+	opcode = (0x13 << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (rs1->id << 4) | rs0->id;
 	inst    = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1097,7 +1110,7 @@ scf_instruction_t* naja_inst_DIV(scf_3ac_code_t* c, scf_register_t* rd, scf_regi
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x3 << 26) | (rd->id << 21) | (2 << 19) | (rs1->id << 5) | rs0->id;
+	opcode = (3 << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (rs1->id << 4) | rs0->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1108,7 +1121,7 @@ scf_instruction_t* naja_inst_SDIV(scf_3ac_code_t* c, scf_register_t* rd, scf_reg
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x3 << 26) | (rd->id << 21) | (2 << 19) | (1 << 18) | (rs1->id << 5) | rs0->id;
+	opcode = (3 << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (1 << 17) | (rs1->id << 4) | rs0->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1119,7 +1132,7 @@ scf_instruction_t* naja_inst_MSUB(scf_3ac_code_t* c, scf_register_t* rd, scf_reg
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x2 << 26) | (rd->id << 21) | (1 << 19) | (1 << 18) | (ra->id << 10) | (rm->id << 5) | rn->id;
+	opcode = (2 << 26) | (rd->id << 21) | (naja_shift(rd->bytes) << 18) | (1 << 16) | (ra->id << 12) | (rm->id << 4) | rn->id;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1131,7 +1144,7 @@ int naja_inst_BL(scf_3ac_code_t* c, scf_function_t* f, scf_function_t* pf)
 	scf_rela_t*        rela;
 	uint32_t           opcode;
 
-	opcode = (0x1a << 26);
+	opcode = (0x31 << 26);
 	inst   = risc_make_inst(c, opcode);
 
 	RISC_INST_ADD_CHECK(c->instructions, inst);
@@ -1146,7 +1159,7 @@ scf_instruction_t* naja_inst_BLR(scf_3ac_code_t* c, scf_register_t* r)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0x1b << 26) | (r->id << 21);
+	opcode = (0x33 << 26) | (r->id << 21);
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1158,7 +1171,7 @@ scf_instruction_t* naja_inst_SETZ(scf_3ac_code_t* c, scf_register_t* rd)
 	uint32_t           opcode;
 	uint32_t           cc = 1;
 
-	opcode = (0xc << 26) | (rd->id << 21);
+	opcode = (0x34 << 26) | (rd->id << 21);
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1169,7 +1182,7 @@ scf_instruction_t* naja_inst_SETNZ(scf_3ac_code_t* c, scf_register_t* rd)
 	uint32_t           opcode;
 	uint32_t           cc = 0;
 
-	opcode = (0xc << 26) | (rd->id << 21) | (1 << 1);
+	opcode = (0x34 << 26) | (rd->id << 21) | (1 << 1);
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1179,7 +1192,7 @@ scf_instruction_t* naja_inst_SETGT(scf_3ac_code_t* c, scf_register_t* rd)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0xc << 26) | (rd->id << 21) | (3 << 1);
+	opcode = (0x34 << 26) | (rd->id << 21) | (3 << 1);
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1189,7 +1202,7 @@ scf_instruction_t* naja_inst_SETGE(scf_3ac_code_t* c, scf_register_t* rd)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0xc << 26) | (rd->id << 21) | (2 << 1);
+	opcode = (0x34 << 26) | (rd->id << 21) | (2 << 1);
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1199,7 +1212,7 @@ scf_instruction_t* naja_inst_SETLT(scf_3ac_code_t* c, scf_register_t* rd)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0xb << 26) | (rd->id << 21) | (5 << 1);
+	opcode = (0x34 << 26) | (rd->id << 21) | (5 << 1);
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1209,7 +1222,7 @@ scf_instruction_t* naja_inst_SETLE(scf_3ac_code_t* c, scf_register_t* rd)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0xb << 26) | (rd->id << 21) | (4 << 1);
+	opcode = (0x34 << 26) | (rd->id << 21) | (4 << 1);
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1220,7 +1233,7 @@ scf_instruction_t* naja_inst_JMP(scf_3ac_code_t* c)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = 0xa << 26;
+	opcode = 0x30 << 26;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1231,7 +1244,7 @@ scf_instruction_t* naja_inst_JZ(scf_3ac_code_t* c)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0xb << 26) | 1;
+	opcode = (0x32 << 26) | 1;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1242,7 +1255,7 @@ scf_instruction_t* naja_inst_JNZ(scf_3ac_code_t* c)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0xb << 26) | (1 << 1) | 1;
+	opcode = (0x32 << 26) | (1 << 1) | 1;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1253,7 +1266,7 @@ scf_instruction_t* naja_inst_JGT(scf_3ac_code_t* c)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0xb << 26) | (3 << 1) | 1;
+	opcode = (0x32 << 26) | (3 << 1) | 1;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1264,7 +1277,7 @@ scf_instruction_t* naja_inst_JGE(scf_3ac_code_t* c)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0xb << 26) | (2 << 1) | 1;
+	opcode = (0x32 << 26) | (2 << 1) | 1;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1275,7 +1288,7 @@ scf_instruction_t* naja_inst_JLT(scf_3ac_code_t* c)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0xb << 26) | (5 << 1) | 1;
+	opcode = (0x32 << 26) | (5 << 1) | 1;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1286,7 +1299,7 @@ scf_instruction_t* naja_inst_JLE(scf_3ac_code_t* c)
 	scf_instruction_t* inst;
 	uint32_t           opcode;
 
-	opcode = (0xb << 26) | (4 << 1) | 1;
+	opcode = (0x32 << 26) | (4 << 1) | 1;
 	inst   = risc_make_inst(c, opcode);
 
 	return inst;
@@ -1318,7 +1331,7 @@ void naja_set_jmp_offset(scf_instruction_t* inst, int32_t bytes)
 	opcode |= inst->code[2] << 16;
 	opcode |= inst->code[3] << 24;
 
-	if (0xb == (opcode >> 26) && 1 == (opcode & 1)) {
+	if (0x32 == (opcode >> 26) && 1 == (opcode & 1)) {
 
 		if (bytes  >= 0 && bytes < (0x1 << 20)) {
 			bytes >>= 2;
@@ -1338,7 +1351,7 @@ void naja_set_jmp_offset(scf_instruction_t* inst, int32_t bytes)
 		inst->code[3] |= 0x3  & (bytes >> 24);
 
 	} else {
-		assert(0xa == (opcode >> 26));
+		assert(0x30 == (opcode >> 26));
 
 		bytes >>= 2;
 
@@ -1354,8 +1367,8 @@ void naja_set_jmp_offset(scf_instruction_t* inst, int32_t bytes)
 int naja_cmp_update(scf_3ac_code_t* c, scf_function_t* f, scf_instruction_t* cmp)
 {
 	scf_instruction_t* inst;
-	scf_register_t*    r16 = f->rops->find_register_type_id_bytes(0, 16, 8);
-	scf_register_t*    r17 = f->rops->find_register_type_id_bytes(0, 17, 8);
+	scf_register_t*    r10 = f->rops->find_register_type_id_bytes(0, 10, 8);
+	scf_register_t*    r11 = f->rops->find_register_type_id_bytes(0, 11, 8);
 	scf_register_t*    r0;
 
 	uint32_t opcode;
@@ -1371,34 +1384,34 @@ int naja_cmp_update(scf_3ac_code_t* c, scf_function_t* f, scf_instruction_t* cmp
 
 	switch (opcode >> 21) {
 
-		case 0x3f:
-			SH = (opcode >> 19) & 0x3;
+		case 0x2f:
+			SH = (opcode >> 16) & 0x3;
 
 			if (0x3 == SH) {
-				i0   = opcode & 0x1f;
+				i0   = opcode & 0xf;
 				r0   = f->rops->find_register_type_id_bytes(0, i0, 8);
-				inst = f->iops->MOV_G(c, r16, r0);  // use r16 to backup r0
+				inst = f->iops->MOV_G(c, r10, r0);  // use r10 to backup r0
 				RISC_INST_ADD_CHECK(c->instructions, inst);
 
-				opcode &= ~0x1f;
-				opcode |=  0x10;
+				opcode &= ~0xf;
+				opcode |=  0xa;
 			} else {
-				i0   =  opcode & 0x1f;
-				i1   = (opcode >> 5) & 0x1f;
+				i0   =  opcode & 0xf;
+				i1   = (opcode >> 4) & 0xf;
 
 				r0   = f->rops->find_register_type_id_bytes(0, i0, 8);
-				inst = f->iops->MOV_G(c, r16, r0);  // use r16 to backup r0
+				inst = f->iops->MOV_G(c, r10, r0);  // use r10 to backup r0
 				RISC_INST_ADD_CHECK(c->instructions, inst);
 
 				r0   = f->rops->find_register_type_id_bytes(0, i1, 8);
-				inst = f->iops->MOV_G(c, r17, r0);  // use r17 to backup r1
+				inst = f->iops->MOV_G(c, r11, r0);  // use r11 to backup r1
 				RISC_INST_ADD_CHECK(c->instructions, inst);
 
-				opcode &= ~0x1f;
-				opcode |=  0x10;
+				opcode &= ~0xf;
+				opcode |=  0xa;
 
-				opcode &= ~(0x1f << 5);
-				opcode |=  (0x11 << 5);
+				opcode &= ~(0xf << 4);
+				opcode |=  (0xb << 4);
 			}
 			break;
 		default:

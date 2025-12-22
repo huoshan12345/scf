@@ -6,14 +6,31 @@ static const char* somaps[][3] =
 	{"x64", "libc.so.6",                   "/lib/x86_64-linux-gnu/libc.so.6"},
 };
 
+static char*  __naja_sign[]  = {"", "s"};
+static char   __naja_size[]  = {'b', 'w', 'l', 'q'};
+static char   __naja_float[] = {'B', 'H', 'S', 'D'};
+
+static char* __naja_SH[] = {
+	"LSL",
+	"LSR",
+	"ASR",
+	"IMM"
+};
+
+static char* __naja_reg[] =
+{
+	"r0",  "r1",  "r2", "r3", "r4",
+	"r5",  "r6",  "r7", "r8", "r9",
+	"r10", "r11", "fp", "lr", "sp",
+	"null"
+};
+
 typedef int (*dyn_func_pt)(uint64_t r0,
 		uint64_t r1,
 		uint64_t r2,
 		uint64_t r3,
 		uint64_t r4,
 		uint64_t r5,
-		uint64_t r6,
-		uint64_t r7,
 		double   d0,
 		double   d1,
 		double   d2,
@@ -56,21 +73,21 @@ static int naja_vm_dynamic_link(scf_vm_t* vm)
 	int64_t  sp = naja->regs[NAJA_REG_SP];
 
 	uint64_t lr  = *(uint64_t*)(naja->stack - (sp +  8));
-	uint64_t r16 = *(uint64_t*)(naja->stack - (sp + 16));
+	uint64_t r10 = *(uint64_t*)(naja->stack - (sp + 16));
 
-	scf_logw("sp: %ld, r16: %#lx, lr: %#lx, vm->jmprel_size: %ld\n", sp, r16, lr, vm->jmprel_size);
+	scf_logw("sp: %ld, r10: %#lx, lr: %#lx, vm->jmprel_size: %ld\n", sp, r10, lr, vm->jmprel_size);
 
-	if (r16  > (uint64_t)vm->data->data) {
-		r16 -= (uint64_t)vm->data->data;
-		r16 +=           vm->data->addr;
+	if (r10  > (uint64_t)vm->data->data) {
+		r10 -= (uint64_t)vm->data->data;
+		r10 +=           vm->data->addr;
 	}
 
-	scf_logw("r16: %#lx, text: %p, rodata: %p, data: %p\n", r16, vm->text->data, vm->rodata->data, vm->data->data);
+	scf_logw("r10: %#lx, text: %p, rodata: %p, data: %p\n", r10, vm->text->data, vm->rodata->data, vm->data->data);
 
 	int i;
 	for (i = 0; i < vm->jmprel_size / sizeof(Elf64_Rela); i++) {
 
-		if (r16  == vm->jmprel[i].r_offset) {
+		if (r10  == vm->jmprel[i].r_offset) {
 
 			int   j     = ELF64_R_SYM(vm->jmprel[i].r_info);
 			char* fname = vm->dynstr + vm->dynsym[j].st_name;
@@ -103,8 +120,6 @@ static int naja_vm_dynamic_link(scf_vm_t* vm)
 						naja->regs[3],
 						naja->regs[4],
 						naja->regs[5],
-						naja->regs[6],
-						naja->regs[7],
 						naja->fvec[0].d[0],
 						naja->fvec[1].d[0],
 						naja->fvec[2].d[0],
@@ -294,83 +309,36 @@ static int __naja_add(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	int rs0 =  inst        & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
+	int rs0  =  inst        & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int SH   = (inst >> 16) & 0x3;
 
 	if (0x3 == SH) {
-		uint64_t uimm14 = (inst >> 5) & 0x3fff;
+		uint64_t uimm12 = (inst >> 4) & 0xfff;
 
-		naja->regs[rd]  = naja->regs[rs0] + uimm14;
+		naja->regs[rd]  = naja->regs[rs0] + uimm12;
 
-		NAJA_PRINTF("add    r%d, r%d, %lu\n", rd, rs0, uimm14);
+		NAJA_PRINTF("add%c     %s, %s, %lu\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs0], uimm12);
 	} else {
-		uint64_t uimm9 = (inst >> 10) & 0x1ff;
-		int      rs1   = (inst >>  5) & 0x1f;
+		uint64_t uimm6 = (inst >> 10) & 0x3f;
+		int      rs1   = (inst >>  4) & 0xf;
+		uint64_t v1    = naja->regs[rs1];
+
+		NAJA_PRINTF("add%c     %s, %s, %s %s %lu\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs0], __naja_reg[rs1], __naja_SH[SH], uimm6);
 
 		switch (SH) {
 			case 0:
-				naja->regs[rd] = naja->regs[rs0] + (naja->regs[rs1] << uimm9);
-
-				NAJA_PRINTF("add    r%d, r%d, r%d << %lu\n", rd, rs0, rs1, uimm9);
+				naja->regs[rd] = naja->regs[rs0] + (scf_zero_extend(v1, 8 << size) << uimm6);
 				break;
-
 			case 1:
-				naja->regs[rd] = naja->regs[rs0] + (naja->regs[rs1] >> uimm9);
-
-				NAJA_PRINTF("add    r%d, r%d, r%d LSR %lu\n", rd, rs0, rs1, uimm9);
+				naja->regs[rd] = naja->regs[rs0] + (scf_zero_extend(v1, 8 << size) >> uimm6);
 				break;
 			default:
-				naja->regs[rd] = naja->regs[rs0] + (((int64_t)naja->regs[rs1]) >> uimm9);
-
-				NAJA_PRINTF("add    r%d, r%d, r%d ASR %lu\n", rd, rs0, rs1, uimm9);
+				naja->regs[rd] = naja->regs[rs0] + (((int64_t)scf_sign_extend(v1, 8 << size)) >> uimm6);
 				break;
 		};
 	}
-
-	naja->ip += 4;
-	return 0;
-}
-
-static int __naja_fadd(scf_vm_t* vm, uint32_t inst)
-{
-	scf_vm_naja_t* naja = vm->priv;
-
-	int rs0 =  inst        & 0x1f;
-	int rs1 = (inst >>  5) & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-
-	naja->fvec[rd].d[0]  = naja->fvec[rs0].d[0] + naja->fvec[rs1].d[0];
-
-	NAJA_PRINTF("fadd   d%d, d%d, d%d\n", rd, rs0, rs1);
-
-	naja->ip += 4;
-	return 0;
-}
-
-static int __naja_fsub(scf_vm_t* vm, uint32_t inst)
-{
-	scf_vm_naja_t* naja = vm->priv;
-
-	int rs0 =  inst        & 0x1f;
-	int rs1 = (inst >>  5) & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-
-	naja->fvec[rd].d[0]  = naja->fvec[rs0].d[0] - naja->fvec[rs1].d[0];
-
-	if (31 == rd) {
-		double d = naja->fvec[rd].d[0];
-
-		if (d > 0.0)
-			naja->flags = 0x4;
-		else if (d < 0.0)
-			naja->flags = 0x2;
-		else
-			naja->flags = 0x1;
-
-		NAJA_PRINTF("fcmp   d%d, d%d\n", rs0, rs1);
-	} else
-		NAJA_PRINTF("fsub   r%d, r%d, r%d\n", rd, rs0, rs1);
 
 	naja->ip += 4;
 	return 0;
@@ -380,42 +348,45 @@ static int __naja_sub(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	int rs0 =  inst        & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
+	int rs0  =  inst        & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int SH   = (inst >> 16) & 0x3;
 
 	if (0x3 == SH) {
-		uint64_t uimm14 = (inst >> 5) & 0x3fff;
+		uint64_t uimm12 = (inst >> 4) & 0xfff;
 
-		naja->regs[rd]  = naja->regs[rs0] - uimm14;
+		naja->regs[rd]  = naja->regs[rs0] - uimm12;
 
-		NAJA_PRINTF("sub    r%d, r%d, %lu\n", rd, rs0, uimm14);
+		if (0xf == rd)
+			NAJA_PRINTF("cmp%c     %s, %lu\n", __naja_size[size], __naja_reg[rs0], uimm12);
+		else
+			NAJA_PRINTF("sub%c     %s, %s, %lu\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs0], uimm12);
 	} else {
-		uint64_t uimm9 = (inst >> 10) & 0x1ff;
-		int      rs1   = (inst >>  5) & 0x1f;
+		uint64_t uimm6 = (inst >> 10) & 0x3f;
+		int      rs1   = (inst >>  4) & 0xf;
+		uint64_t v1    = naja->regs[rs1];
+
+		if (0xf == rd)
+			NAJA_PRINTF("cmp%c     %s, %s %s %lu\n", __naja_size[size], __naja_reg[rs0], __naja_reg[rs1], __naja_SH[SH], uimm6);
+		else
+			NAJA_PRINTF("sub%c     %s, %s, %s %s %lu\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs0], __naja_reg[rs1], __naja_SH[SH], uimm6);
 
 		switch (SH) {
 			case 0:
-				naja->regs[rd] = naja->regs[rs0] - (naja->regs[rs1] << uimm9);
-
-				NAJA_PRINTF("sub    r%d, r%d, r%d << %lu\n", rd, rs0, rs1, uimm9);
+				naja->regs[rd] = naja->regs[rs0] - (scf_zero_extend(v1, 8 << size) << uimm6);
 				break;
-
 			case 1:
-				naja->regs[rd] = naja->regs[rs0] - (naja->regs[rs1] >> uimm9);
-
-				NAJA_PRINTF("sub    r%d, r%d, r%d LSR %lu\n", rd, rs0, rs1, uimm9);
+				naja->regs[rd] = naja->regs[rs0] - (scf_zero_extend(v1, 8 << size) >> uimm6);
 				break;
 			default:
-				naja->regs[rd] = naja->regs[rs0] - (((int64_t)naja->regs[rs1]) >> uimm9);
-
-				NAJA_PRINTF("sub    r%d, r%d, r%d ASR %lu\n", rd, rs0, rs1, uimm9);
+				naja->regs[rd] = naja->regs[rs0] - (((int64_t)scf_sign_extend(v1, 8 << size)) >> uimm6);
 				break;
 		}
 	}
 
-	if (31 == rd) { // cmp
-		int ret = naja->regs[rd];
+	if (0xf == rd) { // cmp
+		int ret = scf_sign_extend(naja->regs[rd], 8 << size);
 
 		if (0 == ret)
 			naja->flags = 0x1;
@@ -433,88 +404,37 @@ static int __naja_mul(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	int rs0 =  inst        & 0x1f;
-	int rs1 = (inst >>  5) & 0x1f;
-	int rs2 = (inst >> 10) & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int S   = (inst >> 18) & 0x1;
-	int opt = (inst >> 19) & 0x3;
+	int rs0  =  inst        & 0xf;
+	int rs1  = (inst >>  4) & 0xf;
+	int rs2  = (inst >> 12) & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int s    = (inst >> 17) & 0x1;
+	int A    = (inst >> 16) & 0x1;
 
-	if (S)
-		naja->regs[rd] = (int64_t)naja->regs[rs0] * (int64_t)naja->regs[rs1];
-	else
-		naja->regs[rd] = naja->regs[rs0] * naja->regs[rs1];
-
-	if (0 == opt) {
-		naja->regs[rd] += naja->regs[rs2];
-
-		NAJA_PRINTF("madd   r%d, r%d, r%d, r%d", rd, rs2, rs0, rs1);
-	} else if (1 == opt) {
-		naja->regs[rd]  = naja->regs[rs2] - naja->regs[rd];
-
-		NAJA_PRINTF("msub   r%d, r%d, r%d, r%d", rd, rs2, rs0, rs1);
-	} else {
-		if (S)
-			NAJA_PRINTF("smul   r%d, r%d, r%d", rd, rs0, rs1);
+	if (0xf == rs2)
+		NAJA_PRINTF("%smul%c     %s, %s, %s\n", __naja_sign[s], __naja_size[size], __naja_reg[rd], __naja_reg[rs0], __naja_reg[rs1]);
+	else {
+		if (0 == A)
+			NAJA_PRINTF("%smadd%c    %s, %s, %s, %s\n", __naja_sign[s], __naja_size[size], __naja_reg[rd], __naja_reg[rs2], __naja_reg[rs0], __naja_reg[rs1]);
 		else
-			NAJA_PRINTF("mul    r%d, r%d, r%d", rd, rs0, rs1);
+			NAJA_PRINTF("%smsub%c    %s, %s, %s, %s\n", __naja_sign[s], __naja_size[size], __naja_reg[rd], __naja_reg[rs2], __naja_reg[rs0], __naja_reg[rs1]);
 	}
 
-	naja->ip += 4;
-	return 0;
-}
+	uint64_t v0 = naja->regs[rs0];
+	uint64_t v1 = naja->regs[rs1];
 
-static int __naja_fmul(scf_vm_t* vm, uint32_t inst)
-{
-	scf_vm_naja_t* naja = vm->priv;
+	if (s)
+		naja->regs[rd] = (int64_t)scf_sign_extend(v0, 8 << size) * (int64_t)scf_sign_extend(v1, 8 << size);
+	else
+		naja->regs[rd] = v0 * v1;
 
-	int rs0 =  inst        & 0x1f;
-	int rs1 = (inst >>  5) & 0x1f;
-	int rs2 = (inst >> 10) & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int opt = (inst >> 18) & 0x3;
-
-	naja->fvec[rd].d[0] = naja->fvec[rs0].d[0] * naja->fvec[rs1].d[0];
-
-	if (0 == opt) {
-		naja->fvec[rd].d[0] += naja->fvec[rs2].d[0];
-
-		NAJA_PRINTF("fmadd   d%d, d%d, d%d, d%d", rd, rs2, rs0, rs1);
-
-	} else if (1 == opt) {
-		naja->fvec[rd].d[0]  = naja->fvec[rs2].d[0] - naja->fvec[rd].d[0];
-
-		NAJA_PRINTF("fmsub   d%d, d%d, d%d, d%d", rd, rs2, rs0, rs1);
-	} else
-		NAJA_PRINTF("fmul    d%d, d%d, d%d", rd, rs0, rs1);
-
-	naja->ip += 4;
-	return 0;
-}
-
-static int __naja_fdiv(scf_vm_t* vm, uint32_t inst)
-{
-	scf_vm_naja_t* naja = vm->priv;
-
-	int rs0 =  inst        & 0x1f;
-	int rs1 = (inst >>  5) & 0x1f;
-	int rs2 = (inst >> 10) & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int opt = (inst >> 18) & 0x3;
-
-	naja->fvec[rd].d[0] = naja->fvec[rs0].d[0] / naja->fvec[rs1].d[0];
-
-	if (0 == opt) {
-		naja->fvec[rd].d[0] += naja->fvec[rs2].d[0];
-
-		NAJA_PRINTF("fdadd   d%d, d%d, d%d, d%d", rd, rs2, rs0, rs1);
-
-	} else if (1 == opt) {
-		naja->fvec[rd].d[0]  = naja->fvec[rs2].d[0] - naja->fvec[rd].d[0];
-
-		NAJA_PRINTF("fdsub   d%d, d%d, d%d, d%d", rd, rs2, rs0, rs1);
-	} else
-		NAJA_PRINTF("fdiv    d%d, d%d, d%d", rd, rs0, rs1);
+	if (0xf != rs2) {
+		if (0 == A)
+			naja->regs[rd] += naja->regs[rs2];
+		else
+			naja->regs[rd]  = naja->regs[rs2] - naja->regs[rd];
+	}
 
 	naja->ip += 4;
 	return 0;
@@ -524,33 +444,23 @@ static int __naja_div(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	int rs0 =  inst        & 0x1f;
-	int rs1 = (inst >>  5) & 0x1f;
-	int rs2 = (inst >> 10) & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int S   = (inst >> 18) & 0x1;
-	int opt = (inst >> 19) & 0x3;
+	int rs0  =  inst        & 0xf;
+	int rs1  = (inst >>  4) & 0xf;
+	int rs2  = (inst >> 12) & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int s    = (inst >> 17) & 0x1;
+	int A    = (inst >> 16) & 0x1;
 
-	if (S)
-		naja->regs[rd] = (int64_t)naja->regs[rs0] / (int64_t)naja->regs[rs1];
+	NAJA_PRINTF("%sdiv%c     %s, %s, %s\n", __naja_sign[s], __naja_size[size], __naja_reg[rd], __naja_reg[rs0], __naja_reg[rs1]);
+
+	uint64_t v0 = naja->regs[rs0];
+	uint64_t v1 = naja->regs[rs1];
+
+	if (s)
+		naja->regs[rd] = (int64_t)scf_sign_extend(v0, 8 << size) / (int64_t)scf_sign_extend(v1, 8 << size);
 	else
-		naja->regs[rd] = naja->regs[rs0] / naja->regs[rs1];
-
-	if (0 == opt) {
-		naja->regs[rd] += naja->regs[rs2];
-
-		NAJA_PRINTF("fdadd   d%d, d%d, d%d, d%d", rd, rs2, rs0, rs1);
-
-	} else if (1 == opt) {
-		naja->regs[rd]  = naja->regs[rs2] - naja->regs[rd];
-
-		NAJA_PRINTF("dsub   r%d, r%d, r%d, r%d", rd, rs2, rs0, rs1);
-	} else {
-		if (S)
-			NAJA_PRINTF("sdiv   r%d, r%d, r%d", rd, rs0, rs1);
-		else
-			NAJA_PRINTF("div    r%d, r%d, r%d", rd, rs0, rs1);
-	}
+		naja->regs[rd] = scf_zero_extend(v0, 8 << size) / scf_zero_extend(v1, 8 << size);
 
 	naja->ip += 4;
 	return 0;
@@ -612,7 +522,6 @@ static int __naja_mem(scf_vm_t* vm, int64_t addr, uint8_t** pdata, int64_t* poff
 			scf_loge("\n");
 			return -1;
 		}
-
 	} else {
 		data   = naja->stack;
 		offset = addr;
@@ -623,19 +532,20 @@ static int __naja_mem(scf_vm_t* vm, int64_t addr, uint8_t** pdata, int64_t* poff
 	return 0;
 }
 
-static int __naja_fstr_disp(scf_vm_t* vm, uint32_t inst)
+static int __naja_ldr_disp(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	int rb  =  inst        & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
-	int s13 = (inst >>  5) & 0x1fff;
+	int rb   =  inst        & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int s    = (inst >> 17) & 0x1;
+	int s13  = (inst >>  4) & 0x1fff;
 
 	if (s13  & 0x1000)
 		s13 |= 0xffffe000;
 
-	scf_logd("rd: %d, rb: %d, s13: %d, SH: %d\n", rd, rb, s13, SH);
+	NAJA_PRINTF("ldr%s%c  %s, [%s, %d]\n", __naja_sign[s], __naja_size[size], __naja_reg[rd], __naja_reg[rb], s13 << size);
 
 	int64_t  addr   = naja->regs[rb];
 	int64_t  offset = 0;
@@ -645,7 +555,119 @@ static int __naja_fstr_disp(scf_vm_t* vm, uint32_t inst)
 	if (ret < 0)
 		return ret;
 
-	offset += s13 << SH;
+	offset += s13 << size;
+
+	if (data   == naja->stack) {
+		offset = -offset;
+
+		scf_logd("offset0: %ld, size: %ld\n", offset, naja->size);
+		assert(offset >= 0);
+
+		if (naja->size < offset) {
+			scf_loge("offset: %ld, size: %ld\n", offset, naja->size);
+			return -EINVAL;
+		}
+
+		offset -= 1 << size;
+	}
+
+	switch (size) {
+		case 0:
+			if (s)
+				naja->regs[rd] = *(int8_t*)(data + offset);
+			else
+				naja->regs[rd] = *(uint8_t*)(data + offset);
+			break;
+
+		case 1:
+			if (s)
+				naja->regs[rd] = *(int16_t*)(data + offset);
+			else
+				naja->regs[rd] = *(uint16_t*)(data + offset);
+			break;
+
+		case 2:
+			if (s)
+				naja->regs[rd] = *(int32_t*)(data + offset);
+			else
+				naja->regs[rd] = *(uint32_t*)(data + offset);
+			break;
+
+		default:
+			naja->regs[rd] = *(uint64_t*)(data + offset);
+			break;
+	};
+
+	naja->ip += 4;
+	return 0;
+}
+
+static int __naja_and(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs0  =  inst        & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int SH   = (inst >> 16) & 0x3;
+
+	if (0x3 == SH) {
+		uint64_t uimm12 = (inst >> 4) & 0xfff;
+
+		if (0xf == rd)
+			NAJA_PRINTF("teq%c   %s, %#lx\n", __naja_size[size], __naja_reg[rs0], uimm12);
+		else
+			NAJA_PRINTF("and%c   %s, %s, %#lx\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs0], uimm12);
+
+		naja->regs[rd]  = naja->regs[rs0] & uimm12;
+	} else {
+		uint64_t uimm6 = (inst >> 10) & 0x3f;
+		int      rs1   = (inst >>  4) & 0xf;
+		uint64_t v1    = naja->regs[rs1];
+
+		if (0xf == rd)
+			NAJA_PRINTF("teq%c   %s, %s %s %lu\n", __naja_size[size], __naja_reg[rs0], __naja_reg[rs1], __naja_SH[SH], uimm6);
+		else
+			NAJA_PRINTF("and%c   %s, %s, %s %s %lu\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs0], __naja_reg[rs1], __naja_SH[SH], uimm6);
+
+		if (0 == SH)
+			naja->regs[rd]  = naja->regs[rs0] & (v1 << uimm6);
+		else if (1 == SH)
+			naja->regs[rd]  = naja->regs[rs0] & (v1 >> uimm6);
+		else
+			naja->regs[rd]  = naja->regs[rs0] & (((int64_t)scf_sign_extend(v1, 8 << size)) >> uimm6);
+	}
+
+	if (0xf == rd)
+		naja->flags = !!scf_zero_extend(naja->regs[rd], 8 << size);
+
+	naja->ip += 4;
+	return 0;
+}
+
+static int __naja_str_disp(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rb   =  inst        & 0xf;
+	int rs   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int s13  = (inst >>  4) & 0x1fff;
+
+	if (s13  & 0x1000)
+		s13 |= 0xffffe000;
+
+	NAJA_PRINTF("str%c    %s, [%s, %d]\n", __naja_size[size], __naja_reg[rs], __naja_reg[rb], s13 << size);
+
+	int64_t  addr   = naja->regs[rb];
+	int64_t  offset = 0;
+	uint8_t* data   = NULL;
+
+	int ret = __naja_mem(vm, addr, &data, &offset);
+	if (ret < 0)
+		return ret;
+
+	offset += s13 << size;
 
 	if (data   == naja->stack) {
 		offset = -offset;
@@ -657,286 +679,59 @@ static int __naja_fstr_disp(scf_vm_t* vm, uint32_t inst)
 			return -EINVAL;
 		}
 
-		offset -= 1 << SH;
+		offset -= 1 << size;
 	}
 
-	switch (SH) {
-		case 2:
-			*(float*)(data + offset) = naja->fvec[rd].d[0];
-
-			NAJA_PRINTF("fstr   f%d, [r%d, %d]\n", rd, rb, s13 << 2);
-			break;
-
-		case 3:
-			*(double*)(data + offset) = naja->fvec[rd].d[0];
-
-			NAJA_PRINTF("fstr    d%d, [r%d, %d]\n", rd, rb, s13 << 3);
-			break;
-		default:
-			scf_loge("SH: %d\n", SH);
-			return -1;
-			break;
-	};
-
-	naja->ip += 4;
-	return 0;
-}
-
-static int __naja_fpush(scf_vm_t* vm, uint32_t inst)
-{
-	scf_vm_naja_t* naja = vm->priv;
-
-	int rb  =  inst        & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
-
-	int64_t  addr   = naja->regs[rb];
-	int64_t  offset = 0;
-	uint8_t* data   = NULL;
-
-	int ret = __naja_mem(vm, addr, &data, &offset);
-	if (ret < 0)
-		return ret;
-
-	if (data   == naja->stack) {
-		offset = -offset;
-
-		assert(offset >= 0);
-
-		offset += 1 << SH;
-
-		if (naja->size < offset) {
-			data = realloc(naja->stack, offset + STACK_INC);
-			if (!data)
-				return -ENOMEM;
-
-			naja->stack = data;
-			naja->size  = offset + STACK_INC;
-		}
-
-		offset -= 1 << SH;
-	}
-
-	switch (SH) {
-		case 2:
-			*(float*)(data + offset) = naja->fvec[rd].d[0];
-
-			NAJA_PRINTF("fpush   f%d, [r%d]\n", rd, rb);
-			break;
-
-		case 3:
-			*(double*)(data + offset) = naja->fvec[rd].d[0];
-
-			NAJA_PRINTF("fpush   d%d, [r%d]\n", rd, rb);
-			break;
-		default:
-			scf_loge("SH: %d\n", SH);
-			return -1;
-			break;
-	};
-
-	naja->regs[rb] -= 1 << SH;
-
-	naja->ip += 4;
-	return 0;
-}
-
-static int __naja_fldr_disp(scf_vm_t* vm, uint32_t inst)
-{
-	scf_vm_naja_t* naja = vm->priv;
-
-	int rb  =  inst        & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
-	int s13 = (inst >>  5) & 0x1fff;
-
-	if (s13  & 0x1000)
-		s13 |= 0xffffe000;
-
-	scf_logd("rd: %d, rb: %d, s13: %d, SH: %d\n", rd, rb, s13, SH);
-
-	int64_t  addr   = naja->regs[rb];
-	int64_t  offset = 0;
-	uint8_t* data   = NULL;
-
-	int ret = __naja_mem(vm, addr, &data, &offset);
-	if (ret < 0)
-		return ret;
-
-	offset += s13 << SH;
-
-	if (data   == naja->stack) {
-		offset = -offset;
-
-		scf_logd("offset0: %ld, size: %ld\n", offset, naja->size);
-		assert(offset > 0);
-
-		if (naja->size < offset) {
-			scf_loge("offset: %ld, size: %ld\n", offset, naja->size);
-			return -EINVAL;
-		}
-
-		offset -= 1 << SH;
-	}
-
-	switch (SH) {
-		case 2:
-			naja->fvec[rd].d[0] = *(float*)(data + offset);
-
-			NAJA_PRINTF("fldr    f%d, [r%d, %d], rd: %lg, rb: %ld, %p\n", rd, rb, s13 << 2, naja->fvec[rd].d[0], naja->regs[rb], data + offset);
-			break;
-		case 3:
-			naja->fvec[rd].d[0] = *(double*)(data + offset);
-
-			NAJA_PRINTF("fldr    d%d, [r%d, %d], rd: %lg, rb: %ld, %p\n", rd, rb, s13 << 3, naja->fvec[rd].d[0], naja->regs[rb], data + offset);
-			break;
-		default:
-			scf_loge("SH: %d\n", SH);
-			return -1;
-			break;
-	};
-
-	naja->ip += 4;
-	return 0;
-}
-
-static int __naja_fpop(scf_vm_t* vm, uint32_t inst)
-{
-	scf_vm_naja_t* naja = vm->priv;
-
-	int rb  =  inst        & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
-
-	scf_logd("rd: %d, rb: %d, SH: %d\n", rd, rb, SH);
-
-	int64_t  addr   = naja->regs[rb];
-	int64_t  offset = 0;
-	uint8_t* data   = NULL;
-
-	int ret = __naja_mem(vm, addr, &data, &offset);
-	if (ret < 0)
-		return ret;
-
-	if (data   == naja->stack) {
-		offset = -offset;
-
-		scf_logd("offset0: %ld, size: %ld\n", offset, naja->size);
-		assert(offset > 0);
-
-		if (naja->size < offset) {
-			scf_loge("offset: %ld, size: %ld\n", offset, naja->size);
-			return -EINVAL;
-		}
-
-		offset -= 1 << SH;
-	}
-
-	switch (SH) {
-		case 2:
-			naja->fvec[rd].d[0] = *(float*)(data + offset);
-
-			NAJA_PRINTF("fldr    f%d, [r%d], rd: %lg, rb: %ld, %p\n", rd, rb, naja->fvec[rd].d[0], naja->regs[rb], data + offset);
-			break;
-		case 3:
-			naja->fvec[rd].d[0] = *(double*)(data + offset);
-
-			NAJA_PRINTF("fldr    d%d, [r%d], rd: %lg, rb: %ld, %p\n", rd, rb, naja->fvec[rd].d[0], naja->regs[rb], data + offset);
-			break;
-		default:
-			scf_loge("SH: %d\n", SH);
-			return -1;
-			break;
-	};
-
-	naja->regs[rb] += 1 << SH;
-
-	naja->ip += 4;
-	return 0;
-}
-
-static int __naja_ldr_disp(scf_vm_t* vm, uint32_t inst)
-{
-	scf_vm_naja_t* naja = vm->priv;
-
-	int rb  =  inst        & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
-	int s   = (inst >> 18) & 0x1;
-	int s13 = (inst >>  5) & 0x1fff;
-
-	if (s13  & 0x1000)
-		s13 |= 0xffffe000;
-
-	scf_logd("rd: %d, rb: %d, s13: %d, SH: %d\n", rd, rb, s13, SH);
-
-	int64_t  addr   = naja->regs[rb];
-	int64_t  offset = 0;
-	uint8_t* data   = NULL;
-
-	int ret = __naja_mem(vm, addr, &data, &offset);
-	if (ret < 0)
-		return ret;
-
-	offset += s13 << SH;
-
-	if (data   == naja->stack) {
-		offset = -offset;
-
-		scf_logd("offset0: %ld, size: %ld\n", offset, naja->size);
-		assert(offset >= 0);
-
-		if (naja->size < offset) {
-			scf_loge("offset: %ld, size: %ld\n", offset, naja->size);
-			return -EINVAL;
-		}
-
-		offset -= 1 << SH;
-	}
-
-	switch (SH) {
+	switch (size) {
 		case 0:
-			if (s) {
-				naja->regs[rd] = *(int8_t*)(data + offset);
-
-				NAJA_PRINTF("ldrsb  r%d, [r%d, %d]\n", rd, rb, s13);
-			} else {
-				naja->regs[rd] = *(uint8_t*)(data + offset);
-
-				NAJA_PRINTF("ldrb   r%d, [r%d, %d]\n", rd, rb, s13);
-			}
+			*(uint8_t*)(data + offset) = naja->regs[rs];
 			break;
 
 		case 1:
-			if (s) {
-				naja->regs[rd] = *(int16_t*)(data + offset);
-
-				NAJA_PRINTF("ldrsw  r%d, [r%d, %d]\n", rd, rb, s13 << 1);
-			} else {
-				naja->regs[rd] = *(uint16_t*)(data + offset);
-
-				NAJA_PRINTF("ldrw   r%d, [r%d, %d]\n", rd, rb, s13 << 1);
-			}
+			*(uint16_t*)(data + offset) = naja->regs[rs];
 			break;
 
 		case 2:
-			if (s) {
-				naja->regs[rd] = *(int32_t*)(data + offset);
-
-				NAJA_PRINTF("ldrsl  r%d, [r%d, %d]\n", rd, rb, s13 << 2);
-			} else {
-				naja->regs[rd] = *(uint32_t*)(data + offset);
-
-				NAJA_PRINTF("ldrl   r%d, [r%d, %d],  %ld, %p\n", rd, rb, s13 << 2, naja->regs[rd], data + offset);
-			}
+			*(uint32_t*)(data + offset) = naja->regs[rs];
 			break;
-
 		default:
-			naja->regs[rd] = *(uint64_t*)(data + offset);
-
-			NAJA_PRINTF("ldr    r%d, [r%d, %d]\n", rd, rb, s13 << 3);
+			*(uint64_t*)(data + offset) = naja->regs[rs];
 			break;
 	};
+
+	naja->ip += 4;
+	return 0;
+}
+
+static int __naja_or(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs0  =  inst        & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int SH   = (inst >> 16) & 0x3;
+
+	if (0x3 == SH) {
+		uint64_t uimm12 = (inst >> 4) & 0xfff;
+
+		NAJA_PRINTF("or%c    %s, %s, %#lx\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs0], uimm12);
+
+		naja->regs[rd]  = naja->regs[rs0] | uimm12;
+	} else {
+		uint64_t uimm6 = (inst >> 10) & 0x3f;
+		int      rs1   = (inst >>  4) & 0xf;
+		uint64_t v1    = naja->regs[rs1];
+
+		NAJA_PRINTF("or%c    %s, %s, %s %s %lu\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs0], __naja_reg[rs1], __naja_SH[SH], uimm6);
+
+		if (0 == SH)
+			naja->regs[rd]  = naja->regs[rs0] | (v1 << uimm6);
+		else if (1 == SH)
+			naja->regs[rd]  = naja->regs[rs0] | (v1 >> uimm6);
+		else
+			naja->regs[rd]  = naja->regs[rs0] | (((int64_t)scf_sign_extend(v1, 8 << size)) >> uimm6);
+	}
 
 	naja->ip += 4;
 	return 0;
@@ -946,10 +741,9 @@ static int __naja_pop(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	int rb  =  inst        & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
-	int s   = (inst >> 18) & 0x1;
+	int rb =  inst        & 0xf;
+	int rd = (inst >> 21) & 0xf;
+	int s  = (inst >> 17) & 0x1;
 
 	int64_t  addr   = naja->regs[rb];
 	int64_t  offset = 0;
@@ -970,310 +764,20 @@ static int __naja_pop(scf_vm_t* vm, uint32_t inst)
 			return -EINVAL;
 		}
 
-		offset -= 1 << SH;
+		offset -= 8;
 	}
 
-	switch (SH) {
-		case 0:
-			if (s) {
-				naja->regs[rd] = *(int8_t*)(data + offset);
+	if (s) {
+		NAJA_PRINTF("fpop     d%d, [%s]\n", rd, __naja_reg[rb]);
 
-				NAJA_PRINTF("popsb  r%d, [r%d]\n", rd, rb);
-			} else {
-				naja->regs[rd] = *(uint8_t*)(data + offset);
+		naja->fvec[rd].d[0] = *(double*)(data + offset);
+	} else {
+		naja->regs[rd] = *(uint64_t*)(data + offset);
 
-				NAJA_PRINTF("popb   r%d, [r%d]\n", rd, rb);
-			}
-			break;
-
-		case 1:
-			if (s) {
-				naja->regs[rd] = *(int16_t*)(data + offset);
-
-				NAJA_PRINTF("popsw  r%d, [r%d]\n", rd, rb);
-			} else {
-				naja->regs[rd] = *(uint16_t*)(data + offset);
-
-				NAJA_PRINTF("popw   r%d, [r%d]\n", rd, rb);
-			}
-			break;
-
-		case 2:
-			if (s) {
-				naja->regs[rd] = *(int32_t*)(data + offset);
-
-				NAJA_PRINTF("popsl  r%d, [r%d]\n", rd, rb);
-			} else {
-				naja->regs[rd] = *(uint32_t*)(data + offset);
-
-				NAJA_PRINTF("popl   r%d, [r%d],  %ld, %p\n", rd, rb, naja->regs[rd], data + offset);
-			}
-			break;
-
-		default:
-			naja->regs[rd] = *(uint64_t*)(data + offset);
-
-			NAJA_PRINTF("popq   r%d, [r%d]\n", rd, rb);
-			break;
-	};
-
-	naja->regs[rb] += 1 << SH;
-
-	naja->ip += 4;
-	return 0;
-}
-
-static int __naja_ldr_sib(scf_vm_t* vm, uint32_t inst)
-{
-	scf_vm_naja_t* naja = vm->priv;
-
-	int rb  =  inst        & 0x1f;
-	int ri  = (inst >>  5) & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
-	int s   = (inst >> 18) & 0x1;
-	int u8  = (inst >> 10) & 0xff;
-
-	int64_t  addr   = naja->regs[rb];
-	int64_t  offset = 0;
-	uint8_t* data   = NULL;
-
-	int ret = __naja_mem(vm, addr, &data, &offset);
-	if (ret < 0)
-		return ret;
-
-	offset += (naja->regs[ri] << u8);
-
-	if (data   == naja->stack) {
-		offset = -offset;
-
-		assert(offset >= 0);
-
-		if (naja->size < offset) {
-			scf_loge("\n");
-			return -1;
-		}
-
-		offset -= 1 << SH;
+		NAJA_PRINTF("pop      %s, [%s], offset: %ld, value: %#lx\n", __naja_reg[rd], __naja_reg[rb], offset, naja->regs[rd]);
 	}
 
-	switch (SH) {
-		case 0:
-			if (s) {
-				NAJA_PRINTF("ldrsb r%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-				naja->regs[rd] = *(int8_t*)(data + offset);
-			} else {
-				NAJA_PRINTF("ldrb  r%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-				naja->regs[rd] = *(uint8_t*)(data + offset);
-			}
-			break;
-
-		case 1:
-			if (s) {
-				NAJA_PRINTF("ldrsw r%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-				naja->regs[rd] = *(int16_t*)(data + offset);
-			} else {
-				NAJA_PRINTF("ldrw  r%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-				naja->regs[rd] = *(uint16_t*)(data + offset);
-			}
-			break;
-
-		case 2:
-			if (s) {
-				NAJA_PRINTF("ldrsl r%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-				naja->regs[rd] = *(int32_t*)(data + offset);
-			} else {
-				NAJA_PRINTF("ldrl  r%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-				naja->regs[rd] = *(uint32_t*)(data + offset);
-			}
-			break;
-		default:
-			NAJA_PRINTF("ldr   r%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-			naja->regs[rd] = *(uint64_t*)(data + offset);
-			break;
-	};
-
-	naja->ip += 4;
-	return 0;
-}
-
-static int __naja_fldr_sib(scf_vm_t* vm, uint32_t inst)
-{
-	scf_vm_naja_t* naja = vm->priv;
-
-	int rb  =  inst        & 0x1f;
-	int ri  = (inst >>  5) & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
-	int u8  = (inst >> 10) & 0xff;
-
-	int64_t  addr   = naja->regs[rb];
-	int64_t  offset = 0;
-	uint8_t* data   = NULL;
-
-	int ret = __naja_mem(vm, addr, &data, &offset);
-	if (ret < 0)
-		return ret;
-
-	offset += naja->regs[ri] << u8;
-
-	if (data   == naja->stack) {
-		offset = -offset;
-
-		assert(offset > 0);
-
-		if (naja->size < offset) {
-			scf_loge("\n");
-			return -1;
-		}
-
-		offset -= 1 << SH;
-	}
-
-	switch (SH) {
-		case 2:
-			NAJA_PRINTF("fldr  f%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-			naja->fvec[rd].d[0] = *(float*)(data + offset);
-			break;
-
-		case 3:
-			NAJA_PRINTF("fldr  d%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-			naja->fvec[rd].d[0] = *(double*)(data + offset);
-			break;
-		default:
-			scf_loge("\n");
-			return -1;
-			break;
-	};
-
-	naja->ip += 4;
-	return 0;
-}
-
-static int __naja_fstr_sib(scf_vm_t* vm, uint32_t inst)
-{
-	scf_vm_naja_t* naja = vm->priv;
-
-	int rb  =  inst        & 0x1f;
-	int ri  = (inst >>  5) & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
-	int u8  = (inst >> 10) & 0xff;
-
-	int64_t  addr   = naja->regs[rb];
-	int64_t  offset = 0;
-	uint8_t* data   = NULL;
-
-	int ret = __naja_mem(vm, addr, &data, &offset);
-	if (ret < 0)
-		return ret;
-
-	offset += naja->regs[ri] << u8;
-
-	if (data   == naja->stack) {
-		offset = -offset;
-
-		assert(offset > 0);
-
-		if (naja->size < offset) {
-			scf_loge("\n");
-			return -1;
-		}
-
-		offset -= 1 << SH;
-	}
-
-	switch (SH) {
-		case 2:
-			NAJA_PRINTF("fstr  f%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-			*(float*)(data + offset) = naja->fvec[rd].d[0];
-			break;
-
-		case 3:
-			NAJA_PRINTF("fstr  d%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-			*(double*)(data + offset) = naja->fvec[rd].d[0];
-			break;
-		default:
-			scf_loge("\n");
-			return -1;
-			break;
-	};
-
-	naja->ip += 4;
-	return 0;
-}
-
-static int __naja_str_disp(scf_vm_t* vm, uint32_t inst)
-{
-	scf_vm_naja_t* naja = vm->priv;
-
-	int rb  =  inst        & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
-	int s13 = (inst >>  5) & 0x1fff;
-
-	if (s13  & 0x1000)
-		s13 |= 0xffffe000;
-
-	int64_t  addr   = naja->regs[rb];
-	int64_t  offset = 0;
-	uint8_t* data   = NULL;
-
-	int ret = __naja_mem(vm, addr, &data, &offset);
-	if (ret < 0)
-		return ret;
-
-	offset += s13 << SH;
-
-	if (data   == naja->stack) {
-		offset = -offset;
-
-		assert(offset > 0);
-
-		if (naja->size < offset) {
-			scf_loge("offset0: %ld, size: %ld\n", offset, naja->size);
-			return -EINVAL;
-		}
-
-		offset -= 1 << SH;
-	}
-
-	switch (SH) {
-		case 0:
-			*(uint8_t*)(data + offset) = naja->regs[rd];
-
-			NAJA_PRINTF("strb   r%d, [r%d, %d]\n", rd, rb, s13);
-			break;
-
-		case 1:
-			*(uint16_t*)(data + offset) = naja->regs[rd];
-
-			NAJA_PRINTF("strw   r%d, [r%d, %d]\n", rd, rb, s13 << 1);
-			break;
-
-		case 2:
-			*(uint32_t*)(data + offset) = naja->regs[rd];
-
-			NAJA_PRINTF("strl   r%d, [r%d, %d],  s13: %d, %d, %p\n", rd, rb, s13 << 2, s13, *(uint32_t*)(data + offset), data + offset);
-			break;
-
-		default:
-			*(uint64_t*)(data + offset) = naja->regs[rd];
-
-			NAJA_PRINTF("str    r%d, [r%d, %d]\n", rd, rb, s13 << 3);
-			break;
-	};
+	naja->regs[rb] += 8;
 
 	naja->ip += 4;
 	return 0;
@@ -1283,9 +787,9 @@ static int __naja_push(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	int rb  =  inst        & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
+	int rb =  inst        & 0xf;
+	int rs = (inst >> 21) & 0xf;
+	int s  = (inst >> 17) & 0x1;
 
 	int64_t  addr   = naja->regs[rb];
 	int64_t  offset = 0;
@@ -1302,7 +806,7 @@ static int __naja_push(scf_vm_t* vm, uint32_t inst)
 
 		assert(offset >= 0);
 
-		offset += 1 << SH;
+		offset += 8;
 
 		if (naja->size < offset) {
 			data = realloc(naja->stack, offset + STACK_INC);
@@ -1313,50 +817,37 @@ static int __naja_push(scf_vm_t* vm, uint32_t inst)
 			naja->size  = offset + STACK_INC;
 		}
 
-		offset -= 1 << SH;
+		offset -= 8;
 	}
 
-	switch (SH) {
-		case 0:
-			*(uint8_t*)(data + offset) = naja->regs[rd];
+	if (s) {
+		NAJA_PRINTF("fpush    d%d, [%s]\n", rs, __naja_reg[rb]);
 
-			NAJA_PRINTF("pushb  r%d, [r%d]\n", rd, rb);
-			break;
+		*(double*)(data + offset) = naja->fvec[rs].d[0];
+	} else {
+		*(uint64_t*)(data + offset) = naja->regs[rs];
 
-		case 1:
-			*(uint16_t*)(data + offset) = naja->regs[rd];
+		NAJA_PRINTF("push     %s, [%s], offset: %ld, value: %#lx\n", __naja_reg[rs], __naja_reg[rb], offset, naja->regs[rs]);
+	}
 
-			NAJA_PRINTF("pushw  r%d, [r%d]\n", rd, rb);
-			break;
-
-		case 2:
-			*(uint32_t*)(data + offset) = naja->regs[rd];
-
-			NAJA_PRINTF("pushl  r%d, [r%d], %d, %p\n", rd, rb, *(uint32_t*)(data + offset), data + offset);
-			break;
-
-		default:
-			*(uint64_t*)(data + offset) = naja->regs[rd];
-
-			NAJA_PRINTF("pushq  r%d, [r%d]\n", rd, rb);
-			break;
-	};
-
-	naja->regs[rb] -= 1 << SH;
+	naja->regs[rb] -= 8;
 
 	naja->ip += 4;
 	return 0;
 }
 
-static int __naja_str_sib(scf_vm_t* vm, uint32_t inst)
+static int __naja_ldr_sib(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	int rb  =  inst        & 0x1f;
-	int ri  = (inst >>  5) & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
-	int u8  = (inst >> 10) & 0xff;
+	int rb    =  inst        & 0xf;
+	int ri    = (inst >>  4) & 0xf;
+	int rd    = (inst >> 21) & 0xf;
+	int size  = (inst >> 18) & 0x3;
+	int s     = (inst >> 17) & 0x1;
+	int uimm6 = (inst >> 10) & 0x3f;
+
+	NAJA_PRINTF("ldr%s%c   %s, [%s, %s, %d]\n", __naja_sign[s], __naja_size[size], __naja_reg[rd], __naja_reg[rb], __naja_reg[ri], uimm6);
 
 	int64_t  addr   = naja->regs[rb];
 	int64_t  offset = 0;
@@ -1366,7 +857,7 @@ static int __naja_str_sib(scf_vm_t* vm, uint32_t inst)
 	if (ret < 0)
 		return ret;
 
-	offset += naja->regs[ri] << u8;
+	offset += (naja->regs[ri] << uimm6);
 
 	if (data   == naja->stack) {
 		offset = -offset;
@@ -1378,32 +869,32 @@ static int __naja_str_sib(scf_vm_t* vm, uint32_t inst)
 			return -1;
 		}
 
-		offset -= 1 << SH;
+		offset -= 1 << size;
 	}
 
-	switch (SH) {
+	switch (size) {
 		case 0:
-			NAJA_PRINTF("strb  r%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-			*(uint8_t*)(data + offset) = naja->regs[rd];
+			if (s)
+				naja->regs[rd] = *(int8_t*)(data + offset);
+			else
+				naja->regs[rd] = *(uint8_t*)(data + offset);
 			break;
 
 		case 1:
-			NAJA_PRINTF("strw  r%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-			*(uint16_t*)(data + offset) = naja->regs[rd];
+			if (s)
+				naja->regs[rd] = *(int16_t*)(data + offset);
+			else
+				naja->regs[rd] = *(uint16_t*)(data + offset);
 			break;
 
 		case 2:
-			NAJA_PRINTF("strl  r%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-			*(uint32_t*)(data + offset) = naja->regs[rd];
+			if (s)
+				naja->regs[rd] = *(int32_t*)(data + offset);
+			else
+				naja->regs[rd] = *(uint32_t*)(data + offset);
 			break;
-
 		default:
-			NAJA_PRINTF("str   r%d, [r%d, r%d, %d]\n", rd, rb, ri, u8);
-
-			*(uint64_t*)(data + offset) = naja->regs[rd];
+			naja->regs[rd] = *(uint64_t*)(data + offset);
 			break;
 	};
 
@@ -1411,62 +902,1377 @@ static int __naja_str_sib(scf_vm_t* vm, uint32_t inst)
 	return 0;
 }
 
-static int __naja_and(scf_vm_t* vm, uint32_t inst)
+static int __naja_str_sib(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	int rs0 =  inst        & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
+	int rb    =  inst        & 0xf;
+	int ri    = (inst >>  4) & 0xf;
+	int rs    = (inst >> 21) & 0xf;
+	int size  = (inst >> 18) & 0x3;
+	int s     = (inst >> 17) & 0x1;
+	int uimm6 = (inst >> 10) & 0x3f;
 
-	if (0x3 == SH) {
-		uint64_t uimm14 = (inst >> 5) & 0x3fff;
+	if (s)
+		NAJA_PRINTF("fstr.%d   d%d, [%s, %s, %d]\n", 1 << size, rs, __naja_reg[rb], __naja_reg[ri], uimm6);
+	else
+		NAJA_PRINTF("str%c     %s, [%s, %s, %d]\n", __naja_size[size], __naja_reg[rs], __naja_reg[rb], __naja_reg[ri], uimm6);
 
-		naja->regs[rd]  = naja->regs[rs0] & uimm14;
-	} else {
-		uint64_t uimm9 = (inst >> 10) & 0x1ff;
-		int      rs1   = (inst >>  5) & 0x1f;
+	int64_t  addr   = naja->regs[rb];
+	int64_t  offset = 0;
+	uint8_t* data   = NULL;
 
-		if (0 == SH)
-			naja->regs[rd]  = naja->regs[rs0] & (naja->regs[rs1] << uimm9);
-		else if (1 == SH)
-			naja->regs[rd]  = naja->regs[rs0] & (naja->regs[rs1] >> uimm9);
-		else
-			naja->regs[rd]  = naja->regs[rs0] & (((int64_t)naja->regs[rs1]) >> uimm9);
+	int ret = __naja_mem(vm, addr, &data, &offset);
+	if (ret < 0)
+		return ret;
+
+	offset += naja->regs[ri] << uimm6;
+
+	if (data   == naja->stack) {
+		offset = -offset;
+
+		assert(offset >= 0);
+
+		if (naja->size < offset) {
+			scf_loge("\n");
+			return -1;
+		}
+
+		offset -= 1 << size;
 	}
 
-	if (31 == rd)
-		naja->flags = !naja->regs[rd];
+	switch (size) {
+		case 0:
+			*(uint8_t*)(data + offset) = naja->regs[rs];
+			break;
+
+		case 1:
+			*(uint16_t*)(data + offset) = naja->regs[rs];
+			break;
+
+		case 2:
+			*(uint32_t*)(data + offset) = naja->regs[rs];
+			break;
+
+		default:
+			*(uint64_t*)(data + offset) = naja->regs[rs];
+			break;
+	};
 
 	naja->ip += 4;
 	return 0;
 }
 
-static int __naja_or(scf_vm_t* vm, uint32_t inst)
+static int __naja_mov(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	int rs0 =  inst        & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
+	int rs    =  inst        & 0xf;
+	int rs1   = (inst >>  4) & 0xf;
+	int rd    = (inst >> 21) & 0xf;
+	int size  = (inst >> 18) & 0x3;
+	int SH    = (inst >> 16) & 0x3;
+	int uimm6 = (inst >> 10) & 0x3f;
 
-	if (0x3 == SH) {
-		uint64_t uimm14 = (inst >> 5) & 0x3fff;
-
-		naja->regs[rd]  = naja->regs[rs0] | uimm14;
-	} else {
-		uint64_t uimm9 = (inst >> 10) & 0x1ff;
-		int      rs1   = (inst >>  5) & 0x1f;
-
-		if (0 == SH)
-			naja->regs[rd]  = naja->regs[rs0] | (naja->regs[rs1] << uimm9);
-		else if (1 == SH)
-			naja->regs[rd]  = naja->regs[rs0] | (naja->regs[rs1] >> uimm9);
+	if (0xf == rs1) {
+		if (0 == uimm6)
+			NAJA_PRINTF("mov%c     %s, %s\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs]);
 		else
-			naja->regs[rd]  = naja->regs[rs0] | (((int64_t)naja->regs[rs1]) >> uimm9);
+			NAJA_PRINTF("mov%c     %s, %s %s %d\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs], __naja_SH[SH], uimm6);
+	} else
+		NAJA_PRINTF("mov%c     %s, %s %s %s\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs], __naja_SH[SH], __naja_reg[rs1]);
+
+	uint64_t v = naja->regs[rs];
+
+	if (0xf != rs1)
+		uimm6 = naja->regs[rs1] & 0x3f;
+
+	switch (SH) {
+		case 0:
+			naja->regs[rd] = v << uimm6;
+			break;
+		case 1:
+			naja->regs[rd] = v >> uimm6;
+			break;
+		case 2:
+			naja->regs[rd] = (int64_t)scf_sign_extend(v, 8 << size) >> uimm6;
+			break;
+		default:
+			scf_loge("\n");
+			return -1;
+			break;
+	};
+
+	naja->ip += 4;
+	return 0;
+}
+
+static int __naja_movx(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs    =  inst        & 0xf;
+	int rd    = (inst >> 21) & 0xf;
+	int size  = (inst >> 18) & 0x3;
+	int s     = (inst >> 17) & 0x1;
+
+	if (s) {
+		NAJA_PRINTF("movs%cq    %s, %s\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs]);
+
+		naja->regs[rd] = scf_sign_extend(naja->regs[rs], 8 << size);
+	} else {
+		naja->regs[rd] = scf_zero_extend(naja->regs[rs], 8 << size);
+
+		NAJA_PRINTF("movz%cq    %s, %s\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs]);
 	}
 
 	naja->ip += 4;
+	return 0;
+}
+
+static int __naja_not(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs   =  inst        & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int SH   = (inst >> 16) & 0x3;
+	int u16  =  inst        & 0xffff;
+
+	switch (SH) {
+		case 0:
+			NAJA_PRINTF("neg%c    %s, %s\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs]);
+
+			naja->regs[rd] = -scf_zero_extend(naja->regs[rs], 8 << size);
+			break;
+		case 1:
+			naja->regs[rd] = ~scf_zero_extend(naja->regs[rs], 8 << size);
+
+			NAJA_PRINTF("not%c    %s, %s\n", __naja_size[size], __naja_reg[rd], __naja_reg[rs]);
+			break;
+		case 2:
+			if (0 == size) {
+				NAJA_PRINTF("mov      %s, %d\n", __naja_reg[rd], u16);
+
+				naja->regs[rd]  = u16;
+			} else {
+				naja->regs[rd] |= u16 << size;
+
+				NAJA_PRINTF("movt     %s, %d LSL %d\n", __naja_reg[rd], u16, 16 << size);
+			}
+			break;
+		default:
+			naja->regs[rd] = ~u16;
+
+			NAJA_PRINTF("mvn%c    %s, %d\n", __naja_size[size], __naja_reg[rd], u16);
+			break;
+	};
+
+	naja->ip += 4;
+	return 0;
+}
+
+static int __naja_fadd(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs0  =  inst        & 0xf;
+	int rs1  = (inst >>  4) & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int V    = (inst >> 17) & 0x1;
+	int vlen = (inst >> 10) & 0x3;
+	int N    = 1;
+	int i;
+
+	if (V) {
+		N = 1 << (3 + vlen - size);
+
+		NAJA_PRINTF("vadd.f%dx%d   X%d, X%d, X%d\n", 1 << size, N, rd, rs0, rs1);
+	} else
+		NAJA_PRINTF("fadd.%d   d%d, d%d, d%d\n", 1 << size, rd, rs0, rs1);
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 2:
+				naja->fvec[rd].f[i] = naja->fvec[rs0].f[i] + naja->fvec[rs1].f[i];
+				break;
+			case 3:
+				naja->fvec[rd].d[i] = naja->fvec[rs0].d[i] + naja->fvec[rs1].d[i];
+				break;
+			default:
+				scf_loge("\n");
+				return -1;
+				break;
+		};
+	}
+
+	naja->ip += 4;
+	return 0;
+}
+
+static int __naja_fsub(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs0  =  inst        & 0xf;
+	int rs1  = (inst >>  4) & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int V    = (inst >> 17) & 0x1;
+	int cmp  = (inst >> 16) & 0x1;
+	int vlen = (inst >> 10) & 0x3;
+	int N    = 1;
+	int i;
+
+	if (V) {
+		N = 1 << (3 + vlen - size);
+
+		if (cmp)
+			NAJA_PRINTF("vcmp.f%dx%d   X%d, X%d, X%d\n", 1 << size, N, rd, rs0, rs1);
+		else
+			NAJA_PRINTF("vsub.f%dx%d   X%d, X%d, X%d\n", 1 << size, N, rd, rs0, rs1);
+	} else {
+		if (cmp)
+			NAJA_PRINTF("fcmp.%d   d%d, d%d\n", 1 << size, rs0, rs1);
+		else
+			NAJA_PRINTF("fsub.%d   d%d, d%d, d%d\n", 1 << size, rd, rs0, rs1);
+	}
+
+	for (i = 0; i < N; i++) {
+		double d;
+
+		switch (size) {
+			case 2:
+				d = naja->fvec[rs0].f[i] - naja->fvec[rs1].f[i];
+
+				if (!cmp)
+					naja->fvec[rd].f[i] = d;
+				break;
+
+			case 3:
+				d = naja->fvec[rs0].d[i] - naja->fvec[rs1].d[i];
+				if (!cmp)
+					naja->fvec[rd].d[i] = d;
+				break;
+			default:
+				scf_loge("\n");
+				return -1;
+				break;
+		};
+
+		if (cmp) {
+			uint32_t flags;
+
+			if (d > 0.0)
+				flags = 0x4;
+			else if (d < 0.0)
+				flags = 0x2;
+			else
+				flags = 0x1;
+
+			if (V)
+				naja->fvec[rd].l[i] = flags;
+			else
+				naja->flags = flags;
+		}
+	}
+
+	naja->ip += 4;
+	return 0;
+}
+
+static int __naja_fmul(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs0  =  inst        & 0xf;
+	int rs1  = (inst >>  4) & 0xf;
+	int rs2  = (inst >> 12) & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int V    = (inst >> 17) & 0x1;
+	int A    = (inst >> 16) & 0x1;
+	int vlen = (inst >> 10) & 0x3;
+	int N    = 1;
+	int i;
+
+	if (V) {
+		N = 1 << (3 + vlen - size);
+
+		if (0xf == rs2)
+			NAJA_PRINTF("vmul.f%dx%d   X%d, X%d, X%d\n", 1 << size, N, rd, rs0, rs1);
+		else {
+			if (A)
+				NAJA_PRINTF("vmsub.f%dx%d   X%d, X%d, X%d, X%d\n", 1 << size, N, rd, rs2, rs0, rs1);
+			else
+				NAJA_PRINTF("vmadd.f%dx%d   X%d, X%d, X%d, X%d\n", 1 << size, N, rd, rs2, rs0, rs1);
+		}
+	} else {
+		if (0xf == rs2)
+			NAJA_PRINTF("fmul.%d   d%d, d%d, d%d\n", 1 << size, rd, rs0, rs1);
+		else {
+			if (A)
+				NAJA_PRINTF("fmsub.%d   d%d, d%d, d%d, d%d\n", 1 << size, rd, rs2, rs0, rs1);
+			else
+				NAJA_PRINTF("fmadd.%d   d%d, d%d, d%d, d%d\n", 1 << size, rd, rs2, rs0, rs1);
+		}
+	}
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 2:
+				naja->fvec[rd].f[i] = naja->fvec[rs0].f[i] * naja->fvec[rs1].f[i];
+
+				if (0xf != rs2) {
+					if (A)
+						naja->fvec[rd].f[i] = naja->fvec[rs2].f[i] - naja->fvec[rd].f[i];
+					else
+						naja->fvec[rd].f[i] += naja->fvec[rs2].f[i];
+				}
+				break;
+			case 3:
+				naja->fvec[rd].d[i] = naja->fvec[rs0].d[i] * naja->fvec[rs1].d[i];
+
+				if (0xf != rs2) {
+					if (A)
+						naja->fvec[rd].d[i] = naja->fvec[rs2].d[i] - naja->fvec[rd].d[i];
+					else
+						naja->fvec[rd].d[i] += naja->fvec[rs2].d[i];
+				}
+				break;
+			default:
+				scf_loge("\n");
+				return -1;
+				break;
+		};
+	}
+
+	naja->ip += 4;
+	return 0;
+}
+
+static int __naja_fdiv(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs0  =  inst        & 0xf;
+	int rs1  = (inst >>  4) & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int V    = (inst >> 17) & 0x1;
+	int vlen = (inst >> 10) & 0x3;
+	int N    = 1;
+	int i;
+
+	if (V) {
+		N = 1 << (3 + vlen - size);
+
+		NAJA_PRINTF("vdiv.f%dx%d   X%d, X%d, X%d\n", 1 << size, N, rd, rs0, rs1);
+	} else
+		NAJA_PRINTF("fdiv.%d   d%d, d%d, d%d\n", 1 << size, rd, rs0, rs1);
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 2:
+				naja->fvec[rd].f[i] = naja->fvec[rs0].f[i] / naja->fvec[rs1].f[i];
+				break;
+			case 3:
+				naja->fvec[rd].d[i] = naja->fvec[rs0].d[i] / naja->fvec[rs1].d[i];
+				break;
+			default:
+				scf_loge("\n");
+				return -1;
+				break;
+		};
+	}
+
+	naja->ip += 4;
+	return 0;
+}
+
+static int __naja_fldr_disp(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rb   =  inst        & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int V    = (inst >> 17) & 0x1;
+	int A    = (inst >> 16) & 0x1;
+	int vlen = (inst >> 10) & 0x3;
+	int s13  = (inst >>  4) & 0x1fff;
+	int N    = 1;
+	int i;
+
+	if (s13  & 0x1000)
+		s13 |= 0xffffe000;
+
+	if (V) {
+		N = 1 << (3 + vlen - size);
+
+		if (A)
+			NAJA_PRINTF("vldr.f%dx%d  X%d, [%s]!\n", 1 << size, N, rd, __naja_reg[rb]);
+		else
+			NAJA_PRINTF("vldr.f%dx%d  X%d, [%s]\n", 1 << size, N, rd, __naja_reg[rb]);
+	} else
+		NAJA_PRINTF("fldr.%d  d%d, [%s, %d]\n", 1 << size, rd, __naja_reg[rb], s13 << size);
+
+	int64_t  addr   = naja->regs[rb];
+	int64_t  offset = 0;
+	uint8_t* data   = NULL;
+
+	int ret = __naja_mem(vm, addr, &data, &offset);
+	if (ret < 0)
+		return ret;
+
+	offset += s13 << size;
+
+	if (data   == naja->stack) {
+		offset = -offset;
+
+		scf_logd("offset0: %ld, size: %ld\n", offset, naja->size);
+		assert(offset > 0);
+
+		if (naja->size < offset) {
+			scf_loge("offset: %ld, size: %ld\n", offset, naja->size);
+			return -EINVAL;
+		}
+
+		offset -= N << size;
+	}
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 2:
+				naja->fvec[rd].f[i] = *(float*)(data + offset + (i << 2));
+				break;
+			case 3:
+				naja->fvec[rd].d[i] = *(double*)(data + offset + (i << 3));
+				break;
+			default:
+				scf_loge("size: %d\n", size);
+				return -1;
+				break;
+		};
+	}
+
+	if (A)
+		naja->regs[rb] += offset + (N << size);
+
+	naja->ip += 4;
+	return 0;
+}
+
+static int __naja_fstr_disp(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rb   =  inst        & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int V    = (inst >> 17) & 0x1;
+	int A    = (inst >> 16) & 0x1;
+	int vlen = (inst >> 10) & 0x3;
+	int s13  = (inst >>  4) & 0x1fff;
+	int N    = 1;
+	int i;
+
+	if (s13  & 0x1000)
+		s13 |= 0xffffe000;
+
+	if (V) {
+		N = 1 << (3 + vlen - size);
+
+		if (A)
+			NAJA_PRINTF("vstr.f%dx%d  X%d, [%s]!\n", 1 << size, N, rd, __naja_reg[rb]);
+		else
+			NAJA_PRINTF("vstr.f%dx%d  X%d, [%s]\n", 1 << size, N, rd, __naja_reg[rb]);
+	} else
+		NAJA_PRINTF("fstr.%d  d%d, [%s, %d]\n", 1 << size, rd, __naja_reg[rb], s13 << size);
+
+	int64_t  addr   = naja->regs[rb];
+	int64_t  offset = 0;
+	uint8_t* data   = NULL;
+
+	int ret = __naja_mem(vm, addr, &data, &offset);
+	if (ret < 0)
+		return ret;
+
+	offset += s13 << size;
+
+	if (data   == naja->stack) {
+		offset = -offset;
+
+		assert(offset > 0);
+
+		if (naja->size < offset) {
+			scf_loge("offset0: %ld, size: %ld\n", offset, naja->size);
+			return -EINVAL;
+		}
+
+		offset -= N << size;
+	}
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 2:
+				*(float*)(data + offset + (i << 2)) = naja->fvec[rd].f[i];
+				break;
+			case 3:
+				*(double*)(data + offset + (i << 3)) = naja->fvec[rd].d[i];
+				break;
+			default:
+				scf_loge("size: %d\n", size);
+				return -1;
+				break;
+		};
+	}
+
+	if (A)
+		naja->regs[rb] += offset + (N << size);
+
+	naja->ip += 4;
+	return 0;
+}
+
+static int __naja_fldr_sib(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rb    =  inst        & 0xf;
+	int ri    = (inst >>  4) & 0xf;
+	int rd    = (inst >> 21) & 0xf;
+	int size  = (inst >> 18) & 0x3;
+	int uimm6 = (inst >> 10) & 0x3f;
+
+	NAJA_PRINTF("fldr.%d   d%d, [%s, %s, %d]\n", 1 << size, rd, __naja_reg[rb], __naja_reg[ri], uimm6);
+
+	int64_t  addr   = naja->regs[rb];
+	int64_t  offset = 0;
+	uint8_t* data   = NULL;
+
+	int ret = __naja_mem(vm, addr, &data, &offset);
+	if (ret < 0)
+		return ret;
+
+	offset += naja->regs[ri] << uimm6;
+
+	if (data   == naja->stack) {
+		offset = -offset;
+
+		assert(offset > 0);
+
+		if (naja->size < offset) {
+			scf_loge("\n");
+			return -1;
+		}
+
+		offset -= 1 << size;
+	}
+
+	switch (size) {
+		case 2:
+			naja->fvec[rd].f[0] = *(float*)(data + offset);
+			break;
+		case 3:
+			naja->fvec[rd].d[0] = *(double*)(data + offset);
+			break;
+		default:
+			scf_loge("\n");
+			return -1;
+			break;
+	};
+
+	naja->ip += 4;
+	return 0;
+}
+
+static int __naja_fmov(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs   =  inst        & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int V    = (inst >> 17) & 0x1;
+	int vlen = (inst >> 10) & 0x3;
+	int N    = 1;
+	int i;
+
+	if (V) {
+		N = 1 << (3 + vlen - size);
+
+		NAJA_PRINTF("vmov.f%dx%d  X%d, X%d\n", 1 << size, N, rd, rs);
+	} else
+		NAJA_PRINTF("fmov.%d      d%d, d%d\n", 1 << size, rd, rs);
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 2:
+				naja->fvec[rd].f[i] = naja->fvec[rs].f[i];
+				break;
+			case 3:
+				naja->fvec[rd].d[i] = naja->fvec[rs].d[i];
+				break;
+			default:
+				scf_loge("size: %d\n", size);
+				return -1;
+				break;
+		};
+	}
+
+	naja->ip += 4;
+	return 0;
+}
+
+static uint64_t __naja_to_u64(scf_vm_naja_t* naja, int i, int r, int sign, int size)
+{
+	uint64_t ret;
+
+	switch (size) {
+		case 0:
+			ret = naja->fvec[r].b[i];
+			break;
+		case 1:
+			ret = naja->fvec[r].w[i];
+			break;
+		case 2:
+			ret = naja->fvec[r].l[i];
+			break;
+		default:
+			ret = naja->fvec[r].q[i];
+			break;
+	};
+
+	if (sign)
+		return scf_sign_extend(ret, 8 << size);
+	return scf_zero_extend(ret, 8 << size);
+}
+
+static void __naja_u64_to_int(scf_vm_naja_t* naja, int i, int r, int size, uint64_t src)
+{
+	switch (size) {
+		case 0:
+			naja->fvec[r].b[i] = src;
+			break;
+		case 1:
+			naja->fvec[r].w[i] = src;
+			break;
+		case 2:
+			naja->fvec[r].l[i] = src;
+			break;
+		default:
+			naja->fvec[r].q[i] = src;
+			break;
+	};
+}
+
+static void __naja_u64_to_float(scf_vm_naja_t* naja, int i, int r, int size, uint64_t src)
+{
+	switch (size) {
+		case 2:
+			naja->fvec[r].f[i] = src;
+			break;
+		case 3:
+			naja->fvec[r].d[i] = src;
+			break;
+		default:
+			break;
+	};
+}
+
+static double __naja_to_double(scf_vm_naja_t* naja, int i, int r, int size)
+{
+	double ret;
+
+	switch (size) {
+		case 2:
+			ret = naja->fvec[r].f[i];
+			break;
+		case 3:
+			ret = naja->fvec[r].d[i];
+			break;
+		default:
+			ret = 0.0;
+			break;
+	};
+
+	return ret;
+}
+
+static void __naja_double_to_int(scf_vm_naja_t* naja, int i, int r, int size, double src)
+{
+	switch (size) {
+		case 0:
+			naja->fvec[r].b[i] = src;
+			break;
+		case 1:
+			naja->fvec[r].w[i] = src;
+			break;
+		case 2:
+			naja->fvec[r].l[i] = src;
+			break;
+		default:
+			naja->fvec[r].q[i] = src;
+			break;
+	};
+}
+
+static void __naja_double_to_float(scf_vm_naja_t* naja, int i, int r, int size, double src)
+{
+	switch (size) {
+		case 2:
+			naja->fvec[r].f[i] = src;
+			break;
+		case 3:
+			naja->fvec[r].d[i] = src;
+			break;
+		default:
+			break;
+	};
+}
+
+static int __naja_fcvt(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs    =  inst        & 0xf;
+	int rd    = (inst >> 21) & 0xf;
+	int dsize = (inst >> 18) & 0x3;
+	int V     = (inst >> 17) & 0x1;
+	int Id    = (inst >> 13) & 0x1;
+	int sd    = (inst >> 12) & 0x1;
+	int vlen  = (inst >> 10) & 0x3;
+	int Is    = (inst >>  7) & 0x1;
+	int ss    = (inst >>  6) & 0x1;
+	int ssize = (inst >>  4) & 0x3;
+
+	static char IS_array[2][2] = {
+		'F', 'F',
+		'U', 'I'
+	};
+
+	static char R_array[2] = {'d', 'r'};
+
+	if (V) {
+		int N = 1 << (3 + vlen - dsize);
+		int i;
+
+		NAJA_PRINTF("vcvt%c%dto%c%dx%d  X%d, X%d\n",
+				IS_array[Is][ss], 1 << ssize,
+				IS_array[Id][sd], 1 << dsize,
+				N, rd, rs);
+
+		for (i = 0; i < N; i++) {
+			if (Is) {
+				uint64_t src = __naja_to_u64(naja, i, rs, ss, ssize);
+				if (Id)
+					__naja_u64_to_int(naja, i, rd, dsize, src);
+				else
+					__naja_u64_to_float(naja, i, rd, dsize, src);
+
+			} else {
+				double src = __naja_to_double(naja, i, rs, ssize);
+				if (Id)
+					__naja_double_to_int(naja, i, rd, dsize, src);
+				else
+					__naja_double_to_float(naja, i, rd, dsize, src);
+			}
+		}
+	} else {
+		NAJA_PRINTF("fcvt%c%dto%c%d      %c%d, %c%d\n",
+				IS_array[Is][ss], 1 << ssize,
+				IS_array[Id][sd], 1 << dsize,
+				R_array[Id], rd, R_array[Is], rs);
+
+		if (Is) {
+			uint64_t src;
+			if (ss)
+				src = scf_sign_extend(naja->regs[rs], 8 << ssize);
+			else
+				src = scf_zero_extend(naja->regs[rs], 8 << ssize);
+
+			if (Id)
+				naja->regs[rd] = src;
+			else
+				__naja_u64_to_float(naja, 0, rd, dsize, src);
+
+		} else {
+			double src = __naja_to_double(naja, 0, rs, ssize);
+
+			if (Id)
+				naja->regs[rd] = src;
+			else
+				__naja_u64_to_float(naja, 0, rd, dsize, src);
+		}
+	}
+
+	return 0;
+}
+
+static int __naja_fneg(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs   =  inst        & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int V    = (inst >> 17) & 0x1;
+	int vlen = (inst >> 10) & 0x3;
+	int N    = 1;
+	int i;
+
+	if (V) {
+		N = 1 << (3 + vlen - size);
+
+		NAJA_PRINTF("vneg.f%dx%d  X%d, X%d\n", 1 << size, N, rd, rs);
+	} else
+		NAJA_PRINTF("fneg.%d      d%d, d%d\n", 1 << size, rd, rs);
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 2:
+				naja->fvec[rd].f[i] = -naja->fvec[rs].f[i];
+				break;
+			case 3:
+				naja->fvec[rd].d[i] = -naja->fvec[rs].d[i];
+				break;
+			default:
+				scf_loge("\n");
+				return -1;
+				break;
+		};
+	}
+
+	return 0;
+}
+
+static int __naja_vadd(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs0  =  inst        & 0xf;
+	int rs1  = (inst >>  4) & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int vlen = (inst >> 10) & 0x3;
+
+	int N = 1 << (3 + vlen - size);
+	int i;
+
+	NAJA_PRINTF("vadd.u%dx%d  X%d, X%d, X%d\n", 1 << size, N, rd, rs0, rs1);
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 0:
+				naja->fvec[rd].b[i] = naja->fvec[rs0].b[i] + naja->fvec[rs1].b[i];
+				break;
+			case 1:
+				naja->fvec[rd].w[i] = naja->fvec[rs0].w[i] + naja->fvec[rs1].w[i];
+				break;
+			case 2:
+				naja->fvec[rd].l[i] = naja->fvec[rs0].l[i] + naja->fvec[rs1].l[i];
+				break;
+			case 3:
+				naja->fvec[rd].q[i] = naja->fvec[rs0].q[i] + naja->fvec[rs1].q[i];
+				break;
+			default:
+				scf_loge("\n");
+				return -1;
+				break;
+		};
+	}
+
+	return 0;
+}
+
+static int __naja_vsub(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs0  =  inst        & 0xf;
+	int rs1  = (inst >>  4) & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int cmp  = (inst >> 16) & 0x1;
+	int vlen = (inst >> 10) & 0x3;
+
+	int N = 1 << (3 + vlen - size);
+	int i;
+
+	if (cmp)
+		NAJA_PRINTF("vcmp.u%dx%d  X%d, X%d, X%d\n", 1 << size, N, rd, rs0, rs1);
+	else
+		NAJA_PRINTF("vsub.u%dx%d  X%d, X%d, X%d\n", 1 << size, N, rd, rs0, rs1);
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 0:
+				naja->fvec[rd].b[i] = naja->fvec[rs0].b[i] - naja->fvec[rs1].b[i];
+				if (cmp) {
+					int8_t i = naja->fvec[rd].b[i];
+					if (0 == i)
+						naja->fvec[rd].b[i] = 0x1;
+					else if (i > 0)
+						naja->fvec[rd].b[i] = 0x4;
+					else
+						naja->fvec[rd].b[i] = 0x2;
+				}
+				break;
+			case 1:
+				naja->fvec[rd].w[i] = naja->fvec[rs0].w[i] - naja->fvec[rs1].w[i];
+				if (cmp) {
+					int16_t i = naja->fvec[rd].w[i];
+					if (0 == i)
+						naja->fvec[rd].w[i] = 0x1;
+					else if (i > 0)
+						naja->fvec[rd].w[i] = 0x4;
+					else
+						naja->fvec[rd].w[i] = 0x2;
+				}
+				break;
+			case 2:
+				naja->fvec[rd].l[i] = naja->fvec[rs0].l[i] - naja->fvec[rs1].l[i];
+				if (cmp) {
+					int32_t i = naja->fvec[rd].l[i];
+					if (0 == i)
+						naja->fvec[rd].l[i] = 0x1;
+					else if (i > 0)
+						naja->fvec[rd].l[i] = 0x4;
+					else
+						naja->fvec[rd].l[i] = 0x2;
+				}
+				break;
+			case 3:
+				naja->fvec[rd].q[i] = naja->fvec[rs0].q[i] - naja->fvec[rs1].q[i];
+				if (cmp) {
+					int64_t i = naja->fvec[rd].q[i];
+					if (0 == i)
+						naja->fvec[rd].q[i] = 0x1;
+					else if (i > 0)
+						naja->fvec[rd].q[i] = 0x4;
+					else
+						naja->fvec[rd].q[i] = 0x2;
+				}
+				break;
+			default:
+				scf_loge("\n");
+				return -1;
+				break;
+		};
+	}
+
+	return 0;
+}
+
+static int __naja_vmul(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs0  =  inst        & 0xf;
+	int rs1  = (inst >>  4) & 0xf;
+	int rs2  = (inst >> 12) & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int s    = (inst >> 17) & 0x1;
+	int A    = (inst >> 16) & 0x1;
+	int vlen = (inst >> 10) & 0x3;
+
+	int N = 1 << (3 + vlen - size);
+	int i;
+
+	static char  s_array[2] = {'u',    'i'};
+	static char* A_array[2] = {"madd", "msub"};
+
+	if (0xf == rs2)
+		NAJA_PRINTF("vmul.%c%dx%d  X%d, X%d, X%d\n", s_array[s], 1 << size, N, rd, rs0, rs1);
+	else
+		NAJA_PRINTF("v%s.%c%dx%d  X%d, X%d, X%d, X%d\n", A_array[A], s_array[s], 1 << size, N, rd, rs2, rs0, rs1);
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 0:
+				naja->fvec[rd].b[i] = naja->fvec[rs0].b[i] * naja->fvec[rs1].b[i];
+				if (0xf != rs2) {
+					if (A)
+						naja->fvec[rd].b[i]  = naja->fvec[rs2].b[i] - naja->fvec[rd].b[i];
+					else
+						naja->fvec[rd].b[i] += naja->fvec[rs2].b[i];
+				}
+				break;
+			case 1:
+				naja->fvec[rd].w[i] = naja->fvec[rs0].w[i] * naja->fvec[rs1].w[i];
+				if (0xf != rs2) {
+					if (A)
+						naja->fvec[rd].w[i]  = naja->fvec[rs2].w[i] - naja->fvec[rd].w[i];
+					else
+						naja->fvec[rd].w[i] += naja->fvec[rs2].w[i];
+				}
+				break;
+			case 2:
+				naja->fvec[rd].l[i] = naja->fvec[rs0].l[i] * naja->fvec[rs1].l[i];
+				if (0xf != rs2) {
+					if (A)
+						naja->fvec[rd].l[i]  = naja->fvec[rs2].l[i] - naja->fvec[rd].l[i];
+					else
+						naja->fvec[rd].l[i] += naja->fvec[rs2].l[i];
+				}
+				break;
+			case 3:
+				naja->fvec[rd].q[i] = naja->fvec[rs0].q[i] * naja->fvec[rs1].q[i];
+				if (0xf != rs2) {
+					if (A)
+						naja->fvec[rd].q[i]  = naja->fvec[rs2].q[i] - naja->fvec[rd].q[i];
+					else
+						naja->fvec[rd].q[i] += naja->fvec[rs2].q[i];
+				}
+				break;
+			default:
+				scf_loge("\n");
+				return -1;
+				break;
+		};
+	}
+
+	return 0;
+}
+
+static int __naja_vdiv(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs0  =  inst        & 0xf;
+	int rs1  = (inst >>  4) & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int s    = (inst >> 17) & 0x1;
+	int vlen = (inst >> 10) & 0x3;
+
+	int N = 1 << (3 + vlen - size);
+	int i;
+
+	if (s)
+		NAJA_PRINTF("vdiv.i%dx%d  X%d, X%d, X%d\n", 1 << size, N, rd, rs0, rs1);
+	else
+		NAJA_PRINTF("vdiv.u%dx%d  X%d, X%d, X%d\n", 1 << size, N, rd, rs0, rs1);
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 0:
+				naja->fvec[rd].b[i] = naja->fvec[rs0].b[i] / naja->fvec[rs1].b[i];
+				break;
+			case 1:
+				naja->fvec[rd].w[i] = naja->fvec[rs0].w[i] / naja->fvec[rs1].w[i];
+				break;
+			case 2:
+				naja->fvec[rd].l[i] = naja->fvec[rs0].l[i] / naja->fvec[rs1].l[i];
+				break;
+			case 3:
+				naja->fvec[rd].q[i] = naja->fvec[rs0].q[i] / naja->fvec[rs1].q[i];
+				break;
+			default:
+				scf_loge("\n");
+				return -1;
+				break;
+		};
+	}
+
+	return 0;
+}
+
+static int __naja_vand(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs0  =  inst        & 0xf;
+	int rs1  = (inst >>  4) & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int teq  = (inst >> 16) & 0x1;
+	int vlen = (inst >> 10) & 0x3;
+
+	int N = 1 << (3 + vlen - size);
+	int i;
+
+	if (teq)
+		NAJA_PRINTF("vteq.u%dx%d  X%d, X%d, X%d\n", 1 << size, N, rd, rs0, rs1);
+	else
+		NAJA_PRINTF("vand.u%dx%d  X%d, X%d, X%d\n", 1 << size, N, rd, rs0, rs1);
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 0:
+				naja->fvec[rd].b[i] = naja->fvec[rs0].b[i] & naja->fvec[rs1].b[i];
+				if (teq)
+					naja->fvec[rd].b[i] = !!naja->fvec[rd].b[i];
+				break;
+			case 1:
+				naja->fvec[rd].w[i] = naja->fvec[rs0].w[i] & naja->fvec[rs1].w[i];
+				if (teq)
+					naja->fvec[rd].w[i] = !!naja->fvec[rd].w[i];
+				break;
+			case 2:
+				naja->fvec[rd].l[i] = naja->fvec[rs0].l[i] & naja->fvec[rs1].l[i];
+				if (teq)
+					naja->fvec[rd].l[i] = !!naja->fvec[rd].l[i];
+				break;
+			case 3:
+				naja->fvec[rd].q[i] = naja->fvec[rs0].q[i] & naja->fvec[rs1].q[i];
+				if (teq)
+					naja->fvec[rd].q[i] = !!naja->fvec[rd].q[i];
+				break;
+			default:
+				scf_loge("\n");
+				return -1;
+				break;
+		};
+	}
+
+	return 0;
+}
+
+static int __naja_vor(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs0  =  inst        & 0xf;
+	int rs1  = (inst >>  4) & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int vlen = (inst >> 10) & 0x3;
+
+	int N = 1 << (3 + vlen - size);
+	int i;
+
+	NAJA_PRINTF("vor.u%dx%d   X%d, X%d, X%d\n", 1 << size, N, rd, rs0, rs1);
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 0:
+				naja->fvec[rd].b[i] = naja->fvec[rs0].b[i] | naja->fvec[rs1].b[i];
+				break;
+			case 1:
+				naja->fvec[rd].w[i] = naja->fvec[rs0].w[i] | naja->fvec[rs1].w[i];
+				break;
+			case 2:
+				naja->fvec[rd].l[i] = naja->fvec[rs0].l[i] | naja->fvec[rs1].l[i];
+				break;
+			case 3:
+				naja->fvec[rd].q[i] = naja->fvec[rs0].q[i] | naja->fvec[rs1].q[i];
+				break;
+			default:
+				scf_loge("\n");
+				return -1;
+				break;
+		};
+	}
+
+	return 0;
+}
+
+static int __naja_vmov(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs    =  inst        & 0xf;
+	int rs1   = (inst >>  4) & 0xf;
+	int rd    = (inst >> 21) & 0xf;
+	int size  = (inst >> 18) & 0x3;
+	int SH    = (inst >> 16) & 0x3;
+	int IMM   = (inst >> 15) & 0x3;
+	int vlen  = (inst >> 10) & 0x3;
+	int uimm6 = (inst >>  4) & 0x3f;
+
+	int N = 1 << (3 + vlen - size);
+	int i;
+
+	if (IMM) {
+		if (0 == uimm6)
+			NAJA_PRINTF("vmov.u%dx%d   X%d, X%d\n", 1 << size, N, rd, rs);
+		else
+			NAJA_PRINTF("vmov.u%dx%d   X%d, X%d %s %d\n", 1 << size, N, rd, rs, __naja_SH[SH], uimm6);
+	} else
+		NAJA_PRINTF("vmov.u%dx%d   X%d, X%d %s %s\n", 1 << size, N, rd, rs, __naja_SH[SH], __naja_reg[rs1]);
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 0:
+				if (!IMM)
+					uimm6 = naja->fvec[rs1].b[i];
+
+				if (0 == SH)
+					naja->fvec[rd].b[i] = naja->fvec[rs].b[i] << uimm6;
+				else if (1 == SH)
+					naja->fvec[rd].b[i] = naja->fvec[rs].b[i] >> uimm6;
+				else if (2 == SH)
+					naja->fvec[rd].b[i] = (int8_t)naja->fvec[rs].b[i] >> uimm6;
+				else {
+					scf_loge("\n");
+					return -1;
+				}
+				break;
+			case 1:
+				if (!IMM)
+					uimm6 = naja->fvec[rs1].w[i];
+
+				if (0 == SH)
+					naja->fvec[rd].w[i] = naja->fvec[rs].w[i] << uimm6;
+				else if (1 == SH)
+					naja->fvec[rd].w[i] = naja->fvec[rs].w[i] >> uimm6;
+				else if (2 == SH)
+					naja->fvec[rd].w[i] = (int8_t)naja->fvec[rs].w[i] >> uimm6;
+				else {
+					scf_loge("\n");
+					return -1;
+				}
+				break;
+			case 2:
+				if (!IMM)
+					uimm6 = naja->fvec[rs1].l[i];
+
+				if (0 == SH)
+					naja->fvec[rd].l[i] = naja->fvec[rs].l[i] << uimm6;
+				else if (1 == SH)
+					naja->fvec[rd].l[i] = naja->fvec[rs].l[i] >> uimm6;
+				else if (2 == SH)
+					naja->fvec[rd].l[i] = (int8_t)naja->fvec[rs].l[i] >> uimm6;
+				else {
+					scf_loge("\n");
+					return -1;
+				}
+				break;
+			case 3:
+				if (!IMM)
+					uimm6 = naja->fvec[rs1].q[i];
+
+				if (0 == SH)
+					naja->fvec[rd].q[i] = naja->fvec[rs].q[i] << uimm6;
+				else if (1 == SH)
+					naja->fvec[rd].q[i] = naja->fvec[rs].q[i] >> uimm6;
+				else if (2 == SH)
+					naja->fvec[rd].q[i] = (int8_t)naja->fvec[rs].q[i] >> uimm6;
+				else {
+					scf_loge("\n");
+					return -1;
+				}
+				break;
+			default:
+				scf_loge("\n");
+				return -1;
+				break;
+		};
+	}
+
+	return 0;
+}
+
+static int __naja_vnot(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rs   =  inst        & 0xf;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int A    = (inst >> 16) & 0x3;
+	int vlen = (inst >> 10) & 0x3;
+
+	int N = 1 << (3 + vlen - size);
+	int i;
+
+	if (A)
+		NAJA_PRINTF("vnot.u%dx%d   X%d, X%d\n", 1 << size, N, rd, rs);
+	else
+		NAJA_PRINTF("vneg.u%dx%d   X%d, X%d\n", 1 << size, N, rd, rs);
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 0:
+				if (A)
+					naja->fvec[rd].b[i] = ~naja->fvec[rs].b[i];
+				else
+					naja->fvec[rd].b[i] = -naja->fvec[rs].b[i];
+				break;
+			case 1:
+				if (A)
+					naja->fvec[rd].w[i] = ~naja->fvec[rs].w[i];
+				else
+					naja->fvec[rd].w[i] = -naja->fvec[rs].w[i];
+				break;
+			case 2:
+				if (A)
+					naja->fvec[rd].l[i] = ~naja->fvec[rs].l[i];
+				else
+					naja->fvec[rd].l[i] = -naja->fvec[rs].l[i];
+				break;
+			case 3:
+				if (A)
+					naja->fvec[rd].q[i] = ~naja->fvec[rs].q[i];
+				else
+					naja->fvec[rd].q[i] = -naja->fvec[rs].q[i];
+				break;
+			default:
+				scf_loge("\n");
+				return -1;
+				break;
+		};
+	}
+
+	return 0;
+}
+
+static int __naja_vmov_imm(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int u16  =  inst        & 0xffff;
+	int rd   = (inst >> 21) & 0xf;
+	int size = (inst >> 18) & 0x3;
+	int vlen = (inst >> 16) & 0x3;
+	int mvn  = (inst >> 25) & 0x1;
+
+	int N = 1 << (3 + vlen - size);
+	int i;
+
+	if (mvn)
+		NAJA_PRINTF("vmvn.u%dx%d   X%d, %#x\n", 1 << size, N, rd, u16);
+	else
+		NAJA_PRINTF("vmov.u%dx%d   X%d, %#x\n", 1 << size, N, rd, u16);
+
+	for (i = 0; i < N; i++) {
+		switch (size) {
+			case 0:
+				if (mvn)
+					naja->fvec[rd].b[i] = ~u16;
+				else
+					naja->fvec[rd].b[i] = u16;
+				break;
+			case 1:
+				if (mvn)
+					naja->fvec[rd].w[i] = ~u16;
+				else
+					naja->fvec[rd].w[i] = u16;
+				break;
+			case 2:
+				if (mvn)
+					naja->fvec[rd].l[i] = ~u16;
+				else
+					naja->fvec[rd].l[i] = u16;
+				break;
+			case 3:
+				if (mvn)
+					naja->fvec[rd].q[i] = ~u16;
+				else
+					naja->fvec[rd].q[i] = u16;
+				break;
+			default:
+				scf_loge("\n");
+				return -1;
+				break;
+		};
+	}
+
 	return 0;
 }
 
@@ -1570,8 +2376,6 @@ static int __naja_jmp_reg(scf_vm_t* vm, uint32_t inst)
 					naja->regs[3],
 					naja->regs[4],
 					naja->regs[5],
-					naja->regs[6],
-					naja->regs[7],
 					naja->fvec[0].d[0],
 					naja->fvec[1].d[0],
 					naja->fvec[2].d[0],
@@ -1591,7 +2395,6 @@ static int __naja_jmp_reg(scf_vm_t* vm, uint32_t inst)
 
 	return 0;
 }
-
 
 static int __naja_call_reg(scf_vm_t* vm, uint32_t inst)
 {
@@ -1626,8 +2429,6 @@ static int __naja_call_reg(scf_vm_t* vm, uint32_t inst)
 				naja->regs[3],
 				naja->regs[4],
 				naja->regs[5],
-				naja->regs[6],
-				naja->regs[7],
 				naja->fvec[0].d[0],
 				naja->fvec[1].d[0],
 				naja->fvec[2].d[0],
@@ -1646,17 +2447,52 @@ static int __naja_call_reg(scf_vm_t* vm, uint32_t inst)
 	return 0;
 }
 
+static int __naja_setcc(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
+
+	int rd = (inst >> 21) & 0x1f;
+	int cc = (inst >>  1) & 0xf;
+
+	naja->regs[rd] = 0 == (cc & naja->flags);
+
+	if (SCF_VM_Z == cc)
+		NAJA_PRINTF("setz   r%d\n", rd);
+
+	else if (SCF_VM_NZ == cc)
+		NAJA_PRINTF("setnz  r%d\n", rd);
+
+	else if (SCF_VM_GE == cc)
+		NAJA_PRINTF("setge  r%d\n", rd);
+
+	else if (SCF_VM_GT == cc)
+		NAJA_PRINTF("setgt  r%d\n", rd);
+
+	else if (SCF_VM_LT == cc)
+		NAJA_PRINTF("setlt  r%d\n", rd);
+
+	else if (SCF_VM_LE == cc)
+		NAJA_PRINTF("setle  r%d\n", rd);
+	else {
+		scf_loge("inst: %#x\n", inst);
+		return -EINVAL;
+	}
+
+	naja->ip  += 4;
+	return 0;
+}
+
 static int __naja_adrp(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	int rd  = (inst >> 21) & 0x1f;
+	int rd  = (inst >> 21) & 0xf;
 	int s21 =  inst & 0x1fffff;
 
 	if (s21  & 0x100000)
 		s21 |= ~0x1fffff;
 
-	naja->regs[rd] = (naja->ip + ((int64_t)s21 << 14)) & ~0x3fffULL;
+	naja->regs[rd] = (naja->ip + ((int64_t)s21 << 12)) & ~0xfffULL;
 
 	if (naja->regs[rd] >= 0x800000)
 		naja->regs[rd]  = naja->regs[rd] - vm->data->addr + (uint64_t)vm->data->data;
@@ -1698,222 +2534,63 @@ static int __naja_ret(scf_vm_t* vm, uint32_t inst)
 	return 0;
 }
 
-static int __naja_setcc(scf_vm_t* vm, uint32_t inst)
+static int __naja_spop(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	int rd = (inst >> 21) & 0x1f;
-	int cc = (inst >>  1) & 0xf;
+	int rb =  inst        & 0xf;
+	int sr = (inst >> 21) & 0xf;
 
-	naja->regs[rd] = 0 == (cc & naja->flags);
-
-	if (SCF_VM_Z == cc)
-		NAJA_PRINTF("setz   r%d\n", rd);
-
-	else if (SCF_VM_NZ == cc)
-		NAJA_PRINTF("setnz  r%d\n", rd);
-
-	else if (SCF_VM_GE == cc)
-		NAJA_PRINTF("setge  r%d\n", rd);
-
-	else if (SCF_VM_GT == cc)
-		NAJA_PRINTF("setgt  r%d\n", rd);
-
-	else if (SCF_VM_LT == cc)
-		NAJA_PRINTF("setlt  r%d\n", rd);
-
-	else if (SCF_VM_LE == cc)
-		NAJA_PRINTF("setle  r%d\n", rd);
-	else {
-		scf_loge("inst: %#x\n", inst);
-		return -EINVAL;
-	}
-
-	naja->ip  += 4;
+	NAJA_PRINTF("spop     sr%d, [%s]\n", sr, __naja_reg[rb]);
 	return 0;
 }
 
-static int __naja_mov(scf_vm_t* vm, uint32_t inst)
+static int __naja_spush(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
-	int s   = (inst >> 18) & 0x1;
-	int opt = (inst >> 16) & 0x3;
+	int rb =  inst        & 0xf;
+	int sr = (inst >> 21) & 0xf;
 
-	if (0 == opt) {
-		int rs0 =  inst       & 0x1f;
-		int rs1 = (inst >> 5) & 0x1f;
-
-		if (0 == SH) {
-			naja->regs[rd]  = naja->regs[rs0] << naja->regs[rs1];
-
-			NAJA_PRINTF("mov    r%d, r%d LSL r%d\n", rd, rs0, rs1);
-
-		} else if (1 == SH) {
-			naja->regs[rd]  = naja->regs[rs0] >> naja->regs[rs1];
-
-			NAJA_PRINTF("mov    r%d, r%d LSR r%d\n", rd, rs0, rs1);
-		} else {
-			naja->regs[rd]  = (int64_t)naja->regs[rs0] >> naja->regs[rs1];
-
-			NAJA_PRINTF("mov    r%d, r%d ASR r%d\n", rd, rs0, rs1);
-		}
-
-	} else if (1 == opt) {
-		int rs0 =  inst       & 0x1f;
-		int u11 = (inst >> 5) & 0x7ff;
-
-		if (0 == SH) {
-			naja->regs[rd]  = naja->regs[rs0] << u11;
-
-			if (0 == u11)
-				NAJA_PRINTF("mov    r%d, r%d\n", rd, rs0);
-			else
-				NAJA_PRINTF("mov    r%d, r%d LSL %d\n", rd, rs0, u11);
-
-		} else if (1 == SH) {
-			naja->regs[rd]  = naja->regs[rs0] >> u11;
-
-			NAJA_PRINTF("mov    r%d, r%d LSR %d\n", rd, rs0, u11);
-		} else {
-			naja->regs[rd]  = (int64_t)naja->regs[rs0] >> u11;
-
-			NAJA_PRINTF("mov    r%d, r%d ASR %d\n", rd, rs0, u11);
-		}
-
-	} else if (2 == opt) {
-		int rs = inst & 0x1f;
-
-		switch (SH) {
-			case 0:
-				if (s) {
-					NAJA_PRINTF("movsb  r%d, r%d\n", rd, rs);
-
-					naja->regs[rd] = (int8_t)naja->regs[rs];
-				} else {
-					naja->regs[rd] = (uint8_t)naja->regs[rs];
-
-					NAJA_PRINTF("movzb  r%d, r%d\n", rd, rs);
-				}
-				break;
-
-			case 1:
-				if (s) {
-					NAJA_PRINTF("movsw  r%d, r%d\n", rd, rs);
-
-					naja->regs[rd] = (int16_t)naja->regs[rs];
-				} else {
-					naja->regs[rd] = (uint16_t)naja->regs[rs];
-
-					NAJA_PRINTF("movzw  r%d, r%d\n", rd, rs);
-				}
-				break;
-
-			case 2:
-				if (s) {
-					NAJA_PRINTF("movsl  r%d, r%d\n", rd, rs);
-
-					naja->regs[rd] = (int32_t)naja->regs[rs];
-				} else {
-					naja->regs[rd] = (uint32_t)naja->regs[rs];
-
-					NAJA_PRINTF("movzl  r%d, r%d\n", rd, rs);
-				}
-				break;
-			default:
-				if (s) {
-					NAJA_PRINTF("NEG    r%d, r%d\n", rd, rs);
-
-					naja->regs[rd] = -naja->regs[rs];
-				} else {
-					naja->regs[rd] = ~naja->regs[rs];
-
-					NAJA_PRINTF("NOT    r%d, r%d\n", rd, rs);
-				}
-				break;
-		};
-
-	} else {
-		uint64_t u16 = inst & 0xffff;
-
-		if (s) {
-			naja->regs[rd] = ~u16;
-
-			NAJA_PRINTF("mvn    r%d, %#lx\n", rd, u16);
-		} else {
-			if (0 == SH) {
-				NAJA_PRINTF("mov    r%d, %#lx\n", rd, u16);
-
-				naja->regs[rd] = u16;
-			} else {
-				naja->regs[rd] |= u16 << SH;
-
-				NAJA_PRINTF("mov    r%d, %#lx << %d\n", rd, u16, 16 << SH);
-			}
-		}
-	}
-
-	naja->ip += 4;
+	NAJA_PRINTF("spush    sr%d, [%s]\n", sr, __naja_reg[rb]);
 	return 0;
 }
 
-static int __naja_fmov(scf_vm_t* vm, uint32_t inst)
+static int __naja_in(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	int rs  =  inst & 0x1f;
-	int rd  = (inst >> 21) & 0x1f;
-	int SH  = (inst >> 19) & 0x3;
-	int s   = (inst >> 18) & 0x1;
-	int opt = (inst >> 16) & 0x3;
+	int u16 =  inst        & 0xffff;
+	int rd  = (inst >> 21) & 0xf;
+	int D   = (inst >> 17) & 0xf;
 
-	if (0 == opt) {
-		if (2 == SH) {
-			naja->fvec[rd].d[0] = naja->fvec[rs].d[0];
+	if (D)
+		NAJA_PRINTF("out      %s, %#x\n", __naja_reg[rd], u16);
+	else
+		NAJA_PRINTF("in       %s, %#x\n", __naja_reg[rd], u16);
+	return 0;
+}
 
-			NAJA_PRINTF("fss2sd   d%d, f%d\n", rd, rs);
+static int __naja_smov(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
 
-		} else if (3 == SH) {
-			naja->fvec[rd].d[0] = naja->fvec[rs].d[0];
+	int sr =  inst        & 0xf;
+	int rd = (inst >> 21) & 0xf;
+	int D  = (inst >> 17) & 0xf;
 
-			NAJA_PRINTF("fsd2ss   f%d, d%d\n", rd, rs);
-		} else {
-			scf_loge("\n");
-			return -EINVAL;
-		}
+	if (D)
+		NAJA_PRINTF("smov     sr%d, %s\n", sr, __naja_reg[rd]);
+	else
+		NAJA_PRINTF("smov     %s, sr%d\n", __naja_reg[rd], sr);
+	return 0;
+}
 
-	} else if (1 == opt) {
-		if (s) {
-			naja->regs[rd] = (int64_t)naja->fvec[rs].d[0];
+static int __naja_iret(scf_vm_t* vm, uint32_t inst)
+{
+	scf_vm_naja_t* naja = vm->priv;
 
-			NAJA_PRINTF("cvtss2si r%d, f%d\n", rd, rs);
-		} else {
-			naja->regs[rd] = (uint64_t)naja->fvec[rs].d[0];
-
-			NAJA_PRINTF("cvtss2ui r%d, f%d\n", rd, rs);
-		}
-
-	} else if (2 == opt) {
-
-		naja->fvec[rd].d[0] = (double)naja->regs[rs];
-
-		NAJA_PRINTF("cvtsi2ss f%d, r%d\n", rd, rs);
-
-	} else {
-		if (s) {
-			NAJA_PRINTF("fneg     d%d, d%d\n", rd, rs);
-
-			naja->fvec[rd].d[0] = -naja->fvec[rs].d[0];
-		} else {
-			naja->fvec[rd].d[0] =  naja->fvec[rs].d[0];
-
-			NAJA_PRINTF("fmov     d%d, d%d\n", rd, rs);
-		}
-	}
-
-	naja->ip += 4;
+	NAJA_PRINTF("iret\n");
 	return 0;
 }
 
@@ -1925,19 +2602,20 @@ static naja_opcode_pt  naja_opcodes[64] =
 	__naja_div,      // 3
 
 	__naja_ldr_disp, // 4
-	__naja_pop,      // 5
+	__naja_and,      // 5
 
 	__naja_str_disp, // 6
-	__naja_push,     // 7
+	__naja_or,       // 7
 
-	__naja_and,      // 8
-	__naja_or,       // 9
-	__naja_jmp_disp, // 10
-	__naja_jmp_reg,  // 11
-	__naja_setcc,    // 12
-	__naja_ldr_sib,  // 13
-	__naja_str_sib,  // 14
-	__naja_mov,      // 15
+	__naja_pop,      // 8
+	__naja_push,     // 9
+
+	__naja_ldr_sib,  // 10
+	__naja_str_sib,  // 11
+	__naja_mov,      // 12
+	__naja_movx,     // 13
+	__naja_not,      // 14
+	NULL,            // 15
 
 	__naja_fadd,     // 16
 	__naja_fsub,     // 17
@@ -1945,52 +2623,52 @@ static naja_opcode_pt  naja_opcodes[64] =
 	__naja_fdiv,     // 19
 
 	__naja_fldr_disp,// 20
-	__naja_fpop,     // 21
+	NULL,            // 21
 
 	__naja_fstr_disp,// 22
-	__naja_fpush,    // 23
+	NULL,            // 23
 
 	NULL,            // 24
 	NULL,            // 25
-	__naja_call_disp,// 26
-	__naja_call_reg, // 27
-	NULL,            // 28
-	__naja_fldr_sib, // 29
-	__naja_fstr_sib, // 30
-	__naja_fmov,     // 31
+	__naja_fldr_sib, // 26
+	NULL,            // 27
+	__naja_fmov,     // 28
+	__naja_fcvt,     // 29
+	__naja_fneg,     // 30
+	NULL,            // 31
 
-	NULL,            // 32
-	NULL,            // 33
-	NULL,            // 34
-	NULL,            // 35
+	__naja_vadd,     // 32
+	__naja_vsub,     // 33
+	__naja_vmul,     // 34
+	__naja_vdiv,     // 35
 	NULL,            // 36
-	NULL,            // 37
+	__naja_vand,     // 37
 	NULL,            // 38
-	NULL,            // 39
+	__naja_vor,      // 39
 	NULL,            // 40
 	NULL,            // 41
-	__naja_adrp,     // 42
+	NULL,            // 42
 	NULL,            // 43
-	NULL,            // 44
+	__naja_vmov,     // 44
 	NULL,            // 45
-	NULL,            // 46
-	NULL,            // 47
+	__naja_vnot,     // 46
+	__naja_vmov_imm, // 47
 
-	NULL,            // 48
-	NULL,            // 49
-	NULL,            // 50
-	NULL,            // 51
-	NULL,            // 52
-	NULL,            // 53
-	NULL,            // 54
+	__naja_jmp_disp, // 48
+	__naja_call_disp,// 49
+	__naja_jmp_reg,  // 50
+	__naja_call_reg, // 51
+	__naja_setcc,    // 52
+	__naja_adrp,     // 53
+	__naja_ret,      // 54
 	NULL,            // 55
-	__naja_ret,      // 56
-	NULL,            // 57
-	NULL,            // 58
+	__naja_spop,     // 56
+	__naja_spush,    // 57
+	__naja_in,       // 58
 	NULL,            // 59
-	NULL,            // 60
+	__naja_smov,     // 60
 	NULL,            // 61
-	NULL,            // 62
+	__naja_iret,     // 62
 	NULL,            // 63
 };
 
@@ -2041,6 +2719,8 @@ static int __naja_vm_run(scf_vm_t* vm, const char* path, const char* sys)
 	naja->ip     = eh.e_entry;
 
 	naja->regs[NAJA_REG_LR] = (uint64_t)__naja_vm_exit;
+
+	scf_logw("naja->regs[NAJA_REG_LR]: %#lx\n", naja->regs[NAJA_REG_LR]);
 
 	int n = 0;
 	while ((uint64_t)__naja_vm_exit != naja->ip) {

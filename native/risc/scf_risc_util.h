@@ -3,8 +3,9 @@
 
 #include"scf_def.h"
 
-enum scf_risc_OpCode_types {
-	SCF_RISC_MOV		= 0,
+enum scf_risc_OpCode_types
+{
+	SCF_RISC_MOV = 0,
 
 	SCF_RISC_MOVSX,
 	SCF_RISC_MOVZX,
@@ -117,7 +118,8 @@ enum scf_risc_OpCode_types {
 	SCF_RISC_NB
 };
 
-enum scf_risc_REGs {
+enum scf_risc_REGs
+{
 	SCF_RISC_REG_W0 = 0,
 	SCF_RISC_REG_X0 = 0,
 	SCF_RISC_REG_S0 = 0,
@@ -238,15 +240,15 @@ enum scf_risc_REGs {
 	SCF_RISC_REG_X31 = 31,
 };
 
-enum scf_risc_EG_types {
-	SCF_RISC_G	= 0,
-	SCF_RISC_I	= 1,
-	SCF_RISC_G2E	= 2,
+enum scf_risc_EG_types
+{
+	SCF_RISC_G   = 0,
+	SCF_RISC_I   = 1,
+	SCF_RISC_G2E = 2,
 	SCF_RISC_E2G = 3,
 	SCF_RISC_I2E = 4,
 	SCF_RISC_I2G = 5,
-	SCF_RISC_E	= 6,
+	SCF_RISC_E   = 6,
 };
 
 #endif
-
