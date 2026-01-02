@@ -8,38 +8,6 @@
 #include"scf_graph.h"
 #include"scf_elf.h"
 
-#define X64_INST_ADD_CHECK(vec, inst) \
-			do { \
-				if (!(inst)) { \
-					scf_loge("\n"); \
-					return -ENOMEM; \
-				} \
-				int ret = scf_vector_add((vec), (inst)); \
-				if (ret < 0) { \
-					scf_loge("\n"); \
-					free(inst); \
-					return ret; \
-				} \
-			} while (0)
-
-#define X64_RELA_ADD_CHECK(vec, rela, c, v, f) \
-	do { \
-		if (rela) { \
-			(rela)->code = (c); \
-			(rela)->var  = (v); \
-			(rela)->func = (f); \
-			(rela)->inst = (c)->instructions->data[(c)->instructions->size - 1]; \
-			(rela)->addend = -4; \
-			(rela)->type = R_X86_64_PC32; \
-			int ret = scf_vector_add((vec), (rela)); \
-			if (ret < 0) { \
-				scf_loge("\n"); \
-				free(rela); \
-				return ret; \
-			} \
-		} \
-	} while (0)
-
 #define X64_PEEPHOLE_DEL 1
 #define X64_PEEPHOLE_OK  0
 
@@ -90,43 +58,15 @@ int x64_load_bb_colors (scf_basic_block_t* bb, scf_bb_group_t* bbg, scf_function
 int x64_load_bb_colors2(scf_basic_block_t* bb, scf_bb_group_t* bbg, scf_function_t* f);
 int x64_init_bb_colors (scf_basic_block_t* bb);
 
-
-scf_instruction_t* x64_make_inst  (scf_x64_OpCode_t* OpCode, int size);
-scf_instruction_t* x64_make_inst_G(scf_x64_OpCode_t* OpCode, scf_register_t* r);
-scf_instruction_t* x64_make_inst_E(scf_x64_OpCode_t* OpCode, scf_register_t* r);
-scf_instruction_t* x64_make_inst_I(scf_x64_OpCode_t* OpCode, uint8_t* imm, int size);
-void               x64_make_inst_I2(scf_instruction_t* inst, scf_x64_OpCode_t* OpCode, uint8_t* imm, int size);
-
-scf_instruction_t* x64_make_inst_I2G(scf_x64_OpCode_t* OpCode, scf_register_t* r_dst, uint8_t* imm, int size);
-scf_instruction_t* x64_make_inst_I2E(scf_x64_OpCode_t* OpCode, scf_register_t* r_dst, uint8_t* imm, int size);
-
 scf_instruction_t* x64_make_inst_M  (scf_rela_t** prela, scf_x64_OpCode_t* OpCode, scf_variable_t* v,     scf_register_t* r_base);
 scf_instruction_t* x64_make_inst_I2M(scf_rela_t** prela, scf_x64_OpCode_t* OpCode, scf_variable_t* v_dst, scf_register_t* r_base, uint8_t* imm, int32_t size);
 scf_instruction_t* x64_make_inst_G2M(scf_rela_t** prela, scf_x64_OpCode_t* OpCode, scf_variable_t* v_dst, scf_register_t* r_base, scf_register_t* r_src);
 scf_instruction_t* x64_make_inst_M2G(scf_rela_t** prela, scf_x64_OpCode_t* OpCode, scf_register_t* r_dst, scf_register_t* r_base, scf_variable_t* v_src);
 
-scf_instruction_t* x64_make_inst_G2E(scf_x64_OpCode_t* OpCode, scf_register_t* r_dst, scf_register_t* r_src);
-scf_instruction_t* x64_make_inst_E2G(scf_x64_OpCode_t* OpCode, scf_register_t* r_dst, scf_register_t* r_src);
-
-scf_instruction_t* x64_make_inst_P2G(scf_x64_OpCode_t* OpCode, scf_register_t* r_dst,  scf_register_t* r_base, int32_t offset);
-scf_instruction_t* x64_make_inst_G2P(scf_x64_OpCode_t* OpCode, scf_register_t* r_base, int32_t offset, scf_register_t* r_src);
-scf_instruction_t* x64_make_inst_I2P(scf_x64_OpCode_t* OpCode, scf_register_t* r_base, int32_t offset, uint8_t* imm, int size);
-
-scf_instruction_t* x64_make_inst_SIB2G(scf_x64_OpCode_t* OpCode, scf_register_t* r_dst,  scf_register_t* r_base,  scf_register_t* r_index, int32_t scale, int32_t disp);
-scf_instruction_t* x64_make_inst_G2SIB(scf_x64_OpCode_t* OpCode, scf_register_t* r_base, scf_register_t* r_index, int32_t scale, int32_t disp, scf_register_t* r_src);
-scf_instruction_t* x64_make_inst_I2SIB(scf_x64_OpCode_t* OpCode, scf_register_t* r_base, scf_register_t* r_index, int32_t scale, int32_t disp, uint8_t* imm, int32_t size);
-
-scf_instruction_t* x64_make_inst_SIB(scf_x64_OpCode_t* OpCode, scf_register_t* r_base, scf_register_t* r_index, int32_t scale, int32_t disp, int size);
-scf_instruction_t* x64_make_inst_P  (scf_x64_OpCode_t* OpCode, scf_register_t* r_base, int32_t offset, int size);
-
 int x64_float_OpCode_type(int OpCode_type, int var_type);
 
-
-int x64_shift(scf_native_t* ctx, scf_3ac_code_t* c, int OpCode_type);
-
-int x64_shift_assign(scf_native_t* ctx, scf_3ac_code_t* c, int OpCode_type);
-
-
+int x64_shift        (scf_native_t* ctx, scf_3ac_code_t* c, int OpCode_type);
+int x64_shift_assign (scf_native_t* ctx, scf_3ac_code_t* c, int OpCode_type);
 int x64_binary_assign(scf_native_t* ctx, scf_3ac_code_t* c, int OpCode_type);
 
 int x64_assign_dereference(scf_native_t* ctx, scf_3ac_code_t* c);

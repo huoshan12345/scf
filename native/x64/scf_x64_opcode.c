@@ -22,6 +22,16 @@ scf_x64_OpCode_t	x64_OpCodes[] = {
 	{SCF_X64_XOR,  "xor",  2, {0x33, 0x0, 0x0},1,  2,2, SCF_X64_E2G, 0,0, 0,{0,0}},
 	{SCF_X64_XOR,  "xor",  2, {0x33, 0x0, 0x0},1,  4,4, SCF_X64_E2G, 0,0, 0,{0,0}},
 	{SCF_X64_XOR,  "xor",  2, {0x33, 0x0, 0x0},1,  8,8, SCF_X64_E2G, 0,0, 0,{0,0}},
+
+	{SCF_X64_XOR,  "xorb", 2, {0x30, 0x0, 0x0},1,  1,1, SCF_X64_G2E, 0,0, 0,{0,0}},
+	{SCF_X64_XOR,  "xorw", 2, {0x31, 0x0, 0x0},1,  2,2, SCF_X64_G2E, 0,0, 0,{0,0}},
+	{SCF_X64_XOR,  "xorl", 2, {0x31, 0x0, 0x0},1,  4,4, SCF_X64_G2E, 0,0, 0,{0,0}},
+	{SCF_X64_XOR,  "xorq", 2, {0x31, 0x0, 0x0},1,  8,8, SCF_X64_G2E, 0,0, 0,{0,0}},
+
+	{SCF_X64_XOR,  "xorb", 2, {0x32, 0x0, 0x0},1,  1,1, SCF_X64_E2G, 0,0, 0,{0,0}},
+	{SCF_X64_XOR,  "xorw", 2, {0x33, 0x0, 0x0},1,  2,2, SCF_X64_E2G, 0,0, 0,{0,0}},
+	{SCF_X64_XOR,  "xorl", 2, {0x33, 0x0, 0x0},1,  4,4, SCF_X64_E2G, 0,0, 0,{0,0}},
+	{SCF_X64_XOR,  "xorq", 2, {0x33, 0x0, 0x0},1,  8,8, SCF_X64_E2G, 0,0, 0,{0,0}},
 #if 0
 	{SCF_X64_XOR,  "xor",  2, {0x34, 0x0, 0x0},1,  1,1, SCF_X64_I2G, 0,0, 1,{0,0}},
 	{SCF_X64_XOR,  "xor",  2, {0x35, 0x0, 0x0},1,  2,2, SCF_X64_I2G, 0,0, 1,{0,0}},
@@ -161,6 +171,7 @@ scf_x64_OpCode_t	x64_OpCodes[] = {
 	{SCF_X64_NOT,  "not",  2, {0xf7, 0x0, 0x0},1,  8,8, SCF_X64_E,   2,1, 0,{0,0}},
 
 	{SCF_X64_LEA,  "lea",  1, {0x8d, 0x0, 0x0},1,  8,8, SCF_X64_E2G, 0,0, 0,{0,0}},
+	{SCF_X64_LEA,  "leaq", 1, {0x8d, 0x0, 0x0},1,  8,8, SCF_X64_E2G, 0,0, 0,{0,0}},
 
 	{SCF_X64_MOV,  "mov",  2, {0x88, 0x0, 0x0},1,  1,1, SCF_X64_G2E, 0,0, 0,{0,0}},
 	{SCF_X64_MOV,  "mov",  2, {0x89, 0x0, 0x0},1,  2,2, SCF_X64_G2E, 0,0, 0,{0,0}},
@@ -318,13 +329,25 @@ scf_x64_OpCode_t	x64_OpCodes[] = {
 	{SCF_X64_JMP,  "jmp",  2, {0xff, 0x0, 0x0},1,  8,8, SCF_X64_E, 4,1, 0,{0,0}},
 };
 
-scf_x64_OpCode_t*   x64_find_OpCode_by_type(const int type)
+scf_x64_OpCode_t* x64_find_OpCode_by_type(const int type)
 {
 	int i;
 	for (i = 0; i < sizeof(x64_OpCodes) / sizeof(x64_OpCodes[0]); i++) {
 
 		scf_x64_OpCode_t* OpCode = &(x64_OpCodes[i]);
 		if (OpCode->type == type)
+			return OpCode;
+	}
+	return NULL;
+}
+
+scf_x64_OpCode_t* x64_find_OpCode_by_name(const char* name)
+{
+	int i;
+	for (i = 0; i < sizeof(x64_OpCodes) / sizeof(x64_OpCodes[0]); i++) {
+
+		scf_x64_OpCode_t* OpCode = &(x64_OpCodes[i]);
+		if (!strcmp(OpCode->name, name))
 			return OpCode;
 	}
 	return NULL;
@@ -345,24 +368,3 @@ scf_x64_OpCode_t* x64_find_OpCode(const int type, const int OpBytes, const int R
 	}
 	return NULL;
 }
-
-int x64_find_OpCodes(scf_vector_t* results, const int type, const int OpBytes, const int RegBytes, const int EG)
-{
-	int i;
-	for (i = 0; i < sizeof(x64_OpCodes) / sizeof(x64_OpCodes[0]); i++) {
-
-		scf_x64_OpCode_t* OpCode = &(x64_OpCodes[i]);
-
-		if (type == OpCode->type
-				&& OpBytes == OpCode->OpBytes
-				&& RegBytes == OpCode->RegBytes
-				&& EG == OpCode->EG) {
-
-			int ret = scf_vector_add(results, OpCode);
-			if (ret < 0)
-				return ret;
-		}
-	}
-	return 0;
-}
-

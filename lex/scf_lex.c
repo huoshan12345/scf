@@ -79,6 +79,20 @@ static scf_key_word_t  key_words[] =
 	{"enum",      SCF_LEX_WORD_KEY_ENUM},
 	{"union",     SCF_LEX_WORD_KEY_UNION},
 	{"struct",    SCF_LEX_WORD_KEY_STRUCT},
+
+	{".text",     SCF_LEX_WORD_ASM_TEXT},
+	{".data",     SCF_LEX_WORD_ASM_DATA},
+	{".global",   SCF_LEX_WORD_ASM_GLOBAL},
+	{".align",    SCF_LEX_WORD_ASM_ALIGN},
+	{".org",      SCF_LEX_WORD_ASM_ORG},
+
+	{".fill",     SCF_LEX_WORD_ASM_FILL},
+	{".byte",     SCF_LEX_WORD_ASM_BYTE},
+	{".word",     SCF_LEX_WORD_ASM_WORD},
+	{".long",     SCF_LEX_WORD_ASM_LONG},
+	{".quad",     SCF_LEX_WORD_ASM_QUAD},
+	{".ascii",    SCF_LEX_WORD_ASM_ASCII},
+	{".asciz",    SCF_LEX_WORD_ASM_ASCIZ},
 };
 
 static scf_escape_char_t  escape_chars[] =
@@ -89,7 +103,7 @@ static scf_escape_char_t  escape_chars[] =
 	{'0', '\0'},
 };
 
-static int _find_key_word(const char* text)
+int _find_key_word(const char* text)
 {
 	int i;
 	for (i = 0; i < sizeof(key_words) / sizeof(key_words[0]); i++) {
@@ -114,7 +128,7 @@ static int _find_escape_char(const int c)
 	return c;
 }
 
-int	scf_lex_open(scf_lex_t** plex, const char* path)
+int	scf_lex_open(scf_lex_t** plex, const char* path, scf_string_t* text)
 {
 	if (!plex || !path)
 		return -EINVAL;
@@ -123,22 +137,33 @@ int	scf_lex_open(scf_lex_t** plex, const char* path)
 	if (!lex)
 		return -ENOMEM;
 
-	lex->fp = fopen(path, "r");
-	if (!lex->fp) {
-
-		char cwd[4096];
-		getcwd(cwd, 4095);
-		scf_loge("open file '%s' failed, errno: %d, default path dir: %s\n", path, errno, cwd);
-
-		free(lex);
-		return -1;
-	}
-
 	lex->file = scf_string_cstr(path);
 	if (!lex->file) {
-		fclose(lex->fp);
 		free(lex);
 		return -ENOMEM;
+	}
+
+	if (!text) {
+		lex->fp = fopen(path, "r");
+		if (!lex->fp) {
+			char cwd[4096];
+			getcwd(cwd, 4095);
+			scf_loge("open file '%s' failed, errno: %d, default path dir: %s\n", path, errno, cwd);
+
+			scf_string_free(lex->file);
+			free(lex);
+			return -1;
+		}
+
+		size_t len = strlen(path);
+
+		if (len > 2) {
+			if ('.' == path[len - 2] && 's' == (0x20 | path[len - 1]))
+				lex->asm_flag = 1;
+		}
+	} else {
+		lex->text     = text;
+		lex->asm_flag = 1;
 	}
 
 	lex->nb_lines = 1;
@@ -160,7 +185,8 @@ int scf_lex_close(scf_lex_t* lex)
 
 		scf_string_free(lex->file);
 
-		fclose(lex->fp);
+		if (lex->fp)
+			fclose(lex->fp);
 		free(lex);
 	}
 	return 0;
@@ -657,7 +683,8 @@ int __lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 			lex->nb_lines++;
 			lex->pos = 0;
 
-			if (SCF_UTF8_LF == c->flag) {
+			if (SCF_UTF8_LF == c->flag || lex->asm_flag)
+			{
 				w       = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_LF);
 				w->text = scf_string_cstr("LF");
 				*pword  = w;

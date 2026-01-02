@@ -5,12 +5,14 @@ CFILES += ../lex/scf_lex_util.c
 
 CFILES += scf_parse_util.c
 CFILES += scf_parse.c
+CFILES += scf_symtab.c
 CFILES += main.c
 CFILES += scf_operator_handler_semantic.c
 CFILES += scf_operator_handler_expr.c
 CFILES += scf_operator_handler_const.c
 
 CFILES += ../native/scf_native.c
+CFILES += ../native/scf_instruction.c
 CFILES += ../native/x64/scf_x64.c
 CFILES += ../native/x64/scf_x64_inst.c
 CFILES += ../native/x64/scf_x64_inst_util.c

@@ -4,7 +4,9 @@ int main(int argc, char* argv[])
 {
 	scf_lex_t*	lex = NULL;
 
-	if (scf_lex_open(&lex, argv[1]) < 0) {
+	scf_string_t* text = scf_string_cstr("document.write(\"hello js\n\")");
+
+	if (scf_lex_open(&lex, argv[1], text) < 0) {
 		scf_loge("\n");
 		return -1;
 	}

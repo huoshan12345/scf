@@ -23,8 +23,8 @@ typedef struct scf_dfa_ops_s       scf_dfa_ops_t;
 typedef struct scf_dfa_module_s    scf_dfa_module_t;
 typedef struct scf_dfa_hook_s      scf_dfa_hook_t;
 
-typedef int (*scf_dfa_is_pt)(    scf_dfa_t*	dfa, void*         word);
-typedef int (*scf_dfa_action_pt)(scf_dfa_t*	dfa, scf_vector_t* words, void* data);
+typedef int (*scf_dfa_is_pt    )(scf_dfa_t* dfa, void*         word);
+typedef int (*scf_dfa_action_pt)(scf_dfa_t* dfa, scf_vector_t* words, void* data);
 
 enum scf_dfa_hook_types {
 
@@ -106,9 +106,9 @@ static inline int scf_dfa_action_next(scf_dfa_t* dfa, scf_vector_t* words, void*
 
 #define SCF_DFA_MODULE_NODE(dfa, module, node, is, action) \
 	{ \
-		char str[256]; \
-		snprintf(str, sizeof(str) - 1, "%s_%s", dfa_module_##module.name, #node); \
-		scf_dfa_node_t* node = scf_dfa_node_alloc(str, is, action); \
+		char __str[256]; \
+		snprintf(__str, sizeof(__str) - 1, "%s_%s", dfa_module_##module.name, #node); \
+		scf_dfa_node_t* node = scf_dfa_node_alloc(__str, is, action); \
 		if (!node) { \
 			printf("%s(),%d, error: \n", __func__, __LINE__); \
 			return -1; \
@@ -148,19 +148,17 @@ static inline int scf_dfa_action_next(scf_dfa_t* dfa, scf_vector_t* words, void*
 scf_dfa_node_t*         scf_dfa_node_alloc(const char* name, scf_dfa_is_pt is, scf_dfa_action_pt action);
 void                    scf_dfa_node_free(scf_dfa_node_t* node);
 
-int                     scf_dfa_open(scf_dfa_t** pdfa, const char* name, void* priv);
-void                    scf_dfa_close(scf_dfa_t* dfa);
+int                     scf_dfa_open (scf_dfa_t** pdfa, scf_dfa_ops_t* ops, void* priv);
+void                    scf_dfa_close(scf_dfa_t*  dfa);
 
-int                     scf_dfa_add_node(scf_dfa_t* dfa, scf_dfa_node_t* node);
+int                     scf_dfa_add_node (scf_dfa_t* dfa, scf_dfa_node_t* node);
 scf_dfa_node_t*         scf_dfa_find_node(scf_dfa_t* dfa, const char* name);
 
 int                     scf_dfa_node_add_child(scf_dfa_node_t* parent, scf_dfa_node_t* child);
 
 int                     scf_dfa_parse_word(scf_dfa_t* dfa, void* word, void* data);
 
-void                    scf_dfa_del_hook(        scf_dfa_hook_t** pp, scf_dfa_hook_t* sentinel);
+void                    scf_dfa_del_hook        (scf_dfa_hook_t** pp, scf_dfa_hook_t* sentinel);
 void                    scf_dfa_del_hook_by_name(scf_dfa_hook_t** pp, const char* name);
 
-
 #endif
-

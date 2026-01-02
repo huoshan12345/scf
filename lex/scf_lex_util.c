@@ -1,9 +1,20 @@
 #include"scf_lex.h"
 
+int _find_key_word(const char* text);
+
+static int __lex_getc(scf_lex_t* lex)
+{
+	if (lex->fp)
+		return fgetc(lex->fp);
+
+	if (lex->text_i < lex->text->len)
+		return lex->text->data[lex->text_i++];
+	return EOF;
+}
+
 scf_char_t* _lex_pop_char(scf_lex_t* lex)
 {
 	assert(lex);
-	assert(lex->fp);
 
 	scf_char_t* c;
 
@@ -17,7 +28,7 @@ scf_char_t* _lex_pop_char(scf_lex_t* lex)
 	if (!c)
 		return NULL;
 
-	int ret = fgetc(lex->fp);
+	int ret = __lex_getc(lex);
 	if (EOF == ret) {
 		c->c = ret;
 		return c;
@@ -60,7 +71,7 @@ scf_char_t* _lex_pop_char(scf_lex_t* lex)
 	int i;
 	for (i = 1; i < c->len; i++) {
 
-		ret = fgetc(lex->fp);
+		ret = __lex_getc(lex);
 
 		if (0x2  == (ret >> 6)) {
 			c->c <<= 6;
@@ -537,6 +548,47 @@ int _lex_dot(scf_lex_t* lex, scf_lex_word_t** pword, scf_char_t* c0)
 		}
 
 	} else {
+		if (lex->asm_flag
+				&& 'a' <= (c1->c | 0x20)
+				&& 'z' >= (c1->c | 0x20)) {
+
+			do {
+				scf_string_cat_cstr_len(s, c1->utf8, 1);
+				lex->pos++;
+
+				free(c1);
+				c1 = _lex_pop_char(lex);
+
+				if (!c1) {
+					scf_string_free(s);
+					return -ENOMEM;
+				}
+			} while ('a' <= (c1->c | 0x20) && 'z' >= (c1->c | 0x20));
+
+			_lex_push_char(lex, c1);
+			c1 = NULL;
+
+			int type = _find_key_word(s->data);
+			if (type < 0) {
+				scf_loge("unknown asm key word '%s', file: %s, line: %d\n", s->data, lex->file->data, lex->nb_lines);
+
+				scf_string_free(s);
+				return -EINVAL;
+			}
+
+			w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, type);
+			if (!w) {
+				scf_string_free(s);
+				return -ENOMEM;
+			}
+
+			w->text = s;
+			s = NULL;
+
+			*pword = w;
+			return 0;
+		}
+
 		w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_DOT);
 		w->text = s;
 		s = NULL;

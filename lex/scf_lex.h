@@ -37,11 +37,16 @@ struct scf_lex_s
 
 	scf_vector_t*   macros;
 
-	FILE*           fp; // file pointer to the code
+	FILE*           fp;   // file pointer to the code
+
+	scf_string_t*   text; // text string  to the code, 'fp' & 'text' only one is used
+	int             text_i;
 
 	scf_string_t*   file; // original code file name
 	int             nb_lines;
 	int             pos;
+
+	uint8_t         asm_flag:1;
 };
 
 
@@ -49,7 +54,7 @@ scf_char_t*  _lex_pop_char (scf_lex_t* lex);
 void         _lex_push_char(scf_lex_t* lex, scf_char_t* c);
 
 
-int	 scf_lex_open (scf_lex_t** plex, const char* path);
+int	 scf_lex_open (scf_lex_t** plex, const char* path, scf_string_t* text);
 int  scf_lex_close(scf_lex_t*   lex);
 
 void scf_lex_push_word(scf_lex_t* lex, scf_lex_word_t*   word);

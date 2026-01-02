@@ -92,8 +92,7 @@ int scf_elf_open (scf_elf_context_t** pelf, const char* machine, const char* pat
 int scf_elf_open2(scf_elf_context_t*  elf,  const char* machine);
 int scf_elf_close(scf_elf_context_t*  elf);
 
-int scf_elf_add_sym (scf_elf_context_t* elf, const scf_elf_sym_t*     sym, const char* sh_name);
-
+int scf_elf_add_sym    (scf_elf_context_t* elf, const scf_elf_sym_t*     sym, const char* sh_name);
 int scf_elf_add_section(scf_elf_context_t* elf, const scf_elf_section_t* section);
 
 int	scf_elf_add_rela_section(scf_elf_context_t* elf, const scf_elf_section_t* section, scf_vector_t* relas);

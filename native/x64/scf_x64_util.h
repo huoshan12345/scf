@@ -325,4 +325,3 @@ static inline void scf_SIB_setBase(uint8_t* SIB, uint8_t base)
 }
 
 #endif
-

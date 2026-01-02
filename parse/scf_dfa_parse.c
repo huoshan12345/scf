@@ -84,9 +84,42 @@ scf_dfa_module_t* dfa_modules[] =
 	&dfa_module_block,
 };
 
+static void* dfa_pop_word(scf_dfa_t* dfa)
+{
+	scf_parse_t* parse = dfa->priv;
+
+	scf_lex_word_t* w = NULL;
+	scf_lex_pop_word(parse->lex, &w);
+	return w;
+}
+
+static int dfa_push_word(scf_dfa_t* dfa, void* word)
+{
+	scf_parse_t* parse = dfa->priv;
+
+	scf_lex_word_t* w = word;
+	scf_lex_push_word(parse->lex, w);
+	return 0;
+}
+
+static void dfa_free_word(void* word)
+{
+	scf_lex_word_t* w = word;
+	scf_lex_word_free(w);
+}
+
+scf_dfa_ops_t dfa_ops_parse =
+{
+	.name      = "parse",
+
+	.pop_word  = dfa_pop_word,
+	.push_word = dfa_push_word,
+	.free_word = dfa_free_word,
+};
+
 int scf_parse_dfa_init(scf_parse_t* parse)
 {
-	if (scf_dfa_open(&parse->dfa, "parse", parse) < 0) {
+	if (scf_dfa_open(&parse->dfa, &dfa_ops_parse, parse) < 0) {
 		scf_loge("\n");
 		return -1;
 	}
@@ -145,36 +178,3 @@ int scf_parse_dfa_init(scf_parse_t* parse)
 
 	return 0;
 }
-
-static void* dfa_pop_word(scf_dfa_t* dfa)
-{
-	scf_parse_t* parse = dfa->priv;
-
-	scf_lex_word_t* w = NULL;
-	scf_lex_pop_word(parse->lex, &w);
-	return w;
-}
-
-static int dfa_push_word(scf_dfa_t* dfa, void* word)
-{
-	scf_parse_t* parse = dfa->priv;
-
-	scf_lex_word_t* w = word;
-	scf_lex_push_word(parse->lex, w);
-	return 0;
-}
-
-static void dfa_free_word(void* word)
-{
-	scf_lex_word_t* w = word;
-	scf_lex_word_free(w);
-}
-
-scf_dfa_ops_t dfa_ops_parse = 
-{
-	.name      = "parse",
-
-	.pop_word  = dfa_pop_word,
-	.push_word = dfa_push_word,
-	.free_word = dfa_free_word,
-};

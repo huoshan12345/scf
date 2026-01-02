@@ -204,24 +204,6 @@ int main(int argc, char* argv[])
 
 	printf("\n");
 
-	scf_parse_t*  parse = NULL;
-
-	if (scf_parse_open(&parse) < 0) {
-		scf_loge("\n");
-		return -1;
-	}
-
-	for (i = 0; i  < srcs->size; i++) {
-		char* file = srcs->data[i];
-
-		assert(file);
-
-		if (scf_parse_file(parse, file) < 0) {
-			scf_loge("parse file '%s' failed\n", file);
-			return -1;
-		}
-	}
-
 	char* obj  = "1.o";
 	char* exec = "1.out";
 
@@ -232,17 +214,37 @@ int main(int argc, char* argv[])
 			exec = out;
 	}
 
-	if (scf_parse_compile(parse, arch, _3ac) < 0) {
-		scf_loge("\n");
-		return -1;
-	}
+	if (srcs->size > 0) {
+		scf_parse_t*  parse = NULL;
 
-	if (scf_parse_to_obj(parse, obj, arch) < 0) {
-		scf_loge("\n");
-		return -1;
-	}
+		if (scf_parse_open(&parse) < 0) {
+			scf_loge("\n");
+			return -1;
+		}
 
-	scf_parse_close(parse);
+		for (i = 0; i  < srcs->size; i++) {
+			char* file = srcs->data[i];
+
+			assert(file);
+
+			if (scf_parse_file(parse, file) < 0) {
+				scf_loge("parse file '%s' failed\n", file);
+				return -1;
+			}
+		}
+
+		if (scf_parse_compile(parse, arch, _3ac) < 0) {
+			scf_loge("\n");
+			return -1;
+		}
+
+		if (scf_parse_to_obj(parse, obj, arch) < 0) {
+			scf_loge("\n");
+			return -1;
+		}
+
+		scf_parse_close(parse);
+	}
 
 	if (!link) {
 		printf("%s(),%d, main ok\n", __func__, __LINE__);
@@ -271,10 +273,11 @@ int main(int argc, char* argv[])
 	else
 		MAIN_ADD_FILES(__objs, __sofiles, "x64");
 
-
-	if (scf_vector_add(objs, obj) < 0) {
-		scf_loge("\n");
-		return -1;
+	if (srcs->size > 0) {
+		if (scf_vector_add(objs, obj) < 0) {
+			scf_loge("\n");
+			return -1;
+		}
 	}
 
 	if (scf_elf_link(objs, afiles, sofiles, sysroot, arch, exec, dyn) < 0) {

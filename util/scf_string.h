@@ -6,7 +6,7 @@
 typedef struct {
 	int      capacity;
 	size_t   len;
-	char*    data;
+	uint8_t* data;
 } scf_string_t;
 
 

@@ -5,18 +5,10 @@
 #include"scf_dfa.h"
 #include"scf_basic_block.h"
 #include"scf_optimizer.h"
+#include"scf_symtab.h"
 #include"scf_elf.h"
 #include"scf_leb128.h"
 #include"scf_eda.h"
-
-#define ADD_SECTION_SYMBOL(sh_index, sh_name) \
-	do { \
-		int ret = _scf_parse_add_sym(parse, sh_name, 0, 0, sh_index, ELF64_ST_INFO(STB_LOCAL, STT_SECTION)); \
-		if (ret < 0) { \
-			scf_loge("\n"); \
-			return ret; \
-		} \
-	} while (0)
 
 scf_base_type_t	base_types[] =
 {
@@ -108,58 +100,6 @@ int scf_parse_close(scf_parse_t* parse)
 	return 0;
 }
 
-static int _find_sym(const void* v0, const void* v1)
-{
-	const char*          name = v0;
-	const scf_elf_sym_t* sym  = v1;
-
-	if (!sym->name)
-		return -1;
-
-	return strcmp(name, sym->name);
-}
-
-static int _scf_parse_add_sym(scf_parse_t* parse, const char* name,
-		uint64_t st_size, Elf64_Addr st_value,
-		uint16_t st_shndx, uint8_t st_info)
-{
-	scf_elf_sym_t* sym  = NULL;
-	scf_elf_sym_t* sym2 = NULL;
-
-	if (name)
-		sym = scf_vector_find_cmp(parse->symtab, name, _find_sym);
-
-	if (!sym) {
-		sym = calloc(1, sizeof(scf_elf_sym_t));
-		if (!sym)
-			return -ENOMEM;
-
-		if (name) {
-			sym->name = strdup(name);
-			if (!sym->name) {
-				free(sym);
-				return -ENOMEM;
-			}
-		}
-
-		sym->st_size  = st_size;
-		sym->st_value = st_value;
-		sym->st_shndx = st_shndx;
-		sym->st_info  = st_info;
-
-		int ret = scf_vector_add(parse->symtab, sym);
-		if (ret < 0) {
-			if (sym->name)
-				free(sym->name);
-			free(sym);
-			scf_loge("\n");
-			return ret;
-		}
-	}
-
-	return 0;
-}
-
 int scf_parse_file(scf_parse_t* parse, const char* path)
 {
 	if (!parse || !path)
@@ -179,7 +119,7 @@ int scf_parse_file(scf_parse_t* parse, const char* path)
 		return 0;
 	}
 
-	if (scf_lex_open(&parse->lex, path) < 0)
+	if (scf_lex_open(&parse->lex, path, NULL) < 0)
 		return -1;
 
 	scf_ast_add_file_block(parse->ast, path);
@@ -1380,52 +1320,6 @@ static int _fill_function_inst(scf_string_t* code, scf_function_t* f, int64_t of
 	return 0;
 }
 
-static int _scf_parse_add_rela(scf_vector_t* relas, scf_parse_t* parse, scf_rela_t* r, const char* name, uint16_t st_shndx)
-{
-	scf_elf_rela_t* rela;
-
-	int ret;
-	int i;
-
-	for (i = 0; i < parse->symtab->size; i++) {
-		scf_elf_sym_t* sym = parse->symtab->data[i];
-
-		if (!sym->name)
-			continue;
-
-		if (!strcmp(name, sym->name))
-			break;
-	}
-
-	if (i == parse->symtab->size) {
-		ret = _scf_parse_add_sym(parse, name, 0, 0, st_shndx, ELF64_ST_INFO(STB_GLOBAL, STT_NOTYPE));
-		if (ret < 0) {
-			scf_loge("\n");
-			return ret;
-		}
-	}
-
-	scf_logd("rela: %s, offset: %ld\n", name, r->text_offset);
-
-	rela = calloc(1, sizeof(scf_elf_rela_t));
-	if (!rela)
-		return -ENOMEM;
-
-	rela->name     = (char*)name;
-	rela->r_offset = r->text_offset;
-	rela->r_info   = ELF64_R_INFO(i + 1, r->type);
-	rela->r_addend = r->addend;
-
-	ret = scf_vector_add(relas, rela);
-	if (ret < 0) {
-		scf_loge("\n");
-		free(rela);
-		return ret;
-	}
-
-	return 0;
-}
-
 static int _fill_data(scf_parse_t* parse, scf_variable_t* v, scf_string_t* data, uint32_t shndx)
 {
 	char*    name;
@@ -1476,7 +1370,7 @@ static int _fill_data(scf_parse_t* parse, scf_variable_t* v, scf_string_t* data,
 	else
 		stb = STB_GLOBAL;
 
-	ret = _scf_parse_add_sym(parse, name, size, data->len, shndx, ELF64_ST_INFO(stb, STT_OBJECT));
+	ret = scf_symtab_add_sym(parse->symtab, name, size, data->len, shndx, ELF64_ST_INFO(stb, STT_OBJECT));
 	if (ret < 0)
 		return ret;
 
@@ -1606,7 +1500,7 @@ static int _scf_parse_add_data_relas(scf_parse_t* parse, scf_elf_context_t* elf)
 		}
 
 		if (j == parse->symtab->size) {
-			ret = _scf_parse_add_sym(parse, name, 0, 0, 0, ELF64_ST_INFO(STB_GLOBAL, STT_NOTYPE));
+			ret = scf_symtab_add_sym(parse->symtab, name, 0, 0, 0, ELF64_ST_INFO(STB_GLOBAL, STT_NOTYPE));
 			if (ret < 0) {
 				scf_loge("\n");
 				return ret;
@@ -1851,11 +1745,10 @@ static int _add_debug_sections(scf_parse_t* parse, scf_elf_context_t* elf)
 	if (str < 0)
 		return str;
 
-	ADD_SECTION_SYMBOL(abbrev, ".debug_abbrev");
-	ADD_SECTION_SYMBOL(info,   ".debug_info");
-	ADD_SECTION_SYMBOL(line,   ".debug_line");
-	ADD_SECTION_SYMBOL(str,    ".debug_str");
-
+	ADD_SECTION_SYMBOL(parse->symtab, abbrev, ".debug_abbrev");
+	ADD_SECTION_SYMBOL(parse->symtab, info,   ".debug_info");
+	ADD_SECTION_SYMBOL(parse->symtab, line,   ".debug_line");
+	ADD_SECTION_SYMBOL(parse->symtab, str,    ".debug_str");
 	return 0;
 }
 
@@ -1943,9 +1836,9 @@ static int _scf_parse_add_text_relas(scf_parse_t* parse, scf_elf_context_t* elf,
 			}
 
 			if (r->func->node.define_flag)
-				ret = _scf_parse_add_rela(relas, parse, r, r->func->signature->data, SCF_SHNDX_TEXT);
+				ret = scf_symtab_add_rela(relas, parse->symtab, r, r->func->signature->data, SCF_SHNDX_TEXT);
 			else
-				ret = _scf_parse_add_rela(relas, parse, r, r->func->signature->data, 0);
+				ret = scf_symtab_add_rela(relas, parse->symtab, r, r->func->signature->data, 0);
 
 			if (ret < 0) {
 				scf_loge("\n");
@@ -1962,7 +1855,7 @@ static int _scf_parse_add_text_relas(scf_parse_t* parse, scf_elf_context_t* elf,
 			else
 				name = r->var->signature->data;
 
-			ret = _scf_parse_add_rela(relas, parse, r, name, 2);
+			ret = scf_symtab_add_rela(relas, parse->symtab, r, name, 2);
 			if (ret < 0) {
 				scf_loge("\n");
 				goto error;
@@ -2003,19 +1896,6 @@ error:
 	return ret;
 }
 
-static int _sym_cmp(const void* v0, const void* v1)
-{
-	const scf_elf_sym_t* sym0 = *(const scf_elf_sym_t**)v0;
-	const scf_elf_sym_t* sym1 = *(const scf_elf_sym_t**)v1;
-
-	if (STB_LOCAL == ELF64_ST_BIND(sym0->st_info)) {
-		if (STB_GLOBAL == ELF64_ST_BIND(sym1->st_info))
-			return -1;
-	} else if (STB_LOCAL == ELF64_ST_BIND(sym1->st_info))
-		return 1;
-	return 0;
-}
-
 static int _add_debug_file_names(scf_parse_t* parse)
 {
 	scf_block_t* root = parse->ast->root_block;
@@ -2030,7 +1910,7 @@ static int _add_debug_file_names(scf_parse_t* parse)
 		if (SCF_OP_BLOCK != b->node.type)
 			continue;
 
-		ret = _scf_parse_add_sym(parse, b->name->data, 0, 0, SHN_ABS, ELF64_ST_INFO(STB_LOCAL, STT_FILE));
+		ret = scf_symtab_add_sym(parse->symtab, b->name->data, 0, 0, SHN_ABS, ELF64_ST_INFO(STB_LOCAL, STT_FILE));
 		if (ret < 0) {
 			scf_loge("\n");
 			return ret;
@@ -2173,7 +2053,7 @@ int scf_parse_write_elf(scf_parse_t* parse, scf_vector_t* functions, scf_vector_
 	if (ret < 0)
 		goto error;
 
-	qsort(parse->symtab->data, parse->symtab->size, sizeof(void*), _sym_cmp);
+	qsort(parse->symtab->data, parse->symtab->size, sizeof(void*), __symtab_sort_cmp);
 
 	ret = _scf_parse_add_data_relas(parse, elf);
 	if (ret < 0)
@@ -2241,7 +2121,7 @@ int64_t scf_parse_fill_code2(scf_parse_t* parse, scf_vector_t* functions, scf_ve
 		if (ret < 0)
 			return ret;
 
-		ret = _scf_parse_add_sym(parse, f->signature->data, f->code_bytes, offset, SCF_SHNDX_TEXT, ELF64_ST_INFO(STB_GLOBAL, STT_FUNC));
+		ret = scf_symtab_add_sym(parse->symtab, f->signature->data, f->code_bytes, offset, SCF_SHNDX_TEXT, ELF64_ST_INFO(STB_GLOBAL, STT_FUNC));
 		if (ret < 0)
 			return ret;
 
@@ -2289,9 +2169,9 @@ int scf_parse_fill_code(scf_parse_t* parse, scf_vector_t* functions, scf_vector_
 	scf_string_t* file_name = parse->debug->file_names->data[0];
 	const char*   path      = file_name->data;
 
-	ADD_SECTION_SYMBOL(SCF_SHNDX_TEXT,   ".text");
-	ADD_SECTION_SYMBOL(SCF_SHNDX_RODATA, ".rodata");
-	ADD_SECTION_SYMBOL(SCF_SHNDX_DATA,   ".data");
+	ADD_SECTION_SYMBOL(parse->symtab, SCF_SHNDX_TEXT,   ".text");
+	ADD_SECTION_SYMBOL(parse->symtab, SCF_SHNDX_RODATA, ".rodata");
+	ADD_SECTION_SYMBOL(parse->symtab, SCF_SHNDX_DATA,   ".data");
 
 	scf_dwarf_info_entry_t*  cu = NULL;
 	scf_dwarf_line_result_t* r  = NULL;

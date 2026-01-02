@@ -112,6 +112,21 @@ enum scf_lex_words
 	SCF_LEX_WORD_KEY_DEFINE,    // #define
 	SCF_LEX_WORD_KEY_ENDIF,     // #endif
 
+	// asm key word
+	SCF_LEX_WORD_ASM_TEXT,      // .text
+	SCF_LEX_WORD_ASM_DATA,      // .data
+	SCF_LEX_WORD_ASM_GLOBAL,    // .global
+	SCF_LEX_WORD_ASM_ALIGN,     // .align
+	SCF_LEX_WORD_ASM_ORG,       // .org
+
+	SCF_LEX_WORD_ASM_FILL,      // .fill
+	SCF_LEX_WORD_ASM_BYTE,      // .byte
+	SCF_LEX_WORD_ASM_WORD,      // .word
+	SCF_LEX_WORD_ASM_LONG,      // .long
+	SCF_LEX_WORD_ASM_QUAD,      // .quad
+	SCF_LEX_WORD_ASM_ASCII,     // .ascii
+	SCF_LEX_WORD_ASM_ASCIZ,     // .asciz
+
 	// data types
 	SCF_LEX_WORD_KEY_CHAR,		// char
 

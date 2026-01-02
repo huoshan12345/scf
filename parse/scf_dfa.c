@@ -2,15 +2,6 @@
 #include"scf_lex_word.h"
 #include<unistd.h>
 
-extern scf_dfa_ops_t   dfa_ops_parse;
-
-static scf_dfa_ops_t*  dfa_ops_array[] = 
-{
-	&dfa_ops_parse,
-
-	NULL,
-};
-
 static int _scf_dfa_node_parse_word(scf_dfa_t* dfa, scf_dfa_node_t* node, scf_vector_t* words, void* data, int pre_hook_flag);
 
 void scf_dfa_del_hook_by_name(scf_dfa_hook_t** pp, const char* name)
@@ -157,25 +148,9 @@ int scf_dfa_node_add_child(scf_dfa_node_t* parent, scf_dfa_node_t* child)
 	return 0;
 }
 
-int scf_dfa_open(scf_dfa_t** pdfa, const char* name, void* priv)
+int scf_dfa_open(scf_dfa_t** pdfa, scf_dfa_ops_t* ops, void* priv)
 {
-	if (!pdfa || !name) {
-		scf_loge("\n");
-		return -1;
-	}
-
-	scf_dfa_ops_t* ops = NULL;
-
-	int i;
-	for (i = 0; dfa_ops_array[i]; i++) {
-		ops =   dfa_ops_array[i];
-
-		if (!strcmp(name, ops->name))
-			break;
-		ops = NULL;
-	}
-
-	if (!ops) {
+	if (!pdfa || !ops) {
 		scf_loge("\n");
 		return -1;
 	}
