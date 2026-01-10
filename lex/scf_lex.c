@@ -679,10 +679,8 @@ int __lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 			|| '\r' == c->c || '\t' == c->c
 			|| ' '  == c->c || '\\' == c->c) {
 
-		if ('\n' == c->c) {
-			lex->nb_lines++;
-			lex->pos = 0;
-
+		if ('\n' == c->c)
+		{
 			if (SCF_UTF8_LF == c->flag || lex->asm_flag)
 			{
 				w       = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_LF);
@@ -691,8 +689,14 @@ int __lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 
 				free(c);
 				c = NULL;
+
+				lex->nb_lines++;
+				lex->pos = 0;
 				return 0;
 			}
+
+			lex->nb_lines++;
+			lex->pos = 0;
 		} else
 			lex->pos++;
 
@@ -914,7 +918,41 @@ int __lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 		return _lex_macro(lex);
 	}
 
+	if ('$' == c->c && lex->asm_flag)
+	{
+		free(c);
+		c = _lex_pop_char(lex);
+		if (!c)
+			return -1;
+
+		if ('0' <= c->c && '9' >= c->c)
+			return _lex_number(lex, pword, c);
+
+		if ('_' == c->c
+				|| ('a'    <= c->c && 'z'    >= c->c)
+				|| ('A'    <= c->c && 'Z'    >= c->c)
+				|| (0x4e00 <= c->c && 0x9fa5 >= c->c)) { // support China chars
+
+			_lex_push_char(lex, c);
+
+			w = scf_lex_word_alloc(lex->file, lex->nb_lines, lex->pos, SCF_LEX_WORD_DOLLAR);
+			if (!w)
+				return -ENOMEM;
+
+			w->text = scf_string_cstr("$");
+			if (!w->text) {
+				scf_lex_word_free(w);
+				return -ENOMEM;
+			}
+
+			*pword = w;
+			return 0;
+		}
+	}
+
 	scf_loge("unknown char: %c, utf: %#x, in file: %s, line: %d\n", c->c, c->c, lex->file->data, lex->nb_lines);
+
+	free(c);
 	return -1;
 }
 
@@ -1469,7 +1507,14 @@ int scf_lex_pop_word(scf_lex_t* lex, scf_lex_word_t** pword)
 			case SCF_LEX_WORD_KEY_DEFINE:
 				ret = __parse_macro_define(lex);
 				break;
+
 			default:
+				if (lex->asm_flag) {
+					scf_lex_push_word(lex, w1);
+					*pword = w;
+					return 0;
+				}
+
 				scf_loge("unknown macro '%s', file: %s, line: %d\n", w1->text->data, w1->file->data, w1->line);
 				ret = -1;
 				break;

@@ -124,6 +124,22 @@ int scf_elf_add_sym(scf_elf_context_t* elf, const scf_elf_sym_t* sym, const char
 	return -1;
 }
 
+int scf_elf_add_syms(scf_elf_context_t* elf, const scf_vector_t* syms, const char* sh_name)
+{
+	scf_elf_sym_t* sym;
+	int i;
+
+	for (i = 0; i < syms->size; i++) {
+		sym       = syms->data[i];
+
+		int ret = scf_elf_add_sym(elf, sym, sh_name);
+		if (ret < 0)
+			return ret;
+	}
+
+	return 0;
+}
+
 int scf_elf_add_section(scf_elf_context_t* elf, const scf_elf_section_t* section)
 {
 	if (elf && section) {

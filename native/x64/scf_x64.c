@@ -154,7 +154,7 @@ static int _x64_save_rabi(scf_function_t* f)
 #define X64_SAVE_RABI(offset, rabi) \
 		do { \
 			inst = x64_make_inst_G2P(mov, rbp, offset, rabi); \
-			X64_INST_ADD_CHECK(f->init_code->instructions, inst); \
+			X64_INST_ADD_CHECK(f->init_code->instructions, inst, NULL); \
 			f->init_code_bytes += inst->len; \
 		} while (0)
 
@@ -220,12 +220,12 @@ static int _x64_function_finish(scf_function_t* f)
 	if (f->bp_used_flag || f->vla_flag || f->call_flag) {
 
 		inst = x64_make_inst_G2E(mov, rsp, rbp);
-		X64_INST_ADD_CHECK(end->instructions, inst);
+		X64_INST_ADD_CHECK(end->instructions, inst, NULL);
 		end->inst_bytes += inst->len;
 		bb ->code_bytes += inst->len;
 
 		inst = x64_make_inst_G(pop, rbp);
-		X64_INST_ADD_CHECK(end->instructions, inst);
+		X64_INST_ADD_CHECK(end->instructions, inst, NULL);
 		end->inst_bytes += inst->len;
 		bb ->code_bytes += inst->len;
 	}
@@ -245,11 +245,11 @@ static int _x64_function_finish(scf_function_t* f)
 	if (f->bp_used_flag || f->vla_flag || f->call_flag) {
 
 		inst = x64_make_inst_G(push, rbp);
-		X64_INST_ADD_CHECK(f->init_code->instructions, inst);
+		X64_INST_ADD_CHECK(f->init_code->instructions, inst, NULL);
 		f->init_code_bytes += inst->len;
 
 		inst = x64_make_inst_G2E(mov, rbp, rsp);
-		X64_INST_ADD_CHECK(f->init_code->instructions, inst);
+		X64_INST_ADD_CHECK(f->init_code->instructions, inst, NULL);
 		f->init_code_bytes += inst->len;
 
 		if (f->callee_saved_size & 0xf) {
@@ -264,7 +264,7 @@ static int _x64_function_finish(scf_function_t* f)
 				local, f->local_vars_size, f->callee_saved_size);
 
 		inst = x64_make_inst_I2E(sub, rsp, (uint8_t*)&local, 4);
-		X64_INST_ADD_CHECK(f->init_code->instructions, inst);
+		X64_INST_ADD_CHECK(f->init_code->instructions, inst, NULL);
 		f->init_code_bytes += inst->len;
 
 		int err = _x64_save_rabi(f);
@@ -273,7 +273,7 @@ static int _x64_function_finish(scf_function_t* f)
 	}
 
 	inst = x64_make_inst(ret, 8);
-	X64_INST_ADD_CHECK(end->instructions, inst);
+	X64_INST_ADD_CHECK(end->instructions, inst, NULL);
 	end->inst_bytes += inst->len;
 	bb ->code_bytes += inst->len;
 

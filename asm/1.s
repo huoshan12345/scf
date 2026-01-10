@@ -3,11 +3,12 @@
 
 main:
 	push %rbp
-	leaq hello, %rdi
+	movq pointer, %rdi
 	xorq %rax, %rax
 	call printf
 	pop  %rbp
 	ret
 
 .data
+pointer: .quad hello
 hello: .asciz "hello world\n"

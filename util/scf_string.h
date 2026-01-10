@@ -11,6 +11,7 @@ typedef struct {
 
 
 scf_string_t*	scf_string_alloc();
+scf_string_t*	scf_string_alloc_len(size_t len);
 
 scf_string_t*	scf_string_clone(scf_string_t* s);
 

@@ -56,8 +56,8 @@ static int _x64_inst_op2_imm(int OpCode_type, scf_dag_node_t* dst, scf_dag_node_
 {
 	scf_x64_OpCode_t*   OpCode;
 	scf_instruction_t*  inst;
-	scf_register_t* rd   = NULL;
-	scf_register_t* rs   = NULL;
+	scf_register_t*     rd   = NULL;
+	scf_register_t*     rs   = NULL;
 	scf_rela_t*         rela = NULL;
 
 	assert( scf_variable_const(src->var));
@@ -81,7 +81,6 @@ static int _x64_inst_op2_imm(int OpCode_type, scf_dag_node_t* dst, scf_dag_node_
 	}
 
 	if (dst->color > 0) {
-
 		if (SCF_X64_MOV == OpCode_type)
 			X64_SELECT_REG_CHECK(&rd, dst, c, f, 0);
 		else
@@ -90,14 +89,14 @@ static int _x64_inst_op2_imm(int OpCode_type, scf_dag_node_t* dst, scf_dag_node_
 		OpCode = x64_find_OpCode(OpCode_type, src_size, dst_size, SCF_X64_I2G);
 		if (OpCode) {
 			inst = x64_make_inst_I2G(OpCode, rd, (uint8_t*)&src->var->data, src_size);
-			X64_INST_ADD_CHECK(c->instructions, inst);
+			X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 			return 0;
 		}
 
 		OpCode = x64_find_OpCode(OpCode_type, src_size, dst_size, SCF_X64_I2E);
 		if (OpCode) {
 			inst = x64_make_inst_I2E(OpCode, rd, (uint8_t*)&src->var->data, src_size);
-			X64_INST_ADD_CHECK(c->instructions, inst);
+			X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 			return 0;
 		}
 
@@ -112,7 +111,7 @@ static int _x64_inst_op2_imm(int OpCode_type, scf_dag_node_t* dst, scf_dag_node_
 		X64_SELECT_REG_CHECK(&rs, src, c, f, 1);
 
 		inst = x64_make_inst_G2E(OpCode, rd, rs);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 
 		src->color  = 0;
 		src->loaded = 0;
@@ -124,7 +123,7 @@ static int _x64_inst_op2_imm(int OpCode_type, scf_dag_node_t* dst, scf_dag_node_
 	OpCode = x64_find_OpCode(OpCode_type, src_size, dst_size, SCF_X64_I2E);
 	if (OpCode) {
 		inst = x64_make_inst_I2M(&rela, OpCode, dst->var, NULL, (uint8_t*)&src->var->data, src_size);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst, rela);
 		X64_RELA_ADD_CHECK(f->data_relas, rela, c, dst->var, NULL);
 		return 0;
 	}
@@ -140,7 +139,7 @@ static int _x64_inst_op2_imm(int OpCode_type, scf_dag_node_t* dst, scf_dag_node_
 	X64_SELECT_REG_CHECK(&rs, src, c, f, 1);
 
 	inst = x64_make_inst_G2M(&rela, OpCode, dst->var, NULL, rs);
-	X64_INST_ADD_CHECK(c->instructions, inst);
+	X64_INST_ADD_CHECK(c->instructions, inst, rela);
 	X64_RELA_ADD_CHECK(f->data_relas, rela, c, dst->var, NULL);
 
 	src->color  = 0;
@@ -157,7 +156,7 @@ static int _x64_inst_op2_imm_str(int OpCode_type, scf_dag_node_t* dst, scf_dag_n
 		return -EINVAL;
 	}
 
-	scf_register_t* rd   = NULL;
+	scf_register_t*     rd   = NULL;
 	scf_instruction_t*  inst = NULL;
 	scf_x64_OpCode_t*   lea  = x64_find_OpCode(SCF_X64_LEA, 8, 8, SCF_X64_E2G);
 	scf_rela_t*         rela = NULL;
@@ -175,7 +174,7 @@ static int _x64_inst_op2_imm_str(int OpCode_type, scf_dag_node_t* dst, scf_dag_n
 	src->var->tmp_flag    = 0;
 
 	inst = x64_make_inst_M2G(&rela, lea, rd, NULL, src->var);
-	X64_INST_ADD_CHECK(c->instructions, inst);
+	X64_INST_ADD_CHECK(c->instructions, inst, rela);
 	X64_RELA_ADD_CHECK(f->data_relas, rela, c, src->var, NULL);
 	return 0;
 }
@@ -223,8 +222,7 @@ int x64_inst_op2(int OpCode_type, scf_dag_node_t* dst, scf_dag_node_t* src, scf_
 		OpCode = x64_find_OpCode(OpCode_type, src_size, dst_size, SCF_X64_G2E);
 		if (OpCode) {
 			inst = x64_make_inst_G2E(OpCode, rd, rs);
-			X64_INST_ADD_CHECK(c->instructions, inst);
-
+			X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 		} else {
 			OpCode = x64_find_OpCode(OpCode_type, src_size, dst_size, SCF_X64_E2G);
 			if (!OpCode) {
@@ -233,7 +231,7 @@ int x64_inst_op2(int OpCode_type, scf_dag_node_t* dst, scf_dag_node_t* src, scf_
 			}
 
 			inst = x64_make_inst_E2G(OpCode, rd, rs);
-			X64_INST_ADD_CHECK(c->instructions, inst);
+			X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 		}
 	} else {
 		OpCode = x64_find_OpCode(OpCode_type, src_size, dst_size, SCF_X64_E2G);
@@ -243,7 +241,7 @@ int x64_inst_op2(int OpCode_type, scf_dag_node_t* dst, scf_dag_node_t* src, scf_
 		}
 
 		inst = x64_make_inst_M2G(&rela, OpCode, rd, NULL, src->var);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst, rela);
 		X64_RELA_ADD_CHECK(f->data_relas, rela, c, src->var, NULL);
 	}
 
@@ -259,8 +257,8 @@ int x64_inst_movx(scf_dag_node_t* dst, scf_dag_node_t* src, scf_3ac_code_t* c, s
 	scf_x64_OpCode_t*   xor;
 
 	scf_instruction_t*  inst;
-	scf_register_t* rs;
-	scf_register_t* rd = NULL;
+	scf_register_t*     rs;
+	scf_register_t*     rd = NULL;
 
 	X64_SELECT_REG_CHECK(&rd, dst, c, f, 0);
 
@@ -274,7 +272,7 @@ int x64_inst_movx(scf_dag_node_t* dst, scf_dag_node_t* src, scf_3ac_code_t* c, s
 		assert(4 == src->var->size);
 		xor  = x64_find_OpCode(SCF_X64_XOR, 8, 8, SCF_X64_G2E);
 		inst = x64_make_inst_G2E(xor, rd, rd);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 
 		movx = x64_find_OpCode(SCF_X64_MOV, 4, 4, SCF_X64_E2G);
 	}
@@ -282,7 +280,7 @@ int x64_inst_movx(scf_dag_node_t* dst, scf_dag_node_t* src, scf_3ac_code_t* c, s
 	if (src->color > 0) {
 		X64_SELECT_REG_CHECK(&rs, src, c, f, 0);
 		inst = x64_make_inst_E2G(movx, rd, rs);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 
 	} else if (0 == src->color) {
 		// get the rd's low bits register
@@ -290,16 +288,16 @@ int x64_inst_movx(scf_dag_node_t* dst, scf_dag_node_t* src, scf_3ac_code_t* c, s
 
 		mov  = x64_find_OpCode(SCF_X64_MOV, src->var->size, src->var->size, SCF_X64_I2G);
 		inst = x64_make_inst_I2G(mov, rs, (uint8_t*)&src->var->data, src->var->size);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 
 		inst = x64_make_inst_E2G(movx, rd, rs);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 
 	} else {
 		scf_rela_t* rela = NULL;
 
 		inst = x64_make_inst_M2G(&rela, movx, rd, NULL, src->var);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst, rela);
 		X64_RELA_ADD_CHECK(f->data_relas, rela, c, src->var, NULL);
 	}
 
@@ -309,7 +307,6 @@ int x64_inst_movx(scf_dag_node_t* dst, scf_dag_node_t* src, scf_3ac_code_t* c, s
 int x64_inst_float_cast(scf_dag_node_t* dst, scf_dag_node_t* src, scf_3ac_code_t* c, scf_function_t* f)
 {
 	scf_x64_OpCode_t*   OpCode;
-
 	scf_instruction_t*  inst;
 	scf_register_t*     rs = NULL;
 	scf_register_t*     rd = NULL;
@@ -351,19 +348,19 @@ int x64_inst_float_cast(scf_dag_node_t* dst, scf_dag_node_t* src, scf_3ac_code_t
 
 		X64_SELECT_REG_CHECK(&rs, src, c, f, 1);
 
-		inst   = x64_make_inst_E2G(OpCode, rd, rs);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		inst = x64_make_inst_E2G(OpCode, rd, rs);
+		X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 
 	} else if (src->color > 0) {
 		X64_SELECT_REG_CHECK(&rs, src, c, f, 1);
 		inst = x64_make_inst_E2G(OpCode, rd, rs);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 
 	} else {
 		scf_rela_t* rela = NULL;
 
 		inst   = x64_make_inst_M2G(&rela, OpCode, rd, NULL, src->var);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst, rela);
 		X64_RELA_ADD_CHECK(f->data_relas, rela, c, src->var, NULL);
 	}
 
@@ -392,7 +389,6 @@ int x64_inst_jmp(scf_native_t* ctx, scf_3ac_code_t* c, int OpCode_type)
 
 	scf_instruction_t* inst = x64_make_inst_I(jcc, (uint8_t*)&offset, sizeof(offset));
 
-	X64_INST_ADD_CHECK(c->instructions, inst);
+	X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 	return 0;
 }
-

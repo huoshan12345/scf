@@ -173,6 +173,11 @@ scf_x64_OpCode_t	x64_OpCodes[] = {
 	{SCF_X64_LEA,  "lea",  1, {0x8d, 0x0, 0x0},1,  8,8, SCF_X64_E2G, 0,0, 0,{0,0}},
 	{SCF_X64_LEA,  "leaq", 1, {0x8d, 0x0, 0x0},1,  8,8, SCF_X64_E2G, 0,0, 0,{0,0}},
 
+	{SCF_X64_MOV,  "movb", 2, {0x88, 0x0, 0x0},1,  1,1, SCF_X64_G2E, 0,0, 0,{0,0}},
+	{SCF_X64_MOV,  "movw", 2, {0x89, 0x0, 0x0},1,  2,2, SCF_X64_G2E, 0,0, 0,{0,0}},
+	{SCF_X64_MOV,  "movl", 2, {0x89, 0x0, 0x0},1,  4,4, SCF_X64_G2E, 0,0, 0,{0,0}},
+	{SCF_X64_MOV,  "movq", 2, {0x89, 0x0, 0x0},1,  8,8, SCF_X64_G2E, 0,0, 0,{0,0}},
+
 	{SCF_X64_MOV,  "mov",  2, {0x88, 0x0, 0x0},1,  1,1, SCF_X64_G2E, 0,0, 0,{0,0}},
 	{SCF_X64_MOV,  "mov",  2, {0x89, 0x0, 0x0},1,  2,2, SCF_X64_G2E, 0,0, 0,{0,0}},
 	{SCF_X64_MOV,  "mov",  2, {0x89, 0x0, 0x0},1,  4,4, SCF_X64_G2E, 0,0, 0,{0,0}},
@@ -232,6 +237,11 @@ scf_x64_OpCode_t	x64_OpCodes[] = {
 	{SCF_X64_CMP,  "cmp",  2, {0x83, 0x0, 0x0},1,  1,2, SCF_X64_I2E, 7,1, 0,{0,0}},
 	{SCF_X64_CMP,  "cmp",  2, {0x83, 0x0, 0x0},1,  1,4, SCF_X64_I2E, 7,1, 0,{0,0}},
 	{SCF_X64_CMP,  "cmp",  2, {0x83, 0x0, 0x0},1,  1,8, SCF_X64_I2E, 7,1, 0,{0,0}},
+
+	{SCF_X64_TEST, "testb", 2, {0x84, 0x0, 0x0},1,  1,1, SCF_X64_G2E, 0,0, 0,{0,0}},
+	{SCF_X64_TEST, "testw", 2, {0x85, 0x0, 0x0},1,  2,2, SCF_X64_G2E, 0,0, 0,{0,0}},
+	{SCF_X64_TEST, "testl", 2, {0x85, 0x0, 0x0},1,  4,4, SCF_X64_G2E, 0,0, 0,{0,0}},
+	{SCF_X64_TEST, "testq", 2, {0x85, 0x0, 0x0},1,  8,8, SCF_X64_G2E, 0,0, 0,{0,0}},
 
 	{SCF_X64_TEST, "test", 2, {0x84, 0x0, 0x0},1,  1,1, SCF_X64_G2E, 0,0, 0,{0,0}},
 	{SCF_X64_TEST, "test", 2, {0x85, 0x0, 0x0},1,  2,2, SCF_X64_G2E, 0,0, 0,{0,0}},
@@ -294,11 +304,15 @@ scf_x64_OpCode_t	x64_OpCodes[] = {
 	{SCF_X64_CVTTSD2SI, "cvttsd2si", 8, {0xf2, 0x0f, 0x2c},3, 8,4, SCF_X64_E2G, 0,0, 0,{0,0}},
 	{SCF_X64_CVTTSD2SI, "cvttsd2si", 8, {0xf2, 0x0f, 0x2c},3, 8,8, SCF_X64_E2G, 0,0, 0,{0,0}},
 
-	{SCF_X64_JZ,   "jz",   2, {0x74, 0x0, 0x0},1,  1,1, SCF_X64_I, 0,0, 0,{0,0}},
+	{SCF_X64_JZ,   "jz",   2, {0x74, 0x0,  0x0},1, 1,1, SCF_X64_I, 0,0, 0,{0,0}},
 	{SCF_X64_JZ,   "jz",   6, {0x0f, 0x84, 0x0},2, 4,4, SCF_X64_I, 0,0, 0,{0,0}},
+	{SCF_X64_JZ,   "je",   2, {0x74, 0x0,  0x0},1, 1,1, SCF_X64_I, 0,0, 0,{0,0}},
+	{SCF_X64_JZ,   "je",   6, {0x0f, 0x84, 0x0},2, 4,4, SCF_X64_I, 0,0, 0,{0,0}},
 
-	{SCF_X64_JNZ,  "jnz",  2, {0x75, 0x0, 0x0},1,  1,1, SCF_X64_I, 0,0, 0,{0,0}},
+	{SCF_X64_JNZ,  "jnz",  2, {0x75, 0x0,  0x0},1, 1,1, SCF_X64_I, 0,0, 0,{0,0}},
 	{SCF_X64_JNZ,  "jnz",  6, {0x0f, 0x85, 0x0},2, 4,4, SCF_X64_I, 0,0, 0,{0,0}},
+	{SCF_X64_JNZ,  "jne",  2, {0x75, 0x0,  0x0},1, 1,1, SCF_X64_I, 0,0, 0,{0,0}},
+	{SCF_X64_JNZ,  "jne",  6, {0x0f, 0x85, 0x0},2, 4,4, SCF_X64_I, 0,0, 0,{0,0}},
 
 	{SCF_X64_JG,   "jg",   2, {0x7f, 0x0, 0x0},1,  1,1, SCF_X64_I, 0,0, 0,{0,0}},
 	{SCF_X64_JG,   "jg",   6, {0x0f, 0x8f,0x0},1,  4,4, SCF_X64_I, 0,0, 0,{0,0}},
@@ -326,7 +340,8 @@ scf_x64_OpCode_t	x64_OpCodes[] = {
 
 	{SCF_X64_JMP,  "jmp",  2, {0xeb, 0x0, 0x0},1,  1,1, SCF_X64_I, 0,0, 0,{0,0}},
 	{SCF_X64_JMP,  "jmp",  5, {0xe9, 0x0, 0x0},1,  4,4, SCF_X64_I, 0,0, 0,{0,0}},
-	{SCF_X64_JMP,  "jmp",  2, {0xff, 0x0, 0x0},1,  8,8, SCF_X64_E, 4,1, 0,{0,0}},
+
+	{SCF_X64_SYSCALL, "syscall", 2, {0xf, 0x5, 0x0},2,  8,8, SCF_X64_G, 0,0, 0,{0,0}},
 };
 
 scf_x64_OpCode_t* x64_find_OpCode_by_type(const int type)

@@ -126,6 +126,8 @@ enum scf_x64_OpCode_types {
 
 	SCF_X64_JMP,
 
+	SCF_X64_SYSCALL,
+
 	SCF_X64_NB
 };
 

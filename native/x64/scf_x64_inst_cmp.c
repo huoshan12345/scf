@@ -13,8 +13,8 @@ static int _inst_cmp(scf_dag_node_t* src0, scf_dag_node_t* src1, scf_3ac_code_t*
 
 	scf_x64_OpCode_t*   cmp;
 	scf_instruction_t*  inst;
-	scf_register_t* rs1;
-	scf_register_t* rs0  = NULL;
+	scf_register_t*     rs1;
+	scf_register_t*     rs0  = NULL;
 	scf_rela_t*         rela = NULL;
 
 	X64_SELECT_REG_CHECK(&rs0, src0, c, f, 1);
@@ -35,7 +35,7 @@ static int _inst_cmp(scf_dag_node_t* src0, scf_dag_node_t* src1, scf_3ac_code_t*
 
 			X64_SELECT_REG_CHECK(&rs1, src1, c, f, 1);
 			inst = x64_make_inst_E2G(cmp, rs0, rs1);
-			X64_INST_ADD_CHECK(c->instructions, inst);
+			X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 			return 0;
 		}
 	} else {
@@ -44,7 +44,7 @@ static int _inst_cmp(scf_dag_node_t* src0, scf_dag_node_t* src1, scf_3ac_code_t*
 
 			if (cmp) {
 				inst = x64_make_inst_I2E(cmp, rs0, (uint8_t*)&src1->var->data, src1_size);
-				X64_INST_ADD_CHECK(c->instructions, inst);
+				X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 				return 0;
 			}
 
@@ -54,7 +54,7 @@ static int _inst_cmp(scf_dag_node_t* src0, scf_dag_node_t* src1, scf_3ac_code_t*
 
 			cmp  = x64_find_OpCode(SCF_X64_CMP, rs0->bytes, src1_size, SCF_X64_G2E);
 			inst = x64_make_inst_G2E(cmp, rs0, rs1);
-			X64_INST_ADD_CHECK(c->instructions, inst);
+			X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 
 			src1->loaded = 0;
 			src1->color  = 0;
@@ -68,10 +68,10 @@ static int _inst_cmp(scf_dag_node_t* src0, scf_dag_node_t* src1, scf_3ac_code_t*
 	if (src1->color > 0) {
 		X64_SELECT_REG_CHECK(&rs1, src1, c, f, 1);
 		inst = x64_make_inst_E2G(cmp, rs0, rs1);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 	} else {
 		inst = x64_make_inst_M2G(&rela, cmp, rs0, NULL, src1->var);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst, rela);
 		X64_RELA_ADD_CHECK(f->data_relas, rela, c, src1->var, NULL);
 	}
 
@@ -98,13 +98,13 @@ static int _inst_set(int setcc_type, scf_dag_node_t* dst, scf_3ac_code_t* c, scf
 
 		mov = x64_find_OpCode(SCF_X64_MOV, rd->bytes, rd->bytes, SCF_X64_I2G);
 		inst = x64_make_inst_I2G(mov, rd, (uint8_t*)&imm, rd->bytes);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 
 		rd = x64_find_register_color_bytes(rd->color, 1);
 	}
 
 	inst = x64_make_inst_E(setcc, rd);
-	X64_INST_ADD_CHECK(c->instructions, inst);
+	X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 
 	return 0;
 }
@@ -141,7 +141,7 @@ int x64_inst_teq(scf_native_t* ctx, scf_3ac_code_t* c)
 
 	test = x64_find_OpCode(SCF_X64_TEST, v->size, v->size, SCF_X64_G2E);
 	inst = x64_make_inst_G2E(test, rs, rs);
-	X64_INST_ADD_CHECK(c->instructions, inst);
+	X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 	return 0;
 }
 

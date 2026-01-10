@@ -25,20 +25,20 @@ static int _shift_count(scf_dag_node_t* count, scf_3ac_code_t* c, scf_function_t
 
 			mov  = x64_find_OpCode(SCF_X64_MOV, 1, 1, SCF_X64_G2E);
 			inst = x64_make_inst_G2E(mov, cl, rc);
-			X64_INST_ADD_CHECK(c->instructions, inst);
+			X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 		}
 	} else if (count->color < 0) {
-		scf_rela_t* rela = NULL;
-
 		ret = x64_overflow_reg(cl, c, f);
 		if (ret < 0) {
 			scf_loge("\n");
 			return ret;
 		}
 
+		scf_rela_t* rela = NULL;
+
 		mov  = x64_find_OpCode(SCF_X64_MOV, 1, 1, SCF_X64_E2G);
 		inst = x64_make_inst_M2G(&rela, mov, cl, NULL, count->var);
-		X64_INST_ADD_CHECK(c->instructions, inst);
+		X64_INST_ADD_CHECK(c->instructions, inst, rela);
 		X64_RELA_ADD_CHECK(f->data_relas, rela, c, count->var, NULL);
 	}
 
@@ -59,8 +59,7 @@ static int _x64_shift(scf_native_t* ctx, scf_3ac_code_t* c, scf_dag_node_t* dst,
 			return -ENOMEM;
 	}
 
-	scf_register_t* rd   = NULL;
-
+	scf_register_t*     rd = NULL;
 	scf_instruction_t*  inst;
 	scf_x64_OpCode_t*   mov;
 	scf_x64_OpCode_t*   shift;
@@ -77,11 +76,11 @@ static int _x64_shift(scf_native_t* ctx, scf_3ac_code_t* c, scf_dag_node_t* dst,
 		if (0 != count->color) {
 			shift = x64_find_OpCode(OpCode_type, 1, dst->var->size, SCF_X64_G2E);
 			inst  = x64_make_inst_E(shift, rd);
-			X64_INST_ADD_CHECK(c->instructions, inst);
+			X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 		} else {
 			shift = x64_find_OpCode(OpCode_type, 1, dst->var->size, SCF_X64_I2E);
-			inst = x64_make_inst_I2E(shift, rd, (uint8_t*)&count->var->data, 1);
-			X64_INST_ADD_CHECK(c->instructions, inst);
+			inst  = x64_make_inst_I2E(shift, rd, (uint8_t*)&count->var->data, 1);
+			X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 		}
 	} else {
 		scf_rela_t* rela = NULL;
@@ -89,12 +88,12 @@ static int _x64_shift(scf_native_t* ctx, scf_3ac_code_t* c, scf_dag_node_t* dst,
 		if (0 != count->color) {
 			shift = x64_find_OpCode(OpCode_type, 1, dst->var->size, SCF_X64_G2E);
 			inst  = x64_make_inst_M(&rela, shift, dst->var, NULL);
-			X64_INST_ADD_CHECK(c->instructions, inst);
+			X64_INST_ADD_CHECK(c->instructions, inst, rela);
 			X64_RELA_ADD_CHECK(f->data_relas, rela, c, dst->var, NULL);
 		} else {
 			shift = x64_find_OpCode(OpCode_type, 1, dst->var->size, SCF_X64_I2E);
 			inst  = x64_make_inst_I2M(&rela, shift, dst->var, NULL, (uint8_t*)&count->var->data, 1);
-			X64_INST_ADD_CHECK(c->instructions, inst);
+			X64_INST_ADD_CHECK(c->instructions, inst, rela);
 			X64_RELA_ADD_CHECK(f->data_relas, rela, c, dst->var, NULL);
 		}
 	}

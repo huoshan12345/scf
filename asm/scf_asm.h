@@ -41,6 +41,7 @@ struct dfa_asm_s {
 
 	scf_lex_word_t*    label;
 	scf_lex_word_t*    global;
+	scf_lex_word_t*    fill;
 
 	scf_OpCode_t*      opcode;
 	scf_inst_data_t    operands[4];

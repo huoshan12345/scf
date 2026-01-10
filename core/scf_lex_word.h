@@ -76,6 +76,7 @@ enum scf_lex_words
 	SCF_LEX_WORD_LF,            // '\n', line feed, LF
 	SCF_LEX_WORD_HASH,          // #  hash
 	SCF_LEX_WORD_HASH2,         // ## hash2
+	SCF_LEX_WORD_DOLLAR,        // $  dollar
 
 	SCF_LEX_WORD_COMMA,         // , comma
 	SCF_LEX_WORD_SEMICOLON,     // ;

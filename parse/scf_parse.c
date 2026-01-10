@@ -2075,16 +2075,9 @@ int scf_parse_write_elf(scf_parse_t* parse, scf_vector_t* functions, scf_vector_
 			goto error;
 	}
 
-	scf_elf_sym_t* sym;
-	int i;
-
-	for (i = 0; i < parse->symtab->size; i++) {
-		sym       = parse->symtab->data[i];
-
-		ret = scf_elf_add_sym(elf, sym, ".symtab");
-		if (ret < 0)
-			goto error;
-	}
+	ret = scf_elf_add_syms(elf, parse->symtab, ".symtab");
+	if (ret < 0)
+		goto error;
 
 	ret = scf_elf_write_rel(elf);
 error:

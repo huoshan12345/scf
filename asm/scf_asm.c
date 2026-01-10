@@ -1,6 +1,8 @@
 #include"scf_asm.h"
 #include"scf_symtab.h"
 
+void _x64_set_offset_for_jmps(scf_vector_t* text);
+
 int	scf_asm_open(scf_asm_t** pasm)
 {
 	if (!pasm)
@@ -151,6 +153,8 @@ static int __asm_add_text(scf_elf_context_t* elf, scf_asm_t* _asm)
 	text = scf_string_alloc();
 	if (!text)
 		return -ENOMEM;
+
+	_x64_set_offset_for_jmps(_asm->text);
 
 	for (i = 0; i < _asm->text->size; i++) {
 		inst      = _asm->text->data[i];
@@ -346,14 +350,14 @@ static int __asm_add_rela_data(scf_elf_context_t* elf, scf_asm_t* _asm)
 	if (relas->size > 0) {
 		scf_elf_section_t s = {0};
 
-		s.name         = ".rela.text";
+		s.name         = ".rela.data";
 		s.sh_type      = SHT_RELA;
 		s.sh_flags     = SHF_INFO_LINK;
 		s.sh_addralign = 8;
 		s.data         = NULL;
 		s.data_len     = 0;
 		s.sh_link      = 0;
-		s.sh_info      = ASM_SHNDX_TEXT;
+		s.sh_info      = ASM_SHNDX_DATA;
 
 		ret = scf_elf_add_rela_section(elf, &s, relas);
 	}
@@ -406,16 +410,9 @@ int scf_asm_to_obj(scf_asm_t* _asm, const char* obj, const char* arch)
 	if (ret < 0)
 		goto error;
 
-	scf_elf_sym_t* sym;
-	int i;
-
-	for (i = 0; i < _asm->symtab->size; i++) {
-		sym       = _asm->symtab->data[i];
-
-		ret = scf_elf_add_sym(elf, sym, ".symtab");
-		if (ret < 0)
-			goto error;
-	}
+	ret = scf_elf_add_syms(elf, _asm->symtab, ".symtab");
+	if (ret < 0)
+		goto error;
 
 	ret = scf_elf_write_rel(elf);
 error:

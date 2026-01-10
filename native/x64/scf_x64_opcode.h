@@ -61,7 +61,7 @@ scf_instruction_t*  x64_make_inst_I2L(scf_rela_t** prela, scf_x64_OpCode_t* OpCo
 scf_instruction_t*  x64_make_inst_G2L(scf_rela_t** prela, scf_x64_OpCode_t* OpCode, scf_register_t* r_src);
 scf_instruction_t*  x64_make_inst_L2G(scf_rela_t** prela, scf_x64_OpCode_t* OpCode, scf_register_t* r_dst);
 
-#define X64_INST_ADD_CHECK(vec, inst) \
+#define X64_INST_ADD_CHECK(vec, inst, rela) \
 			do { \
 				if (!(inst)) { \
 					scf_loge("\n"); \
@@ -70,7 +70,8 @@ scf_instruction_t*  x64_make_inst_L2G(scf_rela_t** prela, scf_x64_OpCode_t* OpCo
 				int ret = scf_vector_add((vec), (inst)); \
 				if (ret < 0) { \
 					scf_loge("\n"); \
-					free(inst); \
+					scf_instruction_free(inst); \
+					scf_rela_free(rela); \
 					return ret; \
 				} \
 			} while (0)
@@ -87,7 +88,7 @@ scf_instruction_t*  x64_make_inst_L2G(scf_rela_t** prela, scf_x64_OpCode_t* OpCo
 			int ret = scf_vector_add((vec), (rela)); \
 			if (ret < 0) { \
 				scf_loge("\n"); \
-				free(rela); \
+				scf_rela_free(rela); \
 				return ret; \
 			} \
 		} \

@@ -39,6 +39,7 @@ static scf_instruction_t* _x64_make_OpCode(scf_x64_OpCode_t* OpCode, int bytes,
 			case SCF_X64_POP:
 			case SCF_X64_RET:
 			case SCF_X64_CALL:
+			case SCF_X64_SYSCALL:
 			case SCF_X64_CVTSS2SD:
 				break;
 
@@ -155,14 +156,23 @@ static int _x64_make_disp(scf_rela_t** prela, scf_instruction_t* inst, uint32_t 
 
 	scf_ModRM_setRM(&ModRM,  base);
 
-	if (SCF_X64_RM_EBP != base
-			&& SCF_X64_RM_ESP != base
-			&& SCF_X64_RM_R12 != base
-			&& SCF_X64_RM_R13 != base
-			&& 0 == disp) {
-		scf_ModRM_setMod(&ModRM, SCF_X64_MOD_BASE);
-		inst->code[inst->len++] = ModRM;
-		return 0;
+	if (0 == disp) {
+		if (SCF_X64_RM_ESP ==  base || SCF_X64_RM_R12 == base) {
+			scf_ModRM_setMod(&ModRM, SCF_X64_MOD_BASE);
+			inst->code[inst->len++] = ModRM;
+
+			uint8_t SIB = 0;
+			scf_SIB_setBase(&SIB, base);
+			scf_SIB_setIndex(&SIB, base);
+			scf_SIB_setScale(&SIB, SCF_X64_SIB_SCALE1);
+			inst->code[inst->len++] = SIB;
+			return 0;
+
+		} else if (SCF_X64_RM_EBP != base && SCF_X64_RM_R13 != base) {
+			scf_ModRM_setMod(&ModRM, SCF_X64_MOD_BASE);
+			inst->code[inst->len++] = ModRM;
+			return 0;
+		}
 	}
 
 	if (disp <= 127 && disp >= -128) {

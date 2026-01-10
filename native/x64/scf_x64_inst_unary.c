@@ -15,7 +15,7 @@ static int _unary_assign_sib(x64_sib_t* sib, int size, scf_3ac_code_t* c, scf_fu
 		inst = x64_make_inst_SIB(OpCode, sib->base, sib->index, sib->scale, sib->disp, size);
 	else
 		inst = x64_make_inst_P(OpCode, sib->base, sib->disp, size);
-	X64_INST_ADD_CHECK(c->instructions, inst);
+	X64_INST_ADD_CHECK(c->instructions, inst, NULL);
 	return 0;
 }
 
