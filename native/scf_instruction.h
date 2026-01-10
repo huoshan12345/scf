@@ -66,6 +66,7 @@ struct scf_instruction_s
 	int                 len;
 	uint8_t             code[32];
 
+	int                 flag;  // asm jcc back or front
 	int                 nb_used;
 };
 

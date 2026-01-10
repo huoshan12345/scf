@@ -841,7 +841,6 @@ int _x64_set_offset_for_jmps(scf_vector_t* text)
 				&& (inst->OpCode->type < SCF_X64_JZ || inst->OpCode->type > SCF_X64_JMP))
 			continue;
 
-		int32_t  bytes = 0;
 		uint32_t label = *(uint32_t*)(inst->code + inst->len - 4);
 		uint32_t flag  = label & 0xff;
 		label >>= 8;
@@ -885,6 +884,8 @@ int _x64_set_offset_for_jmps(scf_vector_t* text)
 			default:
 				break;
 		};
+
+		inst->flag = flag;
 	}
 
 	while (1) {
@@ -900,36 +901,38 @@ int _x64_set_offset_for_jmps(scf_vector_t* text)
 					&& (inst->OpCode->type < SCF_X64_JZ || inst->OpCode->type > SCF_X64_JMP))
 				continue;
 
-			int32_t  bytes = 0;
-			uint32_t label = *(uint32_t*)(inst->code + inst->len - 4);
-			uint32_t front = label & 0xff;
-			label >>= 8;
+			int32_t bytes = 0;
 
-			if (front) {
-				for (j = i + 1; j < text->size; j++) {
-					dst           = text->data[j];
+			switch (inst->flag) {
+				case 1:
+					for (j = i; j >= 0; j--) {
+						dst = text->data[j];
 
-					if (dst == inst->next)
-						break;
+						if (dst->len > 0)
+							bytes -= dst->len;
+						else if (dst->bin)
+							bytes -= dst->bin->len;
 
-					if (dst->len > 0)
-						bytes += dst->len;
-					else if (dst->bin)
-						bytes += dst->bin->len;
-				}
-			} else {
-				for (j = i; j >= 0; j--) {
-					dst = text->data[j];
+						if (dst == inst->next)
+							break;
+					}
+					break;
+				case 2:
+					for (j = i + 1; j < text->size; j++) {
+						dst           = text->data[j];
 
-					if (dst->len > 0)
-						bytes -= dst->len;
-					else if (dst->bin)
-						bytes -= dst->bin->len;
+						if (dst == inst->next)
+							break;
 
-					if (dst == inst->next)
-						break;
-				}
-			}
+						if (dst->len > 0)
+							bytes += dst->len;
+						else if (dst->bin)
+							bytes += dst->bin->len;
+					}
+					break;
+				default:
+					break;
+			};
 
 			scf_x64_OpCode_t* opcode = (scf_x64_OpCode_t*)inst->OpCode;
 			int n_bytes = 4;
