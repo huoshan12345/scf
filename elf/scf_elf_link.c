@@ -1003,7 +1003,7 @@ static int link_relas(scf_elf_file_t* exec, char* afiles[], int nb_afiles, char*
 			return -1;
 		}
 	}
-
+#if 0
 	for (i = 0; i < exec->dyn_needs->size; i++) {
 		so =        exec->dyn_needs->data[i];
 
@@ -1033,6 +1033,7 @@ static int link_relas(scf_elf_file_t* exec, char* afiles[], int nb_afiles, char*
 			scf_vector_add_unique(exec->dyn_needs, so2);
 		}
 	}
+#endif
 	return 0;
 }
 
