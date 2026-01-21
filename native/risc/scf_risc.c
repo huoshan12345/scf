@@ -631,10 +631,11 @@ static int _risc_make_insts_for_list(scf_native_t* ctx, scf_basic_block_t* bb, i
 
 static void _risc_set_offset_for_jmps(scf_native_t* ctx, scf_function_t* f)
 {
+	scf_3ac_code_t* c;
 	int i;
 
 	for (i = 0; i < f->jmps->size; i++) {
-		scf_3ac_code_t*    c      = f->jmps->data[i];
+		c  =        f->jmps->data[i];
 
 		assert(c->instructions && 1 == c->instructions->size);
 
@@ -651,14 +652,12 @@ static void _risc_set_offset_for_jmps(scf_native_t* ctx, scf_function_t* f)
 			for (l = &cur_bb->list; l != &dst_bb->list; l = scf_list_next(l)) {
 
 				bb     = scf_list_data(l, scf_basic_block_t, list);
-
 				bytes += bb->code_bytes;
 			}
 		} else {
 			for (l = &dst_bb->list; l != &cur_bb->list; l = scf_list_next(l)) {
 
 				bb     = scf_list_data(l, scf_basic_block_t, list);
-
 				bytes -= bb->code_bytes;
 			}
 		}

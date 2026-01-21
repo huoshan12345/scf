@@ -440,12 +440,13 @@ static int _arm32_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 
 scf_elf_ops_t	elf_ops_arm32 =
 {
-	.machine	      = "arm32",
+	.machine          = "arm32",
+	.arch             = SCF_ELF_ARM32,
 
-	.open		      = elf32_open,
-	.close		      = elf32_close,
+	.open             = elf32_open,
+	.close            = elf32_close,
 
-	.add_sym	      = elf32_add_sym,
+	.add_sym          = elf32_add_sym,
 	.add_section      = elf32_add_section,
 
 	.add_rela_section = elf32_add_rela_section,
@@ -457,6 +458,6 @@ scf_elf_ops_t	elf_ops_arm32 =
 	.read_relas       = elf32_read_relas,
 	.read_section     = elf32_read_section,
 
-	.write_rel	      = _arm32_elf_write_rel,
+	.write_rel        = _arm32_elf_write_rel,
 	.write_exec       = _arm32_elf_write_exec,
 };

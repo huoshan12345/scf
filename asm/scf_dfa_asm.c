@@ -1,11 +1,13 @@
 #include"scf_asm.h"
 #include"scf_lex_word.h"
 
-extern scf_dfa_module_t  dfa_module_inst;
+extern scf_dfa_module_t  dfa_module_x64;
+extern scf_dfa_module_t  dfa_module_naja;
 
 static scf_dfa_module_t* asm_dfa_modules[] =
 {
-	&dfa_module_inst,
+	&dfa_module_x64,
+	&dfa_module_naja,
 };
 
 static void* dfa_pop_word(scf_dfa_t* dfa)
@@ -41,23 +43,17 @@ scf_dfa_ops_t dfa_ops_asm =
 	.free_word = dfa_free_word,
 };
 
-int scf_asm_dfa_init(scf_asm_t* _asm)
+int scf_asm_dfa_init(scf_asm_t* _asm, const char* arch)
 {
 	if (scf_dfa_open(&_asm->dfa, &dfa_ops_asm, _asm) < 0) {
 		scf_loge("\n");
 		return -1;
 	}
 
-	int nb_modules  = sizeof(asm_dfa_modules) / sizeof(asm_dfa_modules[0]);
+	int nb_modules = sizeof(asm_dfa_modules) / sizeof(asm_dfa_modules[0]);
 
 	_asm->dfa_data = calloc(1, sizeof(dfa_asm_t));
 	if (!_asm->dfa_data) {
-		scf_loge("\n");
-		return -1;
-	}
-
-	_asm->dfa_data->module_datas = calloc(nb_modules, sizeof(void*));
-	if (!_asm->dfa_data->module_datas) {
 		scf_loge("\n");
 		return -1;
 	}
@@ -66,33 +62,25 @@ int scf_asm_dfa_init(scf_asm_t* _asm)
 	for (i = 0; i < nb_modules; i++) {
 
 		scf_dfa_module_t* m = asm_dfa_modules[i];
-
 		if (!m)
 			continue;
-
 		m->index = i;
 
-		if (!m->init_module)
-			continue;
+		if (!strcmp(m->name, arch))
+		{
+			if (m->init_module && m->init_module(_asm->dfa) < 0) {
+				scf_loge("init module: %s\n", m->name);
+				return -1;
+			}
 
-		if (m->init_module(_asm->dfa) < 0) {
-			scf_loge("init module: %s\n", m->name);
-			return -1;
+			if (m->init_syntax && m->init_syntax(_asm->dfa) < 0) {
+				scf_loge("init syntax: %s\n", m->name);
+				return -1;
+			}
+
+			return 0;
 		}
 	}
 
-	for (i = 0; i < nb_modules; i++) {
-
-		scf_dfa_module_t* m = asm_dfa_modules[i];
-
-		if (!m || !m->init_syntax)
-			continue;
-
-		if (m->init_syntax(_asm->dfa) < 0) {
-			scf_loge("init syntax: %s\n", m->name);
-			return -1;
-		}
-	}
-
-	return 0;
+	return -1;
 }

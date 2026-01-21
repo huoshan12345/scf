@@ -3,12 +3,13 @@
 
 main:
 	push %rbp
-	movq pointer, %rdi
+	jmp 1f
+0:
+	pop  %rdi
 	xorq %rax, %rax
 	call printf
 	pop  %rbp
 	ret
-
-.data
-pointer: .quad hello
-hello: .asciz "hello world\n"
+1:
+	call 0b
+.asciz "hello world\n"

@@ -653,6 +653,7 @@ static int _x64_elf_write_dyn(scf_elf_context_t* elf, const char* sysroot)
 scf_elf_ops_t	elf_ops_x64 =
 {
 	.machine          = "x64",
+	.arch             = SCF_ELF_X64,
 
 	.open             = elf_open,
 	.close            = elf_close,

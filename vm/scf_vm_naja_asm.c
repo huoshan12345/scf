@@ -765,7 +765,7 @@ static int __naja_jmp_disp(scf_vm_t* vm, uint32_t inst)
 		simm26 |= 0xfc000000;
 
 	uint64_t ip = naja->ip + (simm26 << 2);
-	printf("jmp    %#lx\n", ip);
+	printf("jmp      %#lx\n", ip);
 	return 0;
 }
 

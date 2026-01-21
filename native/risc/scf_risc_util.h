@@ -115,6 +115,8 @@ enum scf_risc_OpCode_types
 
 	SCF_RISC_JMP,
 
+	SCF_RISC_ADRP,
+
 	SCF_RISC_NB
 };
 

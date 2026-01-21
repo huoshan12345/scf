@@ -1,6 +1,7 @@
 #include"scf_x64.h"
 
-scf_x64_OpCode_t	x64_OpCodes[] = {
+scf_x64_OpCode_t	x64_OpCodes[] =
+{
 	{SCF_X64_PUSH, "push", 1, {0x50, 0x0, 0x0},1,  8,8, SCF_X64_G,   0,0, 0,{0,0}},
 	{SCF_X64_POP,  "pop",  1, {0x58, 0x0, 0x0},1,  8,8, SCF_X64_G,   0,0, 0,{0,0}},
 

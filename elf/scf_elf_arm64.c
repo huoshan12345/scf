@@ -452,12 +452,13 @@ static int _arm64_elf_write_exec(scf_elf_context_t* elf, const char* sysroot)
 
 scf_elf_ops_t	elf_ops_arm64 =
 {
-	.machine	      = "arm64",
+	.machine          = "arm64",
+	.arch             = SCF_ELF_ARM64,
 
-	.open		      = elf_open,
-	.close		      = elf_close,
+	.open             = elf_open,
+	.close            = elf_close,
 
-	.add_sym	      = elf_add_sym,
+	.add_sym          = elf_add_sym,
 	.add_section      = elf_add_section,
 
 	.add_rela_section = elf_add_rela_section,
@@ -469,6 +470,6 @@ scf_elf_ops_t	elf_ops_arm64 =
 	.read_relas       = elf_read_relas,
 	.read_section     = elf_read_section,
 
-	.write_rel	      = _arm64_elf_write_rel,
+	.write_rel        = _arm64_elf_write_rel,
 	.write_exec       = _arm64_elf_write_exec,
 };

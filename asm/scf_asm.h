@@ -36,9 +36,8 @@ struct scf_asm_s
 	scf_dwarf_t*       debug;
 };
 
-struct dfa_asm_s {
-	void**             module_datas;
-
+struct dfa_asm_s
+{
 	scf_lex_word_t*    label;
 	scf_lex_word_t*    global;
 	scf_lex_word_t*    fill;
@@ -54,9 +53,9 @@ struct dfa_asm_s {
 	int                n_rp;
 };
 
-int scf_asm_dfa_init(scf_asm_t*  _asm);
+int scf_asm_dfa_init(scf_asm_t* _asm, const char* arch);
 
-int scf_asm_open  (scf_asm_t** pasm);
+int scf_asm_open  (scf_asm_t** pasm, const char* arch);
 int scf_asm_close (scf_asm_t*  _asm);
 
 int scf_asm_file  (scf_asm_t*  _asm, const char* path);

@@ -5752,21 +5752,3 @@ risc_inst_handler_pt  scf_risc_find_inst_handler(const int op_type)
 
 	return risc_inst_handlers[op_type];
 }
-
-scf_instruction_t* risc_make_inst(scf_3ac_code_t* c, uint32_t opcode)
-{
-	scf_instruction_t* inst;
-
-	inst = calloc(1, sizeof(scf_instruction_t));
-	if (!inst)
-		return NULL;
-
-	inst->c       = c;
-	inst->code[0] = opcode & 0xff;
-	inst->code[1] = (opcode >>  8) & 0xff;
-	inst->code[2] = (opcode >> 16) & 0xff;
-	inst->code[3] = (opcode >> 24) & 0xff;
-	inst->len     = 4;
-
-	return inst;
-}

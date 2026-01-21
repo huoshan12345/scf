@@ -5,7 +5,8 @@ CFILES += ../lex/scf_lex_util.c
 CFILES += main.c
 CFILES += scf_asm.c
 CFILES += scf_dfa_asm.c
-CFILES += scf_dfa_inst.c
+CFILES += scf_dfa_x64.c
+CFILES += scf_dfa_naja.c
 
 CFILES += ../core/scf_lex_word.c
 CFILES += ../parse/scf_dfa.c
@@ -15,6 +16,7 @@ CFILES += ../native/scf_instruction.c
 CFILES += ../native/x64/scf_x64_opcode.c
 CFILES += ../native/x64/scf_x64_reg_util.c
 CFILES += ../native/x64/scf_x64_inst_util.c
+CFILES += ../native/risc/scf_risc_opcode.c
 
 CFILES += ../elf/scf_elf.c
 CFILES += ../elf/scf_elf_link.c

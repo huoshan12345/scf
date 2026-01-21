@@ -56,8 +56,9 @@ struct scf_instruction_s
 	scf_OpCode_t*	    OpCode;
 	scf_instruction_t*  next; // only for jcc, jmp, call
 
-	scf_inst_data_t     src;
 	scf_inst_data_t     dst;
+	scf_inst_data_t     src;
+	scf_inst_data_t     srcs[2];
 
 	scf_lex_word_t*     label;  // asm label
 	scf_string_t*       bin;    // asm binary data, maybe in .text or .data
@@ -82,6 +83,12 @@ typedef struct {
 	uint64_t            type;
 	int                 addend;
 } scf_rela_t;
+
+
+static inline int scf_inst_data_empty(scf_inst_data_t* id)
+{
+	return !(id->flag || id->base || id->imm_size);
+}
 
 static inline int scf_inst_data_same(scf_inst_data_t* id0, scf_inst_data_t* id1)
 {

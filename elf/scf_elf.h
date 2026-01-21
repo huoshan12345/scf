@@ -8,6 +8,16 @@
 typedef struct scf_elf_context_s	scf_elf_context_t;
 typedef struct scf_elf_ops_s		scf_elf_ops_t;
 
+enum scf_elf_archs
+{
+	SCF_ELF_X64,
+	SCF_ELF_ARM64,
+	SCF_ELF_ARM32,
+	SCF_ELF_NAJA,
+
+	SCF_ELF_N_ARCHS,
+};
+
 typedef struct {
 	char*		name;
 	uint64_t    st_size;
@@ -52,27 +62,28 @@ typedef struct {
 
 struct scf_elf_ops_s
 {
-	const char*		machine;
+	const char*     machine;
+	int             arch;
 
-	int				(*open )(scf_elf_context_t* elf);
-	int				(*close)(scf_elf_context_t* elf);
+	int             (*open )(scf_elf_context_t* elf);
+	int             (*close)(scf_elf_context_t* elf);
 
-	int				(*add_sym   )(scf_elf_context_t* elf, const scf_elf_sym_t*  sym,   const char* sh_name);
-	int				(*read_syms )(scf_elf_context_t* elf,       scf_vector_t*   syms,  const char* sh_name);
-	int				(*read_relas)(scf_elf_context_t* elf,       scf_vector_t*   relas, const char* sh_name);
-	int				(*read_phdrs)(scf_elf_context_t* elf,       scf_vector_t*   phdrs);
+	int             (*add_sym   )(scf_elf_context_t* elf, const scf_elf_sym_t*  sym,   const char* sh_name);
+	int             (*read_syms )(scf_elf_context_t* elf,       scf_vector_t*   syms,  const char* sh_name);
+	int             (*read_relas)(scf_elf_context_t* elf,       scf_vector_t*   relas, const char* sh_name);
+	int             (*read_phdrs)(scf_elf_context_t* elf,       scf_vector_t*   phdrs);
 
-	int				(*add_section )(scf_elf_context_t* elf, const scf_elf_section_t*  section);
-	int				(*read_section)(scf_elf_context_t* elf,       scf_elf_section_t** psection, const char* name);
+	int             (*add_section )(scf_elf_context_t* elf, const scf_elf_section_t*  section);
+	int             (*read_section)(scf_elf_context_t* elf,       scf_elf_section_t** psection, const char* name);
 
-	int				(*add_rela_section)(scf_elf_context_t* elf, const scf_elf_section_t* section, scf_vector_t* relas);
+	int             (*add_rela_section)(scf_elf_context_t* elf, const scf_elf_section_t* section, scf_vector_t* relas);
 
-	int				(*add_dyn_need)(scf_elf_context_t* elf, const char* soname);
+	int             (*add_dyn_need)(scf_elf_context_t* elf, const char* soname);
 	int	            (*add_dyn_rela)(scf_elf_context_t* elf, const scf_elf_rela_t* rela);
 
-	int				(*write_rel )(scf_elf_context_t* elf);
-	int				(*write_dyn )(scf_elf_context_t* elf, const char* sysroot);
-	int				(*write_exec)(scf_elf_context_t* elf, const char* sysroot);
+	int             (*write_rel )(scf_elf_context_t* elf);
+	int             (*write_dyn )(scf_elf_context_t* elf, const char* sysroot);
+	int             (*write_exec)(scf_elf_context_t* elf, const char* sysroot);
 };
 
 struct scf_elf_context_s {

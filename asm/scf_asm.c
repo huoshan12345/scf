@@ -2,8 +2,9 @@
 #include"scf_symtab.h"
 
 void _x64_set_offset_for_jmps(scf_vector_t* text);
+int _naja_set_offset_for_jmps(scf_vector_t* text);
 
-int	scf_asm_open(scf_asm_t** pasm)
+int scf_asm_open(scf_asm_t** pasm, const char* arch)
 {
 	if (!pasm)
 		return -EINVAL;
@@ -40,7 +41,7 @@ int	scf_asm_open(scf_asm_t** pasm)
 	if (!_asm->symtab)
 		goto symtab_error;
 
-	if (scf_asm_dfa_init(_asm) < 0) {
+	if (scf_asm_dfa_init(_asm, arch) < 0) {
 		scf_loge("\n");
 		goto dfa_error;
 	}
@@ -150,11 +151,23 @@ static int __asm_add_text(scf_elf_context_t* elf, scf_asm_t* _asm)
 	int ret;
 	int i;
 
+	switch (elf->ops->arch)
+	{
+		case SCF_ELF_X64:
+			_x64_set_offset_for_jmps(_asm->text);
+			break;
+
+		case SCF_ELF_NAJA:
+			_naja_set_offset_for_jmps(_asm->text);
+			break;
+		default:
+			scf_loge("%s NOT support\n", elf->ops->machine);
+			break;
+	};
+
 	text = scf_string_alloc();
 	if (!text)
 		return -ENOMEM;
-
-	_x64_set_offset_for_jmps(_asm->text);
 
 	for (i = 0; i < _asm->text->size; i++) {
 		inst      = _asm->text->data[i];
@@ -169,6 +182,16 @@ static int __asm_add_text(scf_elf_context_t* elf, scf_asm_t* _asm)
 		else
 			continue;
 
+		if (ret < 0) {
+			scf_string_free(text);
+			return ret;
+		}
+	}
+
+	if (text->len & 0x7) {
+		size_t n = 8 - (text->len & 0x7);
+
+		ret = scf_string_fill_zero(text, n);
 		if (ret < 0) {
 			scf_string_free(text);
 			return ret;

@@ -23,6 +23,26 @@ void scf_instruction_free(scf_instruction_t* inst)
 	}
 }
 
+void scf_inst_data_print(scf_inst_data_t* id)
+{
+	if (1 == id->flag) {
+		if (id->index)
+			printf("%d(%s, %s, %d)", id->disp, id->base->name, id->index->name, id->scale);
+
+		else if (id->base) {
+			if (id->disp < 0)
+				printf("-%#x(%s)", -id->disp, id->base->name);
+			else
+				printf("%#x(%s)", id->disp, id->base->name);
+		} else
+			printf("%d(rip)", id->disp);
+
+	} else if (id->base)
+		printf("%s", id->base->name);
+	else if (id->imm_size > 0)
+		printf("%d", (int)id->imm);
+}
+
 void scf_instruction_print(scf_instruction_t* inst)
 {
 	if (inst->label)
@@ -31,46 +51,23 @@ void scf_instruction_print(scf_instruction_t* inst)
 	if (inst->OpCode)
 		printf("%s ", inst->OpCode->name);
 
-	if (1 == inst->src.flag) {
-		if (inst->src.index)
-			printf("%d(%s, %s, %d), ", inst->src.disp, inst->src.base->name,
-					inst->src.index->name, inst->src.scale);
+	scf_inst_data_print(&inst->dst);
 
-		else if (inst->src.base) {
-			if (inst->src.disp < 0)
-				printf("-%#x(%s), ", -inst->src.disp, inst->src.base->name);
-			else
-				printf("%#x(%s), ", inst->src.disp, inst->src.base->name);
-		} else
-			printf("%d(rip), ", inst->dst.disp);
+	if (!scf_inst_data_empty(&inst->dst) && !scf_inst_data_empty(&inst->src))
+		printf(", ");
+	scf_inst_data_print(&inst->src);
 
-	} else if (inst->src.base)
-		printf("%s, ", inst->src.base->name);
+	if (!scf_inst_data_empty(&inst->srcs[0]))
+		printf(", ");
+	scf_inst_data_print(&inst->srcs[0]);
 
-	else if (inst->src.imm_size > 0)
-		printf("%d, ", (int)inst->src.imm);
+	if (!scf_inst_data_empty(&inst->srcs[1]))
+		printf(", ");
+	scf_inst_data_print(&inst->srcs[1]);
 
-	if (1 == inst->dst.flag) {
-		if (inst->dst.index)
-			printf("%d(%s, %s, %d)", inst->dst.disp, inst->dst.base->name,
-					inst->dst.index->name, inst->dst.scale);
-
-		else if (inst->dst.base) {
-			if (inst->dst.disp < 0)
-				printf("-%#x(%s)", -inst->dst.disp, inst->dst.base->name);
-			else
-				printf("%#x(%s)", inst->dst.disp, inst->dst.base->name);
-		} else
-			printf("%d(rip)", inst->dst.disp);
-
-	} else if (inst->dst.base)
-		printf("%s", inst->dst.base->name);
-
-	else if (inst->dst.imm_size > 0)
-		printf("%d", (int)inst->dst.imm);
-
-	int i;
-	for (i = 0; i < inst->len; i++)
+	printf(" |");
+	for (int i = 0; i < inst->len; i++)
 		printf(" %#x", inst->code[i]);
+
 	printf("\n");
 }

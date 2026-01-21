@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
 
 	scf_asm_t*  _asm = NULL;
 
-	if (scf_asm_open(&_asm) < 0) {
+	if (scf_asm_open(&_asm, arch) < 0) {
 		scf_loge("\n");
 		return -1;
 	}

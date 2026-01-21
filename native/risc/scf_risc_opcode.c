@@ -1,6 +1,7 @@
 #include"scf_risc.h"
 
-scf_risc_OpCode_t	risc_OpCodes[] = {
+scf_risc_OpCode_t	risc_OpCodes[] =
+{
 	{SCF_RISC_PUSH, "push", 1, {0x50, 0x0, 0x0},1,  8,8, SCF_RISC_G,   0,0, 0,{0,0}},
 	{SCF_RISC_POP,  "pop",  1, {0x58, 0x0, 0x0},1,  8,8, SCF_RISC_G,   0,0, 0,{0,0}},
 
@@ -58,6 +59,11 @@ scf_risc_OpCode_t	risc_OpCodes[] = {
 	{SCF_RISC_CALL, "call", 2, {0xff, 0x0, 0x0},1,  8,8, SCF_RISC_E,   2,1, 0,{0,0}},
 
 	{SCF_RISC_RET,  "ret",  1, {0xc3, 0x0, 0x0},1,  8,8, SCF_RISC_G,   0,0, 0,{0,0}},
+
+	{SCF_RISC_ADD,  "addb", 2, {0x00, 0x0, 0x0},1,  1,1, SCF_RISC_G2E, 0,0, 0,{0,0}},
+	{SCF_RISC_ADD,  "addw", 2, {0x01, 0x0, 0x0},1,  2,2, SCF_RISC_G2E, 0,0, 0,{0,0}},
+	{SCF_RISC_ADD,  "addl", 2, {0x01, 0x0, 0x0},1,  4,4, SCF_RISC_G2E, 0,0, 0,{0,0}},
+	{SCF_RISC_ADD,  "addq", 2, {0x01, 0x0, 0x0},1,  8,8, SCF_RISC_G2E, 0,0, 0,{0,0}},
 
 	{SCF_RISC_ADD,  "add",  2, {0x00, 0x0, 0x0},1,  1,1, SCF_RISC_G2E, 0,0, 0,{0,0}},
 	{SCF_RISC_ADD,  "add",  2, {0x01, 0x0, 0x0},1,  2,2, SCF_RISC_G2E, 0,0, 0,{0,0}},
@@ -161,6 +167,11 @@ scf_risc_OpCode_t	risc_OpCodes[] = {
 	{SCF_RISC_NOT,  "not",  2, {0xf7, 0x0, 0x0},1,  8,8, SCF_RISC_E,   2,1, 0,{0,0}},
 
 	{SCF_RISC_LEA,  "lea",  1, {0x8d, 0x0, 0x0},1,  8,8, SCF_RISC_E2G, 0,0, 0,{0,0}},
+
+	{SCF_RISC_MOV,  "movb", 2, {0x88, 0x0, 0x0},1,  1,1, SCF_RISC_G2E, 0,0, 0,{0,0}},
+	{SCF_RISC_MOV,  "movw", 2, {0x89, 0x0, 0x0},1,  2,2, SCF_RISC_G2E, 0,0, 0,{0,0}},
+	{SCF_RISC_MOV,  "movl", 2, {0x89, 0x0, 0x0},1,  4,4, SCF_RISC_G2E, 0,0, 0,{0,0}},
+	{SCF_RISC_MOV,  "movq", 2, {0x89, 0x0, 0x0},1,  8,8, SCF_RISC_G2E, 0,0, 0,{0,0}},
 
 	{SCF_RISC_MOV,  "mov",  2, {0x88, 0x0, 0x0},1,  1,1, SCF_RISC_G2E, 0,0, 0,{0,0}},
 	{SCF_RISC_MOV,  "mov",  2, {0x89, 0x0, 0x0},1,  2,2, SCF_RISC_G2E, 0,0, 0,{0,0}},
@@ -310,15 +321,29 @@ scf_risc_OpCode_t	risc_OpCodes[] = {
 	{SCF_RISC_JMP,  "jmp",  2, {0xeb, 0x0, 0x0},1,  1,1, SCF_RISC_I, 0,0, 0,{0,0}},
 	{SCF_RISC_JMP,  "jmp",  5, {0xe9, 0x0, 0x0},1,  4,4, SCF_RISC_I, 0,0, 0,{0,0}},
 	{SCF_RISC_JMP,  "jmp",  2, {0xff, 0x0, 0x0},1,  8,8, SCF_RISC_E, 4,1, 0,{0,0}},
+
+	{SCF_RISC_ADRP, "adrp", 1, {0xff, 0x0, 0x0},1,  8,8, SCF_RISC_E2G, 0,0, 0,{0,0}},
 };
 
-scf_risc_OpCode_t*   risc_find_OpCode_by_type(const int type)
+scf_risc_OpCode_t* risc_find_OpCode_by_type(const int type)
 {
 	int i;
 	for (i = 0; i < sizeof(risc_OpCodes) / sizeof(risc_OpCodes[0]); i++) {
 
 		scf_risc_OpCode_t* OpCode = &(risc_OpCodes[i]);
 		if (OpCode->type == type)
+			return OpCode;
+	}
+	return NULL;
+}
+
+scf_risc_OpCode_t* risc_find_OpCode_by_name(const char* name)
+{
+	int i;
+	for (i = 0; i < sizeof(risc_OpCodes) / sizeof(risc_OpCodes[0]); i++) {
+
+		scf_risc_OpCode_t* OpCode = &(risc_OpCodes[i]);
+		if (!strcmp(OpCode->name, name))
 			return OpCode;
 	}
 	return NULL;
@@ -340,23 +365,20 @@ scf_risc_OpCode_t* risc_find_OpCode(const int type, const int OpBytes, const int
 	return NULL;
 }
 
-int risc_find_OpCodes(scf_vector_t* results, const int type, const int OpBytes, const int RegBytes, const int EG)
+scf_instruction_t* risc_make_inst(scf_3ac_code_t* c, uint32_t opcode)
 {
-	int i;
-	for (i = 0; i < sizeof(risc_OpCodes) / sizeof(risc_OpCodes[0]); i++) {
+	scf_instruction_t* inst;
 
-		scf_risc_OpCode_t* OpCode = &(risc_OpCodes[i]);
+	inst = calloc(1, sizeof(scf_instruction_t));
+	if (!inst)
+		return NULL;
 
-		if (type == OpCode->type
-				&& OpBytes == OpCode->OpBytes
-				&& RegBytes == OpCode->RegBytes
-				&& EG == OpCode->EG) {
+	inst->c       = c;
+	inst->code[0] = opcode & 0xff;
+	inst->code[1] = (opcode >>  8) & 0xff;
+	inst->code[2] = (opcode >> 16) & 0xff;
+	inst->code[3] = (opcode >> 24) & 0xff;
+	inst->len     = 4;
 
-			int ret = scf_vector_add(results, OpCode);
-			if (ret < 0)
-				return ret;
-		}
-	}
-	return 0;
+	return inst;
 }
-

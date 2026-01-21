@@ -4,7 +4,7 @@
 #include"scf_elf.h"
 #include<dlfcn.h>
 
-#if 0
+#if 1
 #define NAJA_PRINTF   printf
 #else
 #define NAJA_PRINTF
@@ -39,6 +39,9 @@ struct  scf_vm_s
 	scf_vm_ops_t*             ops;
 	void*                     priv;
 };
+
+#define SCF_ELF_ADDR(_vm, _addr)  ((_addr) - (uint64_t)(_vm)->text->data + (_vm)->text->addr)
+#define SCF_VM_ADDR(_vm, _addr)   ((_addr) + (uint64_t)(_vm)->text->data - (_vm)->text->addr)
 
 struct scf_vm_ops_s
 {
@@ -89,8 +92,8 @@ int scf_vm_clear(scf_vm_t*   vm);
 
 int scf_vm_run  (scf_vm_t*   vm, const char* path, const char* sys);
 
-int naja_vm_open(scf_vm_t* vm);
+int naja_vm_open (scf_vm_t* vm);
 int naja_vm_close(scf_vm_t* vm);
-int naja_vm_init(scf_vm_t* vm, const char* path, const char* sys);
+int naja_vm_init (scf_vm_t* vm, const char* path, const char* sys);
 
 #endif

@@ -27,11 +27,64 @@ typedef struct {
 	uint32_t    regs[2];
 } scf_risc_OpCode_t;
 
-scf_risc_OpCode_t*   risc_find_OpCode_by_type(const int type);
+scf_risc_OpCode_t*  risc_find_OpCode_by_name(const char* name);
+scf_risc_OpCode_t*  risc_find_OpCode_by_type(const int   type);
+scf_risc_OpCode_t*  risc_find_OpCode        (const int   type, const int OpBytes, const int RegBytes, const int EG);
 
-scf_risc_OpCode_t*   risc_find_OpCode(const int type, const int OpBytes, const int RegBytes, const int EG);
+scf_instruction_t*  risc_make_inst(scf_3ac_code_t* c, uint32_t opcode);
 
-int                 risc_find_OpCodes(scf_vector_t* results, const int type, const int OpBytes, const int RegBytes, const int EG);
+#define RISC_INST_ADD_CHECK(vec, inst) \
+			do { \
+				if (!(inst)) { \
+					scf_loge("\n"); \
+					return -ENOMEM; \
+				} \
+				int ret = scf_vector_add((vec), (inst)); \
+				if (ret < 0) { \
+					scf_loge("\n"); \
+					scf_instruction_free(inst); \
+					return ret; \
+				} \
+			} while (0)
+
+#define RISC_RELA_ADD_CHECK(vec, rela, c, v, f) \
+	do { \
+		rela = calloc(1, sizeof(scf_rela_t)); \
+		if (!rela) \
+			return -ENOMEM; \
+		\
+		(rela)->code = (c); \
+		(rela)->var  = (v); \
+		(rela)->func = (f); \
+		(rela)->inst = (c)->instructions->data[(c)->instructions->size - 1]; \
+		(rela)->addend = 0; \
+		\
+		int ret = scf_vector_add((vec), (rela)); \
+		if (ret < 0) { \
+			scf_rela_free(rela); \
+			return ret; \
+		} \
+	} while (0)
+
+#define RISC_RELA_ADD_LABEL(vec, rela, _inst, _label) \
+	do { \
+		rela = calloc(1, sizeof(scf_rela_t)); \
+		if (!rela) \
+			return -ENOMEM; \
+		\
+		(rela)->inst  = (_inst); \
+		(rela)->name = scf_string_clone(_label); \
+		if (!(rela)->name) { \
+			scf_loge("\n"); \
+			scf_rela_free(rela); \
+			return -ENOMEM; \
+		} \
+		int ret = scf_vector_add((vec), (rela)); \
+		if (ret < 0) { \
+			scf_loge("\n"); \
+			scf_rela_free(rela); \
+			return ret; \
+		} \
+	} while (0)
 
 #endif
-

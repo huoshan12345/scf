@@ -8,40 +8,6 @@
 #include"scf_graph.h"
 #include"scf_elf.h"
 
-#define RISC_INST_ADD_CHECK(vec, inst) \
-			do { \
-				if (!(inst)) { \
-					scf_loge("\n"); \
-					return -ENOMEM; \
-				} \
-				int ret = scf_vector_add((vec), (inst)); \
-				if (ret < 0) { \
-					scf_loge("\n"); \
-					free(inst); \
-					return ret; \
-				} \
-			} while (0)
-
-#define RISC_RELA_ADD_CHECK(vec, rela, c, v, f) \
-	do { \
-		rela = calloc(1, sizeof(scf_rela_t)); \
-		if (!rela) \
-			return -ENOMEM; \
-		\
-		(rela)->code = (c); \
-		(rela)->var  = (v); \
-		(rela)->func = (f); \
-		(rela)->inst = (c)->instructions->data[(c)->instructions->size - 1]; \
-		(rela)->addend = 0; \
-		\
-		int ret = scf_vector_add((vec), (rela)); \
-		if (ret < 0) { \
-			free(rela); \
-			rela = NULL; \
-			return ret; \
-		} \
-	} while (0)
-
 #define RISC_PEEPHOLE_DEL 1
 #define RISC_PEEPHOLE_OK  0
 
@@ -92,7 +58,6 @@ int  risc_load_bb_colors2(scf_basic_block_t* bb, scf_bb_group_t* bbg, scf_functi
 void risc_init_bb_colors (scf_basic_block_t* bb, scf_function_t* f);
 
 
-scf_instruction_t* risc_make_inst         (scf_3ac_code_t* c, uint32_t opcode);
 scf_instruction_t* risc_make_inst_BL      (scf_3ac_code_t* c);
 scf_instruction_t* risc_make_inst_BLR     (scf_3ac_code_t* c, scf_register_t* r);
 scf_instruction_t* risc_make_inst_PUSH    (scf_3ac_code_t* c, scf_register_t* r);
@@ -172,4 +137,3 @@ int risc_make_inst_ADRSIB2G(scf_3ac_code_t* c, scf_function_t* f, scf_register_t
 int risc_rcg_make(scf_3ac_code_t* c, scf_graph_t* g, scf_dag_node_t* dn, scf_register_t* reg);
 
 #endif
-

@@ -189,20 +189,24 @@ int naja_vm_init(scf_vm_t* vm, const char* path, const char* sys)
 		ph =        vm->phdrs->data[i];
 
 		if (PT_LOAD ==  ph->ph.p_type) {
+			ph->addr =  ph->ph.p_vaddr & ~(ph->ph.p_align - 1);
+			ph->len  = (ph->ph.p_vaddr +   ph->ph.p_memsz) - ph->addr;
 
-			ph->addr = (ph->ph.p_vaddr + ph->ph.p_memsz) & ~(ph->ph.p_align - 1);
-			ph->len  = (ph->ph.p_vaddr + ph->ph.p_memsz) - ph->addr;
+			long offset = ph->ph.p_offset - (ph->ph.p_vaddr - ph->addr);
+			assert(offset >= 0);
 
-			ph->data = calloc(1, ph->len);
-			if (!ph->data)
-				return -ENOMEM;
+			if (ph->len > 0) {
+				ph->data = calloc(1, ph->len);
+				if (!ph->data)
+					return -ENOMEM;
 
-			fseek(vm->elf->fp, 0, SEEK_SET);
+				fseek(vm->elf->fp, offset, SEEK_SET);
 
-			ret = fread(ph->data, ph->len, 1, vm->elf->fp);
-			if (1 != ret) {
-				scf_loge("\n");
-				return -1;
+				ret = fread(ph->data, ph->len, 1, vm->elf->fp);
+				if (1 != ret) {
+					scf_loge("\n");
+					return -1;
+				}
 			}
 
 			scf_logi("i: %d, ph->p_offset: %#lx, ph->p_filesz: %#lx\n", i, ph->ph.p_offset, ph->ph.p_filesz);
@@ -545,7 +549,7 @@ static int __naja_ldr_disp(scf_vm_t* vm, uint32_t inst)
 	if (s13  & 0x1000)
 		s13 |= 0xffffe000;
 
-	NAJA_PRINTF("ldr%s%c  %s, [%s, %d]\n", __naja_sign[s], __naja_size[size], __naja_reg[rd], __naja_reg[rb], s13 << size);
+	NAJA_PRINTF("ldr%s%c    %s, [%s, %d]\n", __naja_sign[s], __naja_size[size], __naja_reg[rd], __naja_reg[rb], s13 << size);
 
 	int64_t  addr   = naja->regs[rb];
 	int64_t  offset = 0;
@@ -2286,7 +2290,7 @@ static int __naja_jmp_disp(scf_vm_t* vm, uint32_t inst)
 		simm26 |= 0xfc000000;
 
 	naja->ip += simm26 << 2;
-	NAJA_PRINTF("jmp    %#lx\n", naja->ip);
+	NAJA_PRINTF("jmp      %#lx\n", naja->ip);
 	return 0;
 }
 
@@ -2299,11 +2303,11 @@ static int __naja_call_disp(scf_vm_t* vm, uint32_t inst)
 	if (simm26  & 0x2000000)
 		simm26 |= 0xfc000000;
 
-	naja->regs[NAJA_REG_LR] = naja->ip + 4;
+	naja->regs[NAJA_REG_LR] = SCF_VM_ADDR(vm, naja->ip + 4);
 
 	naja->ip += simm26 << 2;
 
-	NAJA_PRINTF("call   %#lx\n", naja->ip);
+	NAJA_PRINTF("call     %#lx\n", naja->ip);
 	return 0;
 }
 
@@ -2327,22 +2331,22 @@ static int __naja_jmp_reg(scf_vm_t* vm, uint32_t inst)
 			naja->ip  += 4;
 
 		if (0 == cc)
-			NAJA_PRINTF("jz     %#lx, flags: %#lx\n", naja->ip, naja->flags);
+			NAJA_PRINTF("jz       %#lx, flags: %#lx\n", naja->ip, naja->flags);
 
 		else if (1 == cc)
-			NAJA_PRINTF("jnz    %#lx, flags: %#lx\n", naja->ip, naja->flags);
+			NAJA_PRINTF("jnz      %#lx, flags: %#lx\n", naja->ip, naja->flags);
 
 		else if (2 == cc)
-			NAJA_PRINTF("jge    %#lx, flags: %#lx\n", naja->ip, naja->flags);
+			NAJA_PRINTF("jge      %#lx, flags: %#lx\n", naja->ip, naja->flags);
 
 		else if (3 == cc)
-			NAJA_PRINTF("jgt    %#lx, flags: %#lx\n", naja->ip, naja->flags);
+			NAJA_PRINTF("jgt      %#lx, flags: %#lx\n", naja->ip, naja->flags);
 
 		else if (4 == cc)
-			NAJA_PRINTF("jle    %#lx, flags: %#lx\n", naja->ip, naja->flags);
+			NAJA_PRINTF("jle      %#lx, flags: %#lx\n", naja->ip, naja->flags);
 
 		else if (5 == cc)
-			NAJA_PRINTF("jlt    %#lx, flags: %#lx\n", naja->ip, naja->flags);
+			NAJA_PRINTF("jlt      %#lx, flags: %#lx\n", naja->ip, naja->flags);
 		else {
 			scf_loge("\n");
 			return -EINVAL;
@@ -2353,7 +2357,7 @@ static int __naja_jmp_reg(scf_vm_t* vm, uint32_t inst)
 
 		if (naja_vm_dynamic_link == (void*)naja->regs[rd]) {
 
-			NAJA_PRINTF("\033[36mjmp    r%d, %#lx@plt\033[0m\n", rd, naja->regs[rd]);
+			NAJA_PRINTF("\033[36mjmp      r%d, %#lx@plt\033[0m\n", rd, naja->regs[rd]);
 
 			int ret = naja_vm_dynamic_link(vm);
 			if (ret < 0) {
@@ -2363,10 +2367,15 @@ static int __naja_jmp_reg(scf_vm_t* vm, uint32_t inst)
 
 			naja->ip = naja->regs[NAJA_REG_LR];
 
+			if (naja->ip >= (uint64_t)vm->text->data
+			 && naja->ip <  (uint64_t)vm->text->data + vm->text->len) {
+				naja->ip =  SCF_ELF_ADDR(vm, naja->ip);
+			}
+
 		} else if (naja->regs[rd] < vm->text->addr
 				|| naja->regs[rd] > vm->text->addr + vm->text->len) {
 
-			NAJA_PRINTF("\033[36mjmp    r%d, %#lx@plt\033[0m\n", rd, naja->regs[rd]);
+			NAJA_PRINTF("\033[36mjmp      r%d, %#lx@plt\033[0m\n", rd, naja->regs[rd]);
 
 			dyn_func_pt f = (void*)naja->regs[rd];
 
@@ -2386,10 +2395,15 @@ static int __naja_jmp_reg(scf_vm_t* vm, uint32_t inst)
 					naja->fvec[7].d[0]);
 
 			naja->ip = naja->regs[NAJA_REG_LR];
+
+			if (naja->ip >= (uint64_t)vm->text->data
+			 && naja->ip <  (uint64_t)vm->text->data + vm->text->len) {
+				naja->ip =  SCF_ELF_ADDR(vm, naja->ip);
+			}
 		} else {
 			naja->ip = naja->regs[rd];
 
-			NAJA_PRINTF("jmp    r%d, %#lx\n", rd, naja->regs[rd]);
+			NAJA_PRINTF("jmp      r%d, %#lx\n", rd, naja->regs[rd]);
 		}
 	}
 
@@ -2503,7 +2517,7 @@ static int __naja_adrp(scf_vm_t* vm, uint32_t inst)
 	else if (naja->regs[rd] >= 0x400000)
 		naja->regs[rd]  = naja->regs[rd] - vm->text->addr + (uint64_t)vm->text->data;
 
-	NAJA_PRINTF("adrp   r%d, [rip, %d],  %#lx\n", rd, s21, naja->regs[rd]);
+	NAJA_PRINTF("adrp     r%d, [rip, %d],  %#lx\n", rd, s21, naja->regs[rd]);
 
 	naja->ip += 4;
 	return 0;
@@ -2528,6 +2542,11 @@ static int __naja_ret(scf_vm_t* vm, uint32_t inst)
 
 		naja->stack = p;
 		naja->size  = sp + STACK_INC;
+	}
+
+	if (naja->ip >= (uint64_t)vm->text->data
+	 && naja->ip <  (uint64_t)vm->text->data + vm->text->len) {
+		naja->ip =  SCF_ELF_ADDR(vm, naja->ip);
 	}
 
 	NAJA_PRINTF("ret,   %#lx, sp: %ld, stack->size: %ld\n", naja->ip, sp, naja->size);

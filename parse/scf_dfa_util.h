@@ -326,4 +326,60 @@ static inline int scf_dfa_is_var(scf_dfa_t* dfa, void* word)
 	return SCF_LEX_WORD_KEY_VAR == w->type;
 }
 
+static int scf_asm_is_text(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_ASM_TEXT == w->type;
+}
+
+static int scf_asm_is_data(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_ASM_DATA == w->type;
+}
+
+static int scf_asm_is_global(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_ASM_GLOBAL == w->type;
+}
+
+static int scf_asm_is_fill(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_ASM_FILL == w->type;
+}
+
+static int scf_asm_is_type(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_ASM_BYTE <= w->type && SCF_LEX_WORD_ASM_ASCIZ >= w->type;
+}
+
+static int scf_asm_is_number(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_CONST_CHAR <= w->type && SCF_LEX_WORD_CONST_DOUBLE >= w->type;
+}
+
+static int scf_asm_is_str(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_CONST_STRING == w->type;
+}
+
+static int scf_asm_is_percent(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_MOD == w->type;
+}
+
 #endif
