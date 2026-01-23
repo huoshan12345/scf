@@ -61,6 +61,7 @@ static int _x64_action_fill(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	scf_lex_word_t*  w   = words->data[words->size - 1];
 
 	d->fill = w;
+	d->i    = 0;
 
 	return SCF_DFA_NEXT_WORD;
 }
@@ -720,46 +721,77 @@ static int _x64_action_LF(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 			d   ->label = NULL;
 		}
 
+		inst->align = d->align;
+		inst->org   = d->org;
+
+		d->align = 0;
+		d->org   = 0;
+
 		scf_instruction_print(inst);
 		d->opcode = NULL;
 
 	} else if (d->fill) {
-		if (d->i < 3) {
-			scf_loge(".fill needs 3 operands, file: %s, line: %d\n", d->fill->file->data, d->fill->line);
-			return SCF_DFA_ERROR;
-		}
-
-		int64_t  n    = d->operands[0].imm;
-		int64_t  size = d->operands[1].imm;
-		uint64_t imm  = d->operands[2].imm;
-		int64_t  i;
-
-		inst = calloc(1, sizeof(scf_instruction_t));
-		if (!inst)
-			return -ENOMEM;
-
-		if (n * size <= sizeof(inst->code)) {
-			for (i = 0; i < n; i++)
-				memcpy(inst->code + i * size, (uint8_t*)&imm, size);
-
-			inst->len = n * size;
-		} else {
-			inst->bin = scf_string_alloc();
-			if (inst->bin) {
-				scf_instruction_free(inst);
-				return -ENOMEM;
+		if (SCF_LEX_WORD_ASM_ORG == d->fill->type) {
+			if (d->i < 1) {
+				scf_loge(".org needs 1 operand, file: %s, line: %d\n", d->fill->file->data, d->fill->line);
+				return SCF_DFA_ERROR;
 			}
 
-			for (i = 0; i < n; i++) {
-				int ret = scf_string_cat_cstr_len(inst->bin, (uint8_t*)&imm, size);
-				if (ret < 0) {
+			d->org = d->operands[0].imm;
+
+		} else if (SCF_LEX_WORD_ASM_ALIGN == d->fill->type) {
+			if (d->i < 1) {
+				scf_loge(".align needs 1 operand, file: %s, line: %d\n", d->fill->file->data, d->fill->line);
+				return SCF_DFA_ERROR;
+			}
+
+			d->align = 1 << d->operands[0].imm;
+
+		} else if (SCF_LEX_WORD_ASM_FILL == d->fill->type) {
+			if (d->i < 3) {
+				scf_loge(".fill needs 3 operands, file: %s, line: %d\n", d->fill->file->data, d->fill->line);
+				return SCF_DFA_ERROR;
+			}
+
+			int64_t  n    = d->operands[0].imm;
+			int64_t  size = d->operands[1].imm;
+			uint64_t imm  = d->operands[2].imm;
+			int64_t  i;
+
+			inst = calloc(1, sizeof(scf_instruction_t));
+			if (!inst)
+				return -ENOMEM;
+
+			if (n * size <= sizeof(inst->code)) {
+				for (i = 0; i < n; i++)
+					memcpy(inst->code + i * size, (uint8_t*)&imm, size);
+
+				inst->len = n * size;
+			} else {
+				inst->bin = scf_string_alloc();
+				if (inst->bin) {
 					scf_instruction_free(inst);
 					return -ENOMEM;
 				}
+
+				for (i = 0; i < n; i++) {
+					int ret = scf_string_cat_cstr_len(inst->bin, (uint8_t*)&imm, size);
+					if (ret < 0) {
+						scf_instruction_free(inst);
+						return -ENOMEM;
+					}
+				}
 			}
+
+			X64_INST_ADD_CHECK(_asm->current, inst, NULL);
+
+			inst->align = d->align;
+			inst->org   = d->org;
+
+			d->align = 0;
+			d->org   = 0;
 		}
 
-		X64_INST_ADD_CHECK(_asm->current, inst, NULL);
 		d->fill = NULL;
 	}
 
@@ -866,6 +898,9 @@ int _x64_set_offset_for_jmps(scf_vector_t* text)
 	while (1) {
 		int drop_bytes = 0;
 
+		if (scf_asm_len(text) < 0)
+			return -1;
+
 		for (i = 0; i < text->size; i++) {
 			inst      = text->data[i];
 
@@ -877,33 +912,10 @@ int _x64_set_offset_for_jmps(scf_vector_t* text)
 				continue;
 
 			int32_t bytes = 0;
-
 			switch (inst->flag) {
 				case 1:
-					for (j = i; j >= 0; j--) {
-						dst = text->data[j];
-
-						if (dst->len > 0)
-							bytes -= dst->len;
-						else if (dst->bin)
-							bytes -= dst->bin->len;
-
-						if (dst == inst->next)
-							break;
-					}
-					break;
 				case 2:
-					for (j = i + 1; j < text->size; j++) {
-						dst           = text->data[j];
-
-						if (dst == inst->next)
-							break;
-
-						if (dst->len > 0)
-							bytes += dst->len;
-						else if (dst->bin)
-							bytes += dst->bin->len;
-					}
+					bytes = inst->next->offset - (inst->offset + inst->len);
 					break;
 				default:
 					break;
@@ -941,6 +953,8 @@ static int _dfa_init_module_x64(scf_dfa_t* dfa)
 	SCF_DFA_MODULE_NODE(dfa, x64, data,     scf_asm_is_data,      _x64_action_data);
 	SCF_DFA_MODULE_NODE(dfa, x64, global,   scf_asm_is_global,    _x64_action_global);
 	SCF_DFA_MODULE_NODE(dfa, x64, fill,     scf_asm_is_fill,      _x64_action_fill);
+	SCF_DFA_MODULE_NODE(dfa, x64, align,    scf_asm_is_align,     _x64_action_fill);
+	SCF_DFA_MODULE_NODE(dfa, x64, org,      scf_asm_is_org,       _x64_action_fill);
 
 	SCF_DFA_MODULE_NODE(dfa, x64, type,     scf_asm_is_type,      _x64_action_type);
 	SCF_DFA_MODULE_NODE(dfa, x64, str,      scf_asm_is_str,       _x64_action_str);
@@ -974,6 +988,8 @@ static int _dfa_init_syntax_x64(scf_dfa_t* dfa)
 	SCF_DFA_GET_MODULE_NODE(dfa, x64, data,      data);
 	SCF_DFA_GET_MODULE_NODE(dfa, x64, global,    global);
 	SCF_DFA_GET_MODULE_NODE(dfa, x64, fill,      fill);
+	SCF_DFA_GET_MODULE_NODE(dfa, x64, align,     align);
+	SCF_DFA_GET_MODULE_NODE(dfa, x64, org,       org);
 
 	SCF_DFA_GET_MODULE_NODE(dfa, x64, identity,  identity);
 	SCF_DFA_GET_MODULE_NODE(dfa, x64, colon,     colon);
@@ -997,6 +1013,8 @@ static int _dfa_init_syntax_x64(scf_dfa_t* dfa)
 	scf_vector_add(dfa->syntaxes, data);
 	scf_vector_add(dfa->syntaxes, global);
 	scf_vector_add(dfa->syntaxes, fill);
+	scf_vector_add(dfa->syntaxes, align);
+	scf_vector_add(dfa->syntaxes, org);
 
 	scf_vector_add(dfa->syntaxes, opcode);
 	scf_vector_add(dfa->syntaxes, identity);
@@ -1068,8 +1086,9 @@ static int _dfa_init_syntax_x64(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(rp,        comma);
 	scf_dfa_node_add_child(rp,        LF);
 
-	// .fill
-	scf_dfa_node_add_child(fill,      number);
+	scf_dfa_node_add_child(fill,      number); // .fill
+	scf_dfa_node_add_child(align,     number); // .align
+	scf_dfa_node_add_child(org,       number); // .org
 
 	return SCF_DFA_OK;
 }

@@ -48,6 +48,9 @@ struct dfa_asm_s
 
 	int                type;
 
+	int                align;
+	int                org;
+
 	int                n_comma;
 	int                n_lp;
 	int                n_rp;
@@ -61,6 +64,7 @@ int scf_asm_close (scf_asm_t*  _asm);
 int scf_asm_file  (scf_asm_t*  _asm, const char* path);
 int scf_asm_to_obj(scf_asm_t*  _asm, const char* obj, const char* arch);
 
+int scf_asm_len(scf_vector_t* instructions);
 
 static inline int __inst_data_is_reg(scf_inst_data_t* id)
 {

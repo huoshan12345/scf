@@ -64,6 +64,9 @@ struct scf_instruction_s
 	scf_string_t*       bin;    // asm binary data, maybe in .text or .data
 	int                 offset; // asm offset,      maybe in .text or .data
 
+	int                 align; // asm .align
+	int                 org;   // asm .org
+
 	int                 len;
 	uint8_t             code[32];
 

@@ -1,7 +1,7 @@
 #include"scf_asm.h"
 #include"scf_symtab.h"
 
-void _x64_set_offset_for_jmps(scf_vector_t* text);
+int  _x64_set_offset_for_jmps(scf_vector_t* text);
 int _naja_set_offset_for_jmps(scf_vector_t* text);
 
 int scf_asm_open(scf_asm_t** pasm, const char* arch)
@@ -144,6 +144,41 @@ int scf_asm_file(scf_asm_t* _asm, const char* path)
 	return ret;
 }
 
+int scf_asm_len(scf_vector_t* instructions)
+{
+	scf_instruction_t* inst;
+	int offset = 0;
+	int i;
+
+	for (i = 0; i < instructions->size; i++) {
+		inst      = instructions->data[i];
+
+		if (inst->align > 0) {
+			int n = offset & (inst->align - 1);
+			if (n > 0)
+				offset += inst->align - n;
+		}
+
+		if (inst->org > 0) {
+			if (offset > inst->org) {
+				scf_loge(".org %#x less than .text length %#x\n", inst->org, offset);
+				return -1;
+			}
+
+			offset = inst->org;
+		}
+
+		inst->offset = offset;
+
+		if (inst->len > 0)
+			offset += inst->len;
+		else if (inst->bin)
+			offset += inst->bin->len;
+	}
+
+	return offset;
+}
+
 static int __asm_add_text(scf_elf_context_t* elf, scf_asm_t* _asm)
 {
 	scf_instruction_t* inst;
@@ -154,16 +189,18 @@ static int __asm_add_text(scf_elf_context_t* elf, scf_asm_t* _asm)
 	switch (elf->ops->arch)
 	{
 		case SCF_ELF_X64:
-			_x64_set_offset_for_jmps(_asm->text);
+			ret = _x64_set_offset_for_jmps(_asm->text);
 			break;
 
 		case SCF_ELF_NAJA:
-			_naja_set_offset_for_jmps(_asm->text);
+			ret = _naja_set_offset_for_jmps(_asm->text);
 			break;
 		default:
 			scf_loge("%s NOT support\n", elf->ops->machine);
 			break;
 	};
+	if (ret < 0)
+		return ret;
 
 	text = scf_string_alloc();
 	if (!text)
@@ -172,7 +209,16 @@ static int __asm_add_text(scf_elf_context_t* elf, scf_asm_t* _asm)
 	for (i = 0; i < _asm->text->size; i++) {
 		inst      = _asm->text->data[i];
 
-		inst->offset = text->len;
+		int n = inst->offset - text->len;
+		assert(n >= 0);
+
+		if (n > 0) {
+			ret = scf_string_fill_zero(text, n);
+			if (ret < 0) {
+				scf_string_free(text);
+				return ret;
+			}
+		}
 
 		if (inst->len > 0)
 			ret = scf_string_cat_cstr_len(text, inst->code, inst->len);

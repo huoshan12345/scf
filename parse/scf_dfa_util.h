@@ -354,6 +354,20 @@ static int scf_asm_is_fill(scf_dfa_t* dfa, void* word)
 	return SCF_LEX_WORD_ASM_FILL == w->type;
 }
 
+static int scf_asm_is_align(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_ASM_ALIGN == w->type;
+}
+
+static int scf_asm_is_org(scf_dfa_t* dfa, void* word)
+{
+	scf_lex_word_t* w = word;
+
+	return SCF_LEX_WORD_ASM_ORG == w->type;
+}
+
 static int scf_asm_is_type(scf_dfa_t* dfa, void* word)
 {
 	scf_lex_word_t* w = word;
