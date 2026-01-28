@@ -62,6 +62,7 @@ static int _naja_action_fill(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	scf_lex_word_t*  w   = words->data[words->size - 1];
 
 	d->fill = w;
+	d->i    = 0;
 
 	return SCF_DFA_NEXT_WORD;
 }
@@ -199,10 +200,7 @@ static int _naja_action_number(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 		inst->len = n;
 
 		RISC_INST_ADD_CHECK(_asm->current, inst);
-		if (d->label) {
-			inst->label = d->label;
-			d   ->label = NULL;
-		}
+		asm_inst_set_label(inst, d);
 	}
 
 	return SCF_DFA_NEXT_WORD;
@@ -249,10 +247,7 @@ static int _naja_action_str(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	}
 
 	RISC_INST_ADD_CHECK(_asm->current, inst);
-	if (d->label) {
-		inst->label = d->label;
-		d   ->label = NULL;
-	}
+	asm_inst_set_label(inst, d);
 
 	return SCF_DFA_NEXT_WORD;
 }
@@ -311,11 +306,7 @@ static int _naja_action_identity(scf_dfa_t* dfa, scf_vector_t* words, void* data
 				return -ENOMEM;
 			inst->len = 8;
 			RISC_INST_ADD_CHECK(_asm->current, inst);
-
-			if (d->label) {
-				inst->label = d->label;
-				d   ->label = NULL;
-			}
+			asm_inst_set_label(inst, d);
 
 			scf_rela_t* rela = calloc(1, sizeof(scf_rela_t));
 			if (!rela)
@@ -742,52 +733,45 @@ static int _naja_action_LF(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 		if (ret < 0)
 			return ret;
-
-		if (d->label) {
-			inst->label = d->label;
-			d   ->label = NULL;
-		}
+		asm_inst_set_label(inst, d);
 
 		scf_instruction_print(inst);
 		d->opcode = NULL;
 
 	} else if (d->fill) {
-		if (d->i < 3) {
-			scf_loge(".fill needs 3 operands, file: %s, line: %d\n", d->fill->file->data, d->fill->line);
-			return SCF_DFA_ERROR;
-		}
-
-		int64_t  n    = d->operands[0].imm;
-		int64_t  size = d->operands[1].imm;
-		uint64_t imm  = d->operands[2].imm;
-		int64_t  i;
-
-		inst = calloc(1, sizeof(scf_instruction_t));
-		if (!inst)
-			return -ENOMEM;
-
-		if (n * size <= sizeof(inst->code)) {
-			for (i = 0; i < n; i++)
-				memcpy(inst->code + i * size, (uint8_t*)&imm, size);
-
-			inst->len = n * size;
-		} else {
-			inst->bin = scf_string_alloc();
-			if (inst->bin) {
-				scf_instruction_free(inst);
-				return -ENOMEM;
+		if (SCF_LEX_WORD_ASM_ORG == d->fill->type) {
+			if (d->i < 1) {
+				scf_loge(".org needs 1 operand, file: %s, line: %d\n", d->fill->file->data, d->fill->line);
+				return SCF_DFA_ERROR;
 			}
 
-			for (i = 0; i < n; i++) {
-				int ret = scf_string_cat_cstr_len(inst->bin, (uint8_t*)&imm, size);
-				if (ret < 0) {
-					scf_instruction_free(inst);
-					return -ENOMEM;
-				}
+			d->org = d->operands[0].imm;
+
+		} else if (SCF_LEX_WORD_ASM_ALIGN == d->fill->type) {
+			if (d->i < 1) {
+				scf_loge(".align needs 1 operand, file: %s, line: %d\n", d->fill->file->data, d->fill->line);
+				return SCF_DFA_ERROR;
 			}
+
+			d->align = 1 << d->operands[0].imm;
+
+		} else if (SCF_LEX_WORD_ASM_FILL == d->fill->type) {
+			if (d->i < 3) {
+				scf_loge(".fill needs 3 operands, file: %s, line: %d\n", d->fill->file->data, d->fill->line);
+				return SCF_DFA_ERROR;
+			}
+
+			int64_t  n    = d->operands[0].imm;
+			int64_t  size = d->operands[1].imm;
+			uint64_t imm  = d->operands[2].imm;
+
+			if (scf_asm_fill(&inst, n, size, imm) < 0)
+				return SCF_DFA_ERROR;
+
+			RISC_INST_ADD_CHECK(_asm->current, inst);
+			asm_inst_set_label(inst, d);
 		}
 
-		RISC_INST_ADD_CHECK(_asm->current, inst);
 		d->fill = NULL;
 	}
 
@@ -834,6 +818,9 @@ int _naja_set_offset_for_jmps(scf_vector_t* text)
 	int i;
 	int j;
 
+	if (scf_asm_len(text) < 0)
+		return -1;
+
 	for (i = 0; i < text->size; i++) {
 		inst      = text->data[i];
 
@@ -877,16 +864,6 @@ int _naja_set_offset_for_jmps(scf_vector_t* text)
 				scf_loge("number label %d NOT found\n", label);
 				return -1;
 			}
-
-			for ( ; j < i; j++) {
-				dst = text->data[j];
-
-				if (dst->len > 0)
-					bytes -= dst->len;
-				else if (dst->bin)
-					bytes -= dst->bin->len;
-			}
-
 		} else if (2 == flag) {
 			for (j = i; j < text->size; j++) {
 				dst       = text->data[j];
@@ -897,11 +874,6 @@ int _naja_set_offset_for_jmps(scf_vector_t* text)
 					inst->next = dst;
 					break;
 				}
-
-				if (dst->len > 0)
-					bytes += dst->len;
-				else if (dst->bin)
-					bytes += dst->bin->len;
 			}
 
 			if (j >= text->size) {
@@ -910,6 +882,8 @@ int _naja_set_offset_for_jmps(scf_vector_t* text)
 			}
 		} else
 			continue;
+
+		bytes = inst->next->offset - inst->offset;
 
 		naja_set_jmp_offset(inst, bytes);
 	}
@@ -923,6 +897,8 @@ static int _dfa_init_module_naja(scf_dfa_t* dfa)
 	SCF_DFA_MODULE_NODE(dfa, naja, data,     scf_asm_is_data,      _naja_action_data);
 	SCF_DFA_MODULE_NODE(dfa, naja, global,   scf_asm_is_global,    _naja_action_global);
 	SCF_DFA_MODULE_NODE(dfa, naja, fill,     scf_asm_is_fill,      _naja_action_fill);
+	SCF_DFA_MODULE_NODE(dfa, naja, align,    scf_asm_is_align,     _naja_action_fill);
+	SCF_DFA_MODULE_NODE(dfa, naja, org,      scf_asm_is_org,       _naja_action_fill);
 
 	SCF_DFA_MODULE_NODE(dfa, naja, type,     scf_asm_is_type,      _naja_action_type);
 	SCF_DFA_MODULE_NODE(dfa, naja, str,      scf_asm_is_str,       _naja_action_str);
@@ -955,6 +931,8 @@ static int _dfa_init_syntax_naja(scf_dfa_t* dfa)
 	SCF_DFA_GET_MODULE_NODE(dfa, naja, data,      data);
 	SCF_DFA_GET_MODULE_NODE(dfa, naja, global,    global);
 	SCF_DFA_GET_MODULE_NODE(dfa, naja, fill,      fill);
+	SCF_DFA_GET_MODULE_NODE(dfa, naja, align,     align);
+	SCF_DFA_GET_MODULE_NODE(dfa, naja, org,       org);
 
 	SCF_DFA_GET_MODULE_NODE(dfa, naja, identity,  identity);
 	SCF_DFA_GET_MODULE_NODE(dfa, naja, colon,     colon);
@@ -977,6 +955,8 @@ static int _dfa_init_syntax_naja(scf_dfa_t* dfa)
 	scf_vector_add(dfa->syntaxes, data);
 	scf_vector_add(dfa->syntaxes, global);
 	scf_vector_add(dfa->syntaxes, fill);
+	scf_vector_add(dfa->syntaxes, align);
+	scf_vector_add(dfa->syntaxes, org);
 
 	scf_vector_add(dfa->syntaxes, opcode);
 	scf_vector_add(dfa->syntaxes, identity);
@@ -1034,8 +1014,9 @@ static int _dfa_init_syntax_naja(scf_dfa_t* dfa)
 	scf_dfa_node_add_child(rp,        comma);
 	scf_dfa_node_add_child(rp,        LF);
 
-	// .fill
-	scf_dfa_node_add_child(fill,      number);
+	scf_dfa_node_add_child(fill,      number); // .fill
+	scf_dfa_node_add_child(align,     number); // .align
+	scf_dfa_node_add_child(org,       number); // .org
 
 	// .global
 	scf_dfa_node_add_child(global,    identity);

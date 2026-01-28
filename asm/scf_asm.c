@@ -144,6 +144,38 @@ int scf_asm_file(scf_asm_t* _asm, const char* path)
 	return ret;
 }
 
+int scf_asm_fill(scf_instruction_t** __inst, int n, int size, uint64_t imm)
+{
+	scf_instruction_t* inst = calloc(1, sizeof(scf_instruction_t));
+	if (!inst)
+		return -ENOMEM;
+
+	int i;
+	if (n * size <= sizeof(inst->code)) {
+		for (i = 0; i < n; i++)
+			memcpy(inst->code + i * size, (uint8_t*)&imm, size);
+
+		inst->len = n * size;
+	} else {
+		inst->bin = scf_string_alloc();
+		if (inst->bin) {
+			scf_instruction_free(inst);
+			return -ENOMEM;
+		}
+
+		for (i = 0; i < n; i++) {
+			int ret = scf_string_cat_cstr_len(inst->bin, (uint8_t*)&imm, size);
+			if (ret < 0) {
+				scf_instruction_free(inst);
+				return -ENOMEM;
+			}
+		}
+	}
+
+	*__inst = inst;
+	return 0;
+}
+
 int scf_asm_len(scf_vector_t* instructions)
 {
 	scf_instruction_t* inst;

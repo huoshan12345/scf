@@ -199,10 +199,7 @@ static int _x64_action_number(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 		inst->len = n;
 
 		X64_INST_ADD_CHECK(_asm->current, inst, NULL);
-		if (d->label) {
-			inst->label = d->label;
-			d   ->label = NULL;
-		}
+		asm_inst_set_label(inst, d);
 	}
 
 	return SCF_DFA_NEXT_WORD;
@@ -249,10 +246,7 @@ static int _x64_action_str(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 	}
 
 	X64_INST_ADD_CHECK(_asm->current, inst, NULL);
-	if (d->label) {
-		inst->label = d->label;
-		d   ->label = NULL;
-	}
+	asm_inst_set_label(inst, d);
 
 	return SCF_DFA_NEXT_WORD;
 }
@@ -311,11 +305,7 @@ static int _x64_action_identity(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 				return -ENOMEM;
 			inst->len = 8;
 			X64_INST_ADD_CHECK(_asm->current, inst, NULL);
-
-			if (d->label) {
-				inst->label = d->label;
-				d   ->label = NULL;
-			}
+			asm_inst_set_label(inst, d);
 
 			scf_rela_t* rela = calloc(1, sizeof(scf_rela_t));
 			if (!rela)
@@ -715,17 +705,7 @@ static int _x64_action_LF(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 
 		if (ret < 0)
 			return ret;
-
-		if (d->label) {
-			inst->label = d->label;
-			d   ->label = NULL;
-		}
-
-		inst->align = d->align;
-		inst->org   = d->org;
-
-		d->align = 0;
-		d->org   = 0;
+		asm_inst_set_label(inst, d);
 
 		scf_instruction_print(inst);
 		d->opcode = NULL;
@@ -756,40 +736,12 @@ static int _x64_action_LF(scf_dfa_t* dfa, scf_vector_t* words, void* data)
 			int64_t  n    = d->operands[0].imm;
 			int64_t  size = d->operands[1].imm;
 			uint64_t imm  = d->operands[2].imm;
-			int64_t  i;
 
-			inst = calloc(1, sizeof(scf_instruction_t));
-			if (!inst)
-				return -ENOMEM;
-
-			if (n * size <= sizeof(inst->code)) {
-				for (i = 0; i < n; i++)
-					memcpy(inst->code + i * size, (uint8_t*)&imm, size);
-
-				inst->len = n * size;
-			} else {
-				inst->bin = scf_string_alloc();
-				if (inst->bin) {
-					scf_instruction_free(inst);
-					return -ENOMEM;
-				}
-
-				for (i = 0; i < n; i++) {
-					int ret = scf_string_cat_cstr_len(inst->bin, (uint8_t*)&imm, size);
-					if (ret < 0) {
-						scf_instruction_free(inst);
-						return -ENOMEM;
-					}
-				}
-			}
+			if (scf_asm_fill(&inst, n, size, imm) < 0)
+				return SCF_DFA_ERROR;
 
 			X64_INST_ADD_CHECK(_asm->current, inst, NULL);
-
-			inst->align = d->align;
-			inst->org   = d->org;
-
-			d->align = 0;
-			d->org   = 0;
+			asm_inst_set_label(inst, d);
 		}
 
 		d->fill = NULL;

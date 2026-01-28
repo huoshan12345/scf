@@ -66,6 +66,8 @@ int scf_asm_to_obj(scf_asm_t*  _asm, const char* obj, const char* arch);
 
 int scf_asm_len(scf_vector_t* instructions);
 
+int scf_asm_fill(scf_instruction_t** __inst, int n, int size, uint64_t imm);
+
 static inline int __inst_data_is_reg(scf_inst_data_t* id)
 {
 	if (!id->flag && id->base && 0 == id->imm_size)
@@ -86,6 +88,20 @@ static inline int __lex_word_cmp(const void* v0, const void* v1)
 	const scf_lex_word_t* w1 = v1;
 
 	return scf_string_cmp(w0->text, w1->text);
+}
+
+static inline void asm_inst_set_label(scf_instruction_t* inst, dfa_asm_t* d)
+{
+	if (d->label) {
+		inst->label = d->label;
+		d   ->label = NULL;
+	}
+
+	inst->align = d->align;
+	inst->org   = d->org;
+
+	d->align = 0;
+	d->org   = 0;
 }
 
 #endif
