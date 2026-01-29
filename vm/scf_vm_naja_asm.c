@@ -1056,20 +1056,20 @@ static int __naja_vm_run(scf_vm_t* vm, const char* path, const char* sys)
 
 		printf("\n%s: \n", s->name);
 		int j;
-		for (j = 0; j < s->st_size; j+= 4) {
+		for (j = 0; j < s->st_size; j += 4) {
 
 			uint32_t inst = *(uint32_t*)(vm->text->data + offset + j);
 
 			naja_opcode_pt pt = naja_opcodes[(inst >> 26) & 0x3f];
 
+			naja->ip = vm->text->addr + offset + j;
+
 			if (!pt) {
-				scf_loge("inst: %d, %#x\n", (inst >> 26) & 0x3f, inst);
+				scf_loge("%4d, %#lx: inst: %d, %08x\n", j, naja->ip, (inst >> 26) & 0x3f, inst);
 				continue;
 			}
 
-			naja->ip = vm->text->addr + offset + j;
-
-			printf("%4d, %#lx: ", j, naja->ip);
+			printf("%4d, %#lx: %08x | ", j, naja->ip, inst);
 
 			ret = pt(vm, inst);
 			if (ret < 0) {

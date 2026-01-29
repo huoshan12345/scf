@@ -2416,7 +2416,7 @@ static int __naja_call_reg(scf_vm_t* vm, uint32_t inst)
 
 	int rd = (inst >> 21) & 0x1f;
 
-	naja->regs[NAJA_REG_LR]   = naja->ip + 4;
+	naja->regs[NAJA_REG_LR] = SCF_VM_ADDR(vm, naja->ip + 4);
 
 	if (naja_vm_dynamic_link == (void*)naja->regs[rd]) {
 
@@ -2429,6 +2429,11 @@ static int __naja_call_reg(scf_vm_t* vm, uint32_t inst)
 		}
 
 		naja->ip = naja->regs[NAJA_REG_LR];
+
+		if (naja->ip >= (uint64_t)vm->text->data
+		 && naja->ip <  (uint64_t)vm->text->data + vm->text->len) {
+			naja->ip =  SCF_ELF_ADDR(vm, naja->ip);
+		}
 
 	} else if (naja->regs[rd] < vm->text->addr
 			|| naja->regs[rd] > vm->text->addr + vm->text->len) {
@@ -2453,6 +2458,11 @@ static int __naja_call_reg(scf_vm_t* vm, uint32_t inst)
 				naja->fvec[7].d[0]);
 
 		naja->ip = naja->regs[NAJA_REG_LR];
+
+		if (naja->ip >= (uint64_t)vm->text->data
+		 && naja->ip <  (uint64_t)vm->text->data + vm->text->len) {
+			naja->ip =  SCF_ELF_ADDR(vm, naja->ip);
+		}
 	} else {
 		NAJA_PRINTF("call  r%d, %#lx\n", rd, naja->regs[rd]);
 		naja->ip = naja->regs[rd];
@@ -2527,13 +2537,11 @@ static int __naja_ret(scf_vm_t* vm, uint32_t inst)
 {
 	scf_vm_naja_t* naja = vm->priv;
 
-	naja->ip   =  naja->regs[NAJA_REG_LR];
 	int64_t sp = -naja->regs[NAJA_REG_SP];
-
 	assert (sp >= 0);
 
-	if (naja->size > sp + STACK_INC) {
-
+	if (naja->size > sp + STACK_INC)
+	{
 		void* p = realloc(naja->stack, sp + STACK_INC);
 		if (!p) {
 			scf_loge("\n");
@@ -2543,6 +2551,8 @@ static int __naja_ret(scf_vm_t* vm, uint32_t inst)
 		naja->stack = p;
 		naja->size  = sp + STACK_INC;
 	}
+
+	naja->ip = naja->regs[NAJA_REG_LR];
 
 	if (naja->ip >= (uint64_t)vm->text->data
 	 && naja->ip <  (uint64_t)vm->text->data + vm->text->len) {
@@ -2754,7 +2764,6 @@ static int __naja_vm_run(scf_vm_t* vm, const char* path, const char* sys)
 		uint32_t inst = *(uint32_t*)(vm->text->data + offset);
 
 		naja_opcode_pt pt = naja_opcodes[(inst >> 26) & 0x3f];
-
 		if (!pt) {
 			scf_loge("inst: %d, %#x\n", (inst >> 26) & 0x3f, inst);
 			return -EINVAL;
